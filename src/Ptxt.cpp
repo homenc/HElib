@@ -14,7 +14,6 @@
 #include <helib/Ptxt.h>
 #include <helib/apiAttributes.h>
 
-
 namespace helib {
 
 void deserialize(std::istream& is, std::complex<double>& num)
@@ -245,10 +244,6 @@ const std::vector<typename Ptxt<Scheme>::SlotType>& Ptxt<Scheme>::getSlotRepr()
  * @note Only enabled for the `BGV` scheme.
  **/
 
-// VJS-FIXME: if we want to maintain support for the Ptxt class,
-// we really need to deprecate or replace these getPolyRep functions
-// with functions that return an EncodedPtxt object, as this is
-// now the preferred way to represent encodings.
 template <>
 NTL::ZZX Ptxt<BGV>::getPolyRepr() const
 {
@@ -263,19 +258,40 @@ NTL::ZZX Ptxt<BGV>::getPolyRepr() const
   return repr;
 }
 
+template <>
+void Ptxt<BGV>::encode(EncodedPtxt& eptxt,
+                       double mag,
+                       double scale,
+                       double err) const
+{
+  assertTrue<LogicError>(isValid(),
+                         "Cannot call encide on default-constructed Ptxt");
+
+  assertTrue<LogicError>(mag < 0 && scale < 0 && err < 0,
+                         "mag,scale,err must be defaulted for BGV");
+
+  std::vector<NTL::ZZX> slots_data(context->ea->size());
+  for (std::size_t i = 0; i < slots_data.size(); ++i) {
+    slots_data[i] = slots[i].getData();
+  }
+
+  context->ea->encode(eptxt, slots_data);
+}
+
 /**
  * @brief CKKS specialisation of the `getPolyRepr` function.
  * @return Single encoded polynomial.
  * @note Only enabled for the `CKKS` scheme.
  **/
 template <>
-NTL::ZZX Ptxt<CKKS>::getPolyRepr() const
+void Ptxt<CKKS>::encode(EncodedPtxt& eptxt,
+                        double mag,
+                        double scale,
+                        double err) const
 {
   assertTrue<LogicError>(isValid(),
-                         "Cannot call getPolyRepr on default-constructed Ptxt");
-  NTL::ZZX repr;
-  context->ea->getCx().encode(repr, slots);
-  return repr;
+                         "Cannot call encode on default-constructed Ptxt");
+  context->ea->encode(eptxt, slots, mag, scale, err);
 }
 
 template <typename Scheme>

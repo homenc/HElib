@@ -584,6 +584,61 @@ void Ctxt::dropSmallAndSpecialPrimes()
   }
 }
 
+void Ctxt::relin_CKKS_adjust()
+{
+  if (isCKKS()) {
+    // we have to increase the noise if it's too small,
+    // in order to protect against loss of precision
+
+    const PAlgebra& palg = context.zMStar;
+    long phim = palg.getPhiM();
+    long k = context.scale;
+
+    double h;
+    if (context.hwt_param == 0)
+      h = phim / 2.0;
+    else
+      h = context.hwt_param;
+
+    double log_phim = std::log(phim);
+    if (log_phim < 1)
+      log_phim = 1;
+
+    double beta = k * sqrt(phim * log_phim * h / 12.0);
+    // beta is the noise estimate implicitly used for mod
+    // switch added noise in the routine addSpecialPrimes in primeChain.cpp.
+    // This is also the amount of noise used to estimate the number
+    // of bits needed in the special primes.
+    // If the current cipherext has noise spaller than this,
+    // we have to do something...
+
+    // VJS-FIXME: if the user specified bitsInSpecialPrimes explcitly,
+    // then this may not be the right thing to do.  However, it is not
+    // clear how to address this.
+
+    // VJS-FIXME: we could also try adding a ctxtPrime if possible...
+    // this would preserve capacity.
+
+    constexpr double fudge_factor = 8;
+    // increase bound by fudge_factor, based on experimentation
+
+    double gamma = beta * fudge_factor;
+
+    if (gamma > noiseBound) {
+      // xf = ceil(beta/noiseBound)
+      long xf = long(std::ceil(gamma / convert<double>(noiseBound)));
+      for (auto& part : parts)
+        part *= xf;
+      noiseBound *= xf; // Increase noiseBound
+      ratFactor *= xf;  // Increase the factor
+      std::string message =
+          "extra factor hack invoked in reLinearize with xf=" +
+          std::to_string(xf);
+      Warning(message);
+    }
+  }
+}
+
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
 // keyID<0 then re-linearize to any key for which a switching matrix exists
 void Ctxt::reLinearize(long keyID)
@@ -611,6 +666,8 @@ void Ctxt::reLinearize(long keyID)
        << "\n";
 
 #endif
+
+  relin_CKKS_adjust();
 
   long g = ptxtSpace;
   double logProd = context.logOfProduct(context.specialPrimes);
@@ -697,11 +754,13 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // Finally we multiply the vector of digits by the key-switching matrix
   keySwitchDigits(W, polyDigits);
 
-  HELIB_STATS_UPDATE("KS-noise-ratio",
-                     NTL::conv<double>(addedNoise / noiseBound));
-  // HERE
-  // fprintf(stderr, "   KS-log-noise-ratio: %f\n",
-  // log(addedNoise/noiseBound)/log(2.0));
+  double ratio = NTL::conv<double>(addedNoise / noiseBound);
+
+  HELIB_STATS_UPDATE("KS-noise-ratio", ratio);
+
+  if (ratio > 1) {
+    Warning("KS-noise-ratio=" + std::to_string(ratio) + "\n");
+  }
 
   noiseBound += addedNoise; // update the noise estimate
 }
@@ -934,46 +993,6 @@ void Ctxt::addConstantCKKS(const NTL::ZZX& poly,
   // we know if we need to do that...otherwise, we'll do
   // an unnecessary round trip between poly and dcrt
   addConstantCKKS(DoubleCRT(poly, context, primeSet), size, factor);
-}
-
-Ctxt& Ctxt::operator+=(const Ptxt<BGV>& other)
-{
-  addConstant(other.getPolyRepr());
-  return *this;
-}
-
-Ctxt& Ctxt::operator+=(const Ptxt<CKKS>& other)
-{
-  addConstantCKKS(other);
-  return *this;
-}
-
-Ctxt& Ctxt::operator-=(const Ptxt<BGV>& other)
-{
-  Ptxt<BGV> subtrahend(other);
-  subtrahend.negate();
-  addConstant(subtrahend.getPolyRepr());
-  return *this;
-}
-
-Ctxt& Ctxt::operator-=(const Ptxt<CKKS>& other)
-{
-  Ptxt<CKKS> subtrahend(other);
-  subtrahend.negate();
-  addConstantCKKS(subtrahend);
-  return *this;
-}
-
-Ctxt& Ctxt::operator*=(const Ptxt<BGV>& other)
-{
-  multByConstant(other.getPolyRepr());
-  return *this;
-}
-
-Ctxt& Ctxt::operator*=(const Ptxt<CKKS>& other)
-{
-  multByConstantCKKS(other);
-  return *this;
 }
 
 Ctxt& Ctxt::operator*=(const NTL::ZZX& poly)
@@ -1664,8 +1683,8 @@ void Ctxt::multiplyBy(const Ctxt& other)
     return;
   }
 
-  *this *= other; // perform the multiplication
-  reLinearize();  // re-linearize
+  this->multLowLvl(other); // perform the multiplication
+  reLinearize();           // re-linearize
 #ifdef HELIB_DEBUG
   checkNoise(*this, *dbgKey, "reLinearize " + std::to_string(size_t(this)));
 #endif
@@ -1695,11 +1714,11 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   if (cap < cap1 && cap < cap2) { // if both others at higher levels than this,
     Ctxt tmp = other1;            // multiply others by each other, then by this
     if (&other1 == &other2)
-      tmp *= tmp; // squaring rather than multiplication
+      tmp.multLowLvl(tmp); // squaring rather than multiplication
     else
-      tmp *= other2;
+      tmp.multLowLvl(other2);
 
-    *this *= tmp;
+    this->multLowLvl(tmp);
     reLinearize(); // re-linearize after all the multiplications
     return;
   }
@@ -1716,11 +1735,11 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 
   if (this == second) { // handle pointer collision
     Ctxt tmp = *second;
-    *this *= *first;
-    *this *= tmp;
+    this->multLowLvl(*first);
+    this->multLowLvl(tmp);
   } else {
-    *this *= *first;
-    *this *= *second;
+    this->multLowLvl(*first);
+    this->multLowLvl(*second);
   }
   reLinearize(); // re-linearize after all the multiplications
 }
@@ -2667,10 +2686,10 @@ void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)
     return;
   }
   result = *v1[0];
-  result *= *v2[0];
+  result.multLowLvl(*v2[0]);
   for (long i = 1; i < n; i++) {
     Ctxt tmp = *v1[i];
-    tmp *= *v2[i];
+    tmp.multLowLvl(*v2[i]);
     result += tmp;
   }
   result.reLinearize();

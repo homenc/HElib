@@ -217,7 +217,7 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
     }
     std::unique_ptr<helib::SecKey> secKey(new helib::SecKey(*context));
     helib::PubKey* pubKey = (helib::PubKey*)secKey.get();
-    secKey->GenSecKey(w);
+    secKey->GenSecKey();
     helib::addSome1DMatrices(*secKey);
     helib::addFrbMatrices(*secKey);
 

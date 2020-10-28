@@ -441,11 +441,23 @@ public:
 
   // Multiply by another ciphertext
   void multLowLvl(const Ctxt& other, bool destructive = false);
+
+#if 0
+  [[deprecated]]
   Ctxt& operator*=(const Ctxt& other)
   {
     multLowLvl(other);
     return *this;
   }
+#else
+  // we now do the high-level mul
+  Ctxt& operator*=(const Ctxt& other)
+  {
+    multiplyBy(other);
+    return *this;
+  }
+
+#endif
 
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k)
@@ -464,52 +476,6 @@ public:
 
   //! @brief applies the automorphism p^j using smartAutomorphism
   void frobeniusAutomorph(long j);
-
-  // Operators acting between ciphertexts and plaintext objects
-
-  // BGV case
-  /**
-   * @brief Plus equals operator with a `BGV` `Ptxt`.
-   * @param other Right hand side of addition.
-   * @return Reference to `*this` post addition.
-   **/
-  Ctxt& operator+=(const Ptxt<BGV>& other);
-
-  /**
-   * @brief Minus equals operator with a `BGV` `Ptxt`.
-   * @param other Right hand side of subtraction.
-   * @return Reference to `*this` post subtraction.
-   **/
-  Ctxt& operator-=(const Ptxt<BGV>& other);
-
-  /**
-   * @brief Times equals operator with a `BGV` `Ptxt`.
-   * @param other Right hand side of multiplication.
-   * @return reference to `*this` post multiplication.
-   **/
-  Ctxt& operator*=(const Ptxt<BGV>& other);
-
-  // CKKS case
-  /**
-   * @brief Plus equals operator with a `CKKS` `Ptxt`.
-   * @param other Right hand side of addition.
-   * @return Reference to `*this` post addition.
-   **/
-  Ctxt& operator+=(const Ptxt<CKKS>& other);
-
-  /**
-   * @brief Minus equals operator with a `CKKS` `Ptxt`.
-   * @param other Right hand side of subtraction.
-   * @return Reference to `*this` post subtraction.
-   **/
-  Ctxt& operator-=(const Ptxt<CKKS>& other);
-
-  /**
-   * @brief Times equals operator with a `CKKS` `Ptxt`.
-   * @param other Right hand side of multiplication.
-   * @return Reference to `*this` post multiplication.
-   **/
-  Ctxt& operator*=(const Ptxt<CKKS>& other);
 
   /**
    * @brief Times equals operator with a `ZZX`.
@@ -530,13 +496,29 @@ public:
   void addConstant(const NTL::ZZX& poly, double size = -1.0);
 
   /**
-   * @brief Add a `BGV` plaintext to this `Ctxt`.
+   * @brief Add a plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object with which to add.
    **/
   template <typename Scheme>
-  void addConstant(const Ptxt<Scheme>& ptxt)
+  void addConstant(const Ptxt<Scheme>& ptxt, bool neg = false)
   {
-    addConstant(ptxt.getPolyRepr());
+    EncodedPtxt eptxt;
+    ptxt.encode(eptxt);
+    addConstant(eptxt, neg);
+  }
+
+  template <typename Scheme>
+  Ctxt& operator+=(const Ptxt<Scheme>& ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
+
+  template <typename Scheme>
+  Ctxt& operator-=(const Ptxt<Scheme>& ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
   }
 
   //! add a rational number in the form a/b, a,b are long
@@ -934,13 +916,22 @@ public:
   //==================================================
 
   /**
-   * @brief Multiply a `BGV` plaintext to this `Ctxt`.
+   * @brief Multiply a plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object with which to multiply.
    **/
   template <typename Scheme>
   void multByConstant(const Ptxt<Scheme>& ptxt)
   {
-    multByConstant(ptxt.getPolyRepr());
+    EncodedPtxt eptxt;
+    ptxt.encode(eptxt);
+    multByConstant(eptxt);
+  }
+
+  template <typename Scheme>
+  Ctxt& operator*=(const Ptxt<Scheme>& ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
   }
 
   //! multiply by a rational number or floating point
@@ -1073,6 +1064,9 @@ public:
 
   void bumpNoiseBound(double factor) { noiseBound *= factor; }
 
+  // CKKS adjustment to protect precision
+  void relin_CKKS_adjust();
+
   void reLinearize(long keyIdx = 0);
   // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
@@ -1118,6 +1112,16 @@ public:
       return ptxtMag * ratFactor + noiseBound;
     else
       return noiseBound;
+  }
+
+  //! @brief for CKKS, returns a bound on the absolute error
+  //! (which is noiseBound/ratFactor); for BGV, returns 0.
+  double errorBound() const
+  {
+    if (isCKKS())
+      return convert<double>(noiseBound / ratFactor);
+    else
+      return 0;
   }
 
   //! @brief returns the "capacity" of a ciphertext,
@@ -1197,7 +1201,7 @@ public:
   void setPtxtMag(const NTL::xdouble& z) { ptxtMag = z; }
   long getKeyID() const;
 
-  bool isCKKS() const { return (getContext().alMod.getTag() == PA_cx_tag); }
+  bool isCKKS() const { return getContext().isCKKS(); }
 
   // Return r such that p^r = ptxtSpace
   long effectiveR() const

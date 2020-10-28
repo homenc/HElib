@@ -21,18 +21,19 @@
 #include <cstdio>
 #include <helib/ArgMap.h>
 #include <helib/fhe_stats.h>
+#include <helib/log.h>
 
 NTL_CLIENT
 using namespace helib;
 
 //#define HELIB_DEBUG
 
-#ifdef HELIB_DEBUG
+#if 1
 #include <helib/debugging.h>
 #define debugCompare(ea,sk,p,c) {\
-  PlaintextArray pp(ea);\
-  ea.decrypt(c, sk, pp);\
-  if (!equals(ea, pp, p)) { \
+  PtxtArray pp(ea);\
+  pp.decrypt(c, sk);\
+  if (pp != p) { \
     std::cout << "oops:\n"; std::cout << p << "\n"; \
     std::cout << pp << "\n"; \
     exit(0); \
@@ -84,12 +85,33 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   if (!noPrint) fhe_stats = true;
 
+  
+  Context context { ContextBuilder<BGV>()
+
+      .m(m).p(p).r(r)
+      .gens(gens1).ords(ords1)
+      .bits(L).c(c).bitsInSpecialPrimes(special_bits)
+
+  };
+
+#if 0
+  // This works in C++17, but not earlier, as it then
+  // requires a copy or move constructor
+  Context context =
+    ContextBuilder<BGV>()
+      .m(m).p(p).r(r)
+      .gens(gens1).ords(ords1)
+      .bits(L).c(c).bitsInSpecialPrimes(special_bits);
+#endif
+
+#if 0
   Context context(m, p, r, gens1, ords1);
   buildModChain(context, L, c,
     /*willBeBootstrappable=*/false,
     /*t=*/0,
     /*resolution=*/3,
     /*bitsInSpecialPrimes=*/special_bits);
+#endif
 
   ZZX G;
   if (d == 0)
@@ -127,22 +149,18 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   dbgEa  = ea_ptr;
 #endif
 
-  PlaintextArray p0(ea);
-  PlaintextArray p1(ea);
-  PlaintextArray p2(ea);
-  PlaintextArray p3(ea);
+  PtxtArray p0(ea), p1(ea), p2(ea), p3(ea);
 
-  random(ea, p0);
-  random(ea, p1);
-  random(ea, p2);
-  random(ea, p3);
+  p0.random();
+  p1.random();
+  p2.random();
+  p3.random();
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  ea.encrypt(c0, publicKey, p0);
-  // {ZZX ppp0; ea.encode(ppp0, p0); c0.DummyEncrypt(ppp0);} // dummy encryption
-  ea.encrypt(c1, publicKey, p1); // real encryption
-  ea.encrypt(c2, publicKey, p2); // real encryption
-  ea.encrypt(c3, publicKey, p3); // real encryption
+  p0.encrypt(c0);
+  p1.encrypt(c1); 
+  p2.encrypt(c2); 
+  p3.encrypt(c3); 
 
   resetAllTimers();
 
@@ -158,60 +176,70 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
                   // random number in [-(nslots-1)..nslots-1]
 
      // two random constants
-     PlaintextArray const1(ea);
-     PlaintextArray const2(ea);
-     random(ea, const1);
-     random(ea, const2);
+     PtxtArray const1(ea), const2(ea);
+     const1.random();
+     const2.random();
 
-     ZZX const1_poly, const2_poly;
-     ea.encode(const1_poly, const1);
-     ea.encode(const2_poly, const2);
 
-     mul(ea, p1, p0);     // c1.multiplyBy(c0)
+     p1 *= p0;     // c1.multiplyBy(c0)
      c1.multiplyBy(c0);
      if (!noPrint) CheckCtxt(c1, "c1*=c0");
      debugCompare(ea,secretKey,p1,c1);
 
-     add(ea, p0, const1); // c0 += random constant
-     c0.addConstant(const1_poly);
+     p0 += const1; // c0 += random constant
+     c0.addConstant(const1);
      if (!noPrint) CheckCtxt(c0, "c0+=k1");
      debugCompare(ea,secretKey,p0,c0);
 
-     mul(ea, p2, const2); // c2 *= random constant
-     c2.multByConstant(const2_poly);
+     p2 *= const2; // c2 *= random constant
+     c2.multByConstant(const2);
      if (!noPrint) CheckCtxt(c2, "c2*=k2");
      debugCompare(ea,secretKey,p2,c2);
 
-     PlaintextArray tmp_p(p1); // tmp = c1
+#if 0
+     p2 *= 3L;
+     c2 *= 3L;
+     if (!noPrint) CheckCtxt(c2, "c2*=3");
+     debugCompare(ea,secretKey,p2,c2);
+
+     p2 += 3L;
+     c2 += 3L;
+     if (!noPrint) CheckCtxt(c2, "c2+=3");
+     debugCompare(ea,secretKey,p2,c2);
+
+
+#endif
+
+     PtxtArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
      sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
-     shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
+     shift(tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
      ea.shift(tmp, shamt);
      if (!noPrint) CheckCtxt(tmp, buffer);
      debugCompare(ea,secretKey,tmp_p,tmp);
 
-     add(ea, p2, tmp_p);  // c2 += tmp
+     p2 += tmp_p;  // c2 += tmp
      c2 += tmp;
      if (!noPrint) CheckCtxt(c2, "c2+=tmp");
      debugCompare(ea,secretKey,p2,c2);
 
      sprintf(buffer, "c2>>>=%d", (int)rotamt);
-     rotate(ea, p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+     rotate(p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
      ea.rotate(c2, rotamt);
      if (!noPrint) CheckCtxt(c2, buffer);
      debugCompare(ea,secretKey,p2,c2);
 
-     helib::negate(ea, p1); // c1.negate()
+     p1.negate(); // c1.negate()
      c1.negate();
      if (!noPrint) CheckCtxt(c1, "c1=-c1");
      debugCompare(ea,secretKey,p1,c1);
 
-     mul(ea, p3, p2); // c3.multiplyBy(c2)
+     p3 *= p2; // c3.multiplyBy(c2)
      c3.multiplyBy(c2);
      if (!noPrint) CheckCtxt(c3, "c3*=c2");
      debugCompare(ea,secretKey,p3,c3);
 
-     sub(ea, p0, p3); // c0 -= c3
+     p0 -= p3; // c0 -= c3
      c0 -= c3;
      if (!noPrint) CheckCtxt(c0, "c0=-c3");
      debugCompare(ea,secretKey,p0,c0);
@@ -233,18 +261,18 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   resetAllTimers();
   HELIB_NTIMER_START(Check);
 
-  PlaintextArray pp0(ea);
-  PlaintextArray pp1(ea);
-  PlaintextArray pp2(ea);
-  PlaintextArray pp3(ea);
+  PtxtArray pp0(ea);
+  PtxtArray pp1(ea);
+  PtxtArray pp2(ea);
+  PtxtArray pp3(ea);
 
-  ea.decrypt(c0, secretKey, pp0);
-  ea.decrypt(c1, secretKey, pp1);
-  ea.decrypt(c2, secretKey, pp2);
-  ea.decrypt(c3, secretKey, pp3);
+  pp0.decrypt(c0, secretKey);
+  pp1.decrypt(c1, secretKey);
+  pp2.decrypt(c2, secretKey);
+  pp3.decrypt(c3, secretKey);
 
-  if (equals(ea, pp0, p0) && equals(ea, pp1, p1)
-      && equals(ea, pp2, p2) && equals(ea, pp3, p3))
+  if (pp0 == p0 && pp1 == p1
+      && pp2 == p2 && pp3 == p3)
        std::cout << "GOOD\n";
   else std::cout << "BAD\n";
 
@@ -280,6 +308,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  */
 int main(int argc, char **argv)
 {
+  helog.setLogToStderr();
+
   setTimersOn();
 
   ArgMap amap;

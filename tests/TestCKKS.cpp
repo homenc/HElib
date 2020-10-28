@@ -338,7 +338,7 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
   ea.decrypt(c1, secretKey, vd2);
 
   mul(vd1, vd[0]);
-  rf /= std::abs(vd[0]);
+  rf /= std::abs(vd[0]); // VJS-NOTE: I fixed this with an abs
   pm *= std::abs(vd[0]);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
@@ -349,6 +349,8 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
       << ", vd[0]=" << vd[0] << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
+  // VJS-FIXME: What does EXPECT_EQ do? Is it a test for *exact*
+  // equality? If so, is this reasonable to expect?
 }
 
 TEST_P(TestCKKS, gettingTheComplexConjugateWorks)
@@ -454,7 +456,7 @@ TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
   ea.encrypt(c1, publicKey, vd1);
   ea.encrypt(c2, publicKey, vd2);
   NTL::xdouble expectedPtxtMag = c1.getPtxtMag() * c2.getPtxtMag();
-  c1 *= c2;
+  c1.multiplyBy(c2);
   ea.decrypt(c1, secretKey, vd3);
 
   mul(vd1, vd2);

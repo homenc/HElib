@@ -58,6 +58,23 @@ namespace {
   }
 }
 
+::testing::AssertionResult ciphertextMatches(const helib::EncryptedArray& ea,
+                                             const helib::SecKey& sk,
+                                             const helib::PtxtArray& p,
+                                             const helib::Ctxt& c)
+{
+  helib::PtxtArray pp(ea);
+  pp.decrypt(c, sk);
+  if (pp == p) {
+    return ::testing::AssertionSuccess();
+  } else {
+    return ::testing::AssertionFailure()
+           << "Ciphertext does not match plaintext:" << std::endl
+           << "p = " << p << std::endl
+           << "pp = " << pp << std::endl;
+  }
+}
+
 struct Parameters
 {
   Parameters(long R,
@@ -171,16 +188,14 @@ protected:
                      true)),
       gens(GetParam().gens),
       ords(GetParam().ords),
-      context(m, p, r, gens, ords),
-      secretKey(
-          (buildModChain(context,
-                         L,
-                         c,
-                         /*willBeBootstrappable=*/false,
-                         /*skHwt=*/0,
-                         /*resolution=*/3,
-                         /*bitsInSpecialPrimes=*/helib_test::special_bits),
-           context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .gens(gens)
+                  .ords(ords)
+                  .bits(L)),
+      secretKey(context),
       publicKey(secretKey)
   {}
 
@@ -188,7 +203,7 @@ protected:
   {
     NTL::SetSeed(NTL::ZZ(GetParam().seed));
     NTL::SetNumThreads(GetParam().nt);
-    secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+    secretKey.GenSecKey();
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
 
@@ -243,22 +258,19 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
   // Debugging additions
   helib::setupDebugGlobals(&secretKey, ea_ptr);
 
-  helib::PlaintextArray p0(ea);
-  helib::PlaintextArray p1(ea);
-  helib::PlaintextArray p2(ea);
-  helib::PlaintextArray p3(ea);
+  helib::PtxtArray p0(ea), p1(ea), p2(ea), p3(ea);
 
-  helib::random(ea, p0);
-  helib::random(ea, p1);
-  helib::random(ea, p2);
-  helib::random(ea, p3);
+  p0.random();
+  p1.random();
+  p2.random();
+  p3.random();
 
   helib::Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  ea.encrypt(c0, publicKey, p0);
+  p0.encrypt(c0);
   // {ZZX ppp0; ea.encode(ppp0, p0); c0.DummyEncrypt(ppp0);} // dummy encryption
-  ea.encrypt(c1, publicKey, p1); // real encryption
-  ea.encrypt(c2, publicKey, p2); // real encryption
-  ea.encrypt(c3, publicKey, p3); // real encryption
+  p1.encrypt(c1); // real encryption
+  p2.encrypt(c2); // real encryption
+  p3.encrypt(c3); // real encryption
 
   helib::resetAllTimers();
 
@@ -275,72 +287,63 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
     // random number in [-(nslots-1)..nslots-1]
 
     // two random constants
-    helib::PlaintextArray const1(ea);
-    helib::PlaintextArray const2(ea);
-    helib::random(ea, const1);
-    helib::random(ea, const2);
+    helib::PtxtArray const1(ea), const2(ea);
+    const1.random();
+    const2.random();
 
-    NTL::ZZX const1_poly, const2_poly;
-    ea.encode(const1_poly, const1);
-    ea.encode(const2_poly, const2);
-
-    mul(ea, p1, p0); // c1.multiplyBy(c0)
+    p1 *= p0; // c1.multiplyBy(c0)
     c1.multiplyBy(c0);
     if (!helib_test::noPrint)
       CheckCtxt(c1, "c1*=c0");
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p1, c1));
 
-    add(ea, p0, const1); // c0 += random constant
-    c0.addConstant(const1_poly);
+    p0 += const1; // c0 += random constant
+    c0.addConstant(const1);
     if (!helib_test::noPrint)
       CheckCtxt(c0, "c0+=k1");
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p0, c0));
 
-    mul(ea, p2, const2); // c2 *= random constant
-    c2.multByConstant(const2_poly);
+    p2 *= const2; // c2 *= random constant
+    c2.multByConstant(const2);
     if (!helib_test::noPrint)
       CheckCtxt(c2, "c2*=k2");
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2));
 
-    helib::PlaintextArray tmp_p(p1); // tmp = c1
+    helib::PtxtArray tmp_p(p1); // tmp = c1
     helib::Ctxt tmp(c1);
     sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
-    shift(ea,
-          tmp_p,
-          shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
+    shift(tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
     ea.shift(tmp, shamt);
     if (!helib_test::noPrint)
       CheckCtxt(tmp, buffer);
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, tmp_p, tmp));
 
-    add(ea, p2, tmp_p); // c2 += tmp
+    p2 += tmp_p; // c2 += tmp
     c2 += tmp;
     if (!helib_test::noPrint)
       CheckCtxt(c2, "c2+=tmp");
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2));
 
     sprintf(buffer, "c2>>>=%d", (int)rotamt);
-    rotate(ea,
-           p2,
-           rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+    rotate(p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
     ea.rotate(c2, rotamt);
     if (!helib_test::noPrint)
       CheckCtxt(c2, buffer);
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2));
 
-    ::helib::negate(ea, p1); // c1.negate()
+    p1.negate(); // c1.negate()
     c1.negate();
     if (!helib_test::noPrint)
       CheckCtxt(c1, "c1=-c1");
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p1, c1));
 
-    mul(ea, p3, p2); // c3.multiplyBy(c2)
+    p3 *= p2; // c3.multiplyBy(c2)
     c3.multiplyBy(c2);
     if (!helib_test::noPrint)
       CheckCtxt(c3, "c3*=c2");
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p3, c3));
 
-    sub(ea, p0, p3); // c0 -= c3
+    p0 -= p3; // c0 -= c3
     c0 -= c3;
     if (!helib_test::noPrint)
       CheckCtxt(c0, "c0=-c3");
@@ -376,6 +379,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
   }
 }
 
+// FIXME: When the replicate API has been updated, update these tests.
 // These helper functions and classes are for the test
 // rotate1DWithBadDimensions
 static bool check_replicate(const helib::Ctxt& c1,

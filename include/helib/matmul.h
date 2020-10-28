@@ -134,12 +134,13 @@ public:
 
 typedef MatMul1D_derived<PA_cx> MatMul1D_CKKS;
 
-// a more convenient user interface
+// more convenient user interfaces
 // VJS-FIXME: document some of this stuff
+
 class MatMul_CKKS : public MatMul1D_CKKS
 {
 public:
-  typedef std::function<std::complex<double>(long, long)> get_fun_type;
+  typedef std::function<double(long, long)> get_fun_type;
 
 private:
   const EncryptedArray& ea;
@@ -154,6 +155,35 @@ public:
   {}
 
   MatMul_CKKS(const Context& context, get_fun_type _get_fun) :
+      ea(context.getDefaultEA()), get_fun(_get_fun)
+  {}
+
+  virtual const EncryptedArray& getEA() const override { return ea; }
+
+  virtual std::complex<double> get(long i, long j) const override
+  {
+    return get_fun(i, j);
+  }
+};
+
+class MatMul_CKKS_Complex : public MatMul1D_CKKS
+{
+public:
+  typedef std::function<std::complex<double>(long, long)> get_fun_type;
+
+private:
+  const EncryptedArray& ea;
+
+  get_fun_type get_fun;
+  // get_fun(i,j) returns matrix entry (i,j)
+  // see get_fun_type definitions below
+
+public:
+  MatMul_CKKS_Complex(const EncryptedArray& _ea, get_fun_type _get_fun) :
+      ea(_ea), get_fun(_get_fun)
+  {}
+
+  MatMul_CKKS_Complex(const Context& context, get_fun_type _get_fun) :
       ea(context.getDefaultEA()), get_fun(_get_fun)
   {}
 

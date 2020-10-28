@@ -255,18 +255,50 @@ public:
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<long>& ptxt) const = 0;
+
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<NTL::ZZX>& ptxt) const = 0;
-  virtual void decrypt(const Ctxt& ctxt,
-                       const SecKey& sKey,
-                       PlaintextArray& ptxt) const = 0;
+
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<double>& ptxt) const = 0;
+
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<cx_double>& ptxt) const = 0;
+
+  virtual void rawDecrypt(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          std::vector<cx_double>& ptxt) const = 0;
+
+  virtual void rawDecrypt(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          std::vector<double>& ptxt) const = 0;
+
+  virtual void decrypt(const Ctxt& ctxt,
+                       const SecKey& sKey,
+                       PlaintextArray& ptxt) const = 0;
+
+  virtual void decryptComplex(const Ctxt& ctxt,
+                              const SecKey& sKey,
+                              PlaintextArray& ptxt) const = 0;
+
+  virtual void decryptReal(const Ctxt& ctxt,
+                           const SecKey& sKey,
+                           PlaintextArray& ptxt) const = 0;
+
+  virtual void rawDecrypt(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          PlaintextArray& ptxt) const = 0;
+
+  virtual void rawDecryptComplex(const Ctxt& ctxt,
+                                 const SecKey& sKey,
+                                 PlaintextArray& ptxt) const = 0;
+
+  virtual void rawDecryptReal(const Ctxt& ctxt,
+                              const SecKey& sKey,
+                              PlaintextArray& ptxt) const = 0;
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const SecKey& sKey, long i) const
@@ -489,6 +521,55 @@ public:
   {
     throw LogicError("Unimplemented: "
                      "EncryptedArrayDerived::decrypt for CKKS type");
+  }
+
+  void rawDecrypt(UNUSED const Ctxt& ctxt,
+                  UNUSED const SecKey& sKey,
+                  UNUSED std::vector<cx_double>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: function only available for CKKS");
+  }
+
+  void rawDecrypt(UNUSED const Ctxt& ctxt,
+                  UNUSED const SecKey& sKey,
+                  UNUSED std::vector<double>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: function only available for CKKS");
+  }
+
+  void rawDecrypt(UNUSED const Ctxt& ctxt,
+                  UNUSED const SecKey& sKey,
+                  UNUSED PlaintextArray& ptxt) const override
+  {
+    throw LogicError("function not implemented");
+  }
+
+  void decryptComplex(UNUSED const Ctxt& ctxt,
+                      UNUSED const SecKey& sKey,
+                      UNUSED PlaintextArray& ptxt) const override
+  {
+    throw LogicError("function not implemented");
+  }
+
+  void rawDecryptComplex(UNUSED const Ctxt& ctxt,
+                         UNUSED const SecKey& sKey,
+                         UNUSED PlaintextArray& ptxt) const override
+  {
+    throw LogicError("function not implemented");
+  }
+
+  void decryptReal(UNUSED const Ctxt& ctxt,
+                   UNUSED const SecKey& sKey,
+                   UNUSED PlaintextArray& ptxt) const override
+  {
+    throw LogicError("function not implemented");
+  }
+
+  void rawDecryptReal(UNUSED const Ctxt& ctxt,
+                      UNUSED const SecKey& sKey,
+                      UNUSED PlaintextArray& ptxt) const override
+  {
+    throw LogicError("function not implemented");
   }
   /* End CKKS functions. */
 
@@ -1276,17 +1357,45 @@ public:
                std::vector<cx_double>& ptxt) const override;
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               std::vector<double>& ptxt) const override
-  {
-    std::vector<cx_double> v;
-    decrypt(ctxt, sKey, v);
-    project(ptxt, v);
-  }
+               std::vector<double>& ptxt) const override;
+
+  void rawDecrypt(const Ctxt& ctxt,
+                  const SecKey& sKey,
+                  std::vector<cx_double>& ptxt) const override;
+
+  void rawDecrypt(const Ctxt& ctxt,
+                  const SecKey& sKey,
+                  std::vector<double>& ptxt) const override;
 
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               PlaintextArray& ptxt) const override;
-  // implemented in EaCx.cpp
+               PlaintextArray& ptxt) const override
+  {
+    decryptReal(ctxt, sKey, ptxt);
+  }
+
+  void rawDecrypt(const Ctxt& ctxt,
+                  const SecKey& sKey,
+                  PlaintextArray& ptxt) const override
+  {
+    rawDecryptReal(ctxt, sKey, ptxt);
+  }
+
+  void decryptComplex(const Ctxt& ctxt,
+                      const SecKey& sKey,
+                      PlaintextArray& ptxt) const override;
+
+  void rawDecryptComplex(const Ctxt& ctxt,
+                         const SecKey& sKey,
+                         PlaintextArray& ptxt) const override;
+
+  void decryptReal(const Ctxt& ctxt,
+                   const SecKey& sKey,
+                   PlaintextArray& ptxt) const override;
+
+  void rawDecryptReal(const Ctxt& ctxt,
+                      const SecKey& sKey,
+                      PlaintextArray& ptxt) const override;
 
   /**
    * @brief Decrypt ciphertext to a plaintext relative to a specific scheme.
@@ -1467,6 +1576,7 @@ public:
   //! @name Direct access to EncryptedArrayBase methods
 
   PA_tag getTag() const { return rep->getTag(); }
+  bool isCKKS() const { return getTag() == PA_cx_tag; }
 
   template <template <typename> class T, typename... Args>
   void dispatch(Args&&... args) const
@@ -1725,6 +1835,40 @@ public:
     rep->decrypt(ctxt, sKey, ptxt);
   }
 
+  template <typename T>
+  void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt) const
+  {
+    rep->rawDecrypt(ctxt, sKey, ptxt);
+  }
+
+  void decryptComplex(const Ctxt& ctxt,
+                      const SecKey& sKey,
+                      PlaintextArray& ptxt) const
+  {
+    rep->decryptComplex(ctxt, sKey, ptxt);
+  }
+
+  void rawDecryptComplex(const Ctxt& ctxt,
+                         const SecKey& sKey,
+                         PlaintextArray& ptxt) const
+  {
+    rep->rawDecryptComplex(ctxt, sKey, ptxt);
+  }
+
+  void decryptReal(const Ctxt& ctxt,
+                   const SecKey& sKey,
+                   PlaintextArray& ptxt) const
+  {
+    rep->decryptReal(ctxt, sKey, ptxt);
+  }
+
+  void rawDecryptReal(const Ctxt& ctxt,
+                      const SecKey& sKey,
+                      PlaintextArray& ptxt) const
+  {
+    rep->rawDecryptReal(ctxt, sKey, ptxt);
+  }
+
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
                           const std::vector<NTL::ZZX>& L) const
   {
@@ -1892,6 +2036,8 @@ void decode(const EncryptedArray& ea,
             const PlaintextArray& pa);
 
 void random(const EncryptedArray& ea, PlaintextArray& pa);
+void randomReal(const EncryptedArray& ea, PlaintextArray& pa);
+void randomComplex(const EncryptedArray& ea, PlaintextArray& pa);
 
 bool equals(const EncryptedArray& ea,
             const PlaintextArray& pa,
@@ -1930,6 +2076,14 @@ void applyPerm(const EncryptedArray& ea,
                const NTL::Vec<long>& pi);
 
 void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
+
+double Norm(const EncryptedArray& ea, const PlaintextArray& pa);
+double Distance(const EncryptedArray& ea,
+                const PlaintextArray& pa,
+                const PlaintextArray& other);
+
+void totalSums(const EncryptedArray& ea, PlaintextArray& pa);
+void runningSums(const EncryptedArray& ea, PlaintextArray& pa);
 
 //=====================================
 
@@ -1991,7 +2145,10 @@ public:
               double scale = -1,
               double err = -1) const
   {
-    ea.encode(eptxt, pa, mag, scale, err);
+    if (ea.isCKKS())
+      ea.encode(eptxt, pa, mag, scale, err);
+    else
+      ea.encode(eptxt, pa); // ignore mag,scale,err for BGV
   }
 
   void encrypt(Ctxt& ctxt,
@@ -1999,13 +2156,49 @@ public:
                double scale = -1,
                double err = -1) const
   {
-    ea.encrypt(ctxt, pa, mag, scale, err);
+    if (ea.isCKKS()) {
+      if (mag < 0)
+        mag = NextPow2(Norm(pa.getData<PA_cx>()));
+      // if mag is defaulted, set it to 2^(ceil(log2(max(Norm(pa),1))))
+      ea.encrypt(ctxt, pa, mag, scale, err);
+    } else {
+      ea.encrypt(ctxt, pa); // ignore mag,scale,err for BGV
+    }
   }
 
   void decrypt(const Ctxt& ctxt, const SecKey& sKey)
   {
     ea.decrypt(ctxt, sKey, pa);
   }
+
+  void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.rawDecrypt(ctxt, sKey, pa);
+  }
+
+  void decryptComplex(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.decryptComplex(ctxt, sKey, pa);
+  }
+
+  void rawDecryptComplex(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.rawDecryptComplex(ctxt, sKey, pa);
+  }
+
+  void decryptReal(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.decryptReal(ctxt, sKey, pa);
+  }
+
+  void rawDecryptReal(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.rawDecryptReal(ctxt, sKey, pa);
+  }
+
+  void randomReal() { helib::randomReal(ea, pa); }
+
+  void randomComplex() { helib::randomComplex(ea, pa); }
 
   void random() { helib::random(ea, pa); }
 
@@ -2111,6 +2304,11 @@ public:
   void store(std::vector<cx_double>& array) const { decode(ea, array, pa); }
 
   void store(std::vector<double>& array) const { decode(ea, array, pa); }
+
+  //===============================
+
+  // this is here for consistency with Ctxt class
+  void negate() { helib::negate(ea, pa); }
 };
 
 inline std::ostream& operator<<(std::ostream& s, const PtxtArray& a)
@@ -2139,17 +2337,6 @@ inline bool operator!=(const PtxtArray& a, const PtxtArray& b)
 {
   assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   return !equals(a.ea, a.pa, b.pa);
-}
-
-// this function enables the syntax a == Approx(b),
-// defined in NumbTh.h.
-inline bool approx_equal(const PtxtArray& a,
-                         const PtxtArray& b,
-                         double tolerance,
-                         double floor)
-{
-  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
-  return equals(a.ea, a.pa, b.pa, tolerance, floor);
 }
 
 inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
@@ -2197,8 +2384,6 @@ auto operator*=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
   return a *= PtxtArray(a.ea, b);
 }
 
-inline void negate(PtxtArray& a) { negate(a.ea, a.pa); }
-
 inline void frobeniusAutomorph(PtxtArray& a, long j)
 {
   frobeniusAutomorph(a.ea, a.pa, j);
@@ -2216,6 +2401,19 @@ inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
 
 inline void power(PtxtArray& a, long e) { power(a.ea, a.pa, e); }
 
+// For CKKS, returns max norm of slots, for BGV the trivial norm
+// (i.e., 0 if zero, 1 otherwise)
+inline double Norm(const PtxtArray& a) { return Norm(a.ea, a.pa); }
+
+inline double Distance(const PtxtArray& a, const PtxtArray& b)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
+  return Distance(a.ea, a.pa, b.pa);
+}
+
+inline void totalSums(PtxtArray& a) { totalSums(a.ea, a.pa); }
+inline void runningSums(PtxtArray& a) { runningSums(a.ea, a.pa); }
+
 //=====================================
 
 // Following are functions for performing "higher level"
@@ -2228,9 +2426,19 @@ inline void power(PtxtArray& a, long e) { power(a.ea, a.pa, e); }
 void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 // The implementation uses O(log n) shift operations.
 
+inline void runningSums(Ctxt& ctxt)
+{
+  runningSums(ctxt.getContext().getDefaultView(), ctxt);
+}
+
 //! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
 //! encryption of \f$(y, ..., y)\$, where \f$y = sum_{j=1}^n x_j.\f$
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
+
+inline void totalSums(Ctxt& ctxt)
+{
+  totalSums(ctxt.getContext().getDefaultView(), ctxt);
+}
 
 //! @brief Map all non-zero slots to 1, leaving zero slots as zero.
 //! Assumes that r=1, and that all the slots contain elements from GF(p^d).

@@ -79,7 +79,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
 
   SecKey secretKey(context);
   const PubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A Hamming-weight-w secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
 

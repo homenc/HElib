@@ -1933,4 +1933,16 @@ void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff)
   r = P2;
 }
 
+double NextPow2(double x)
+{
+  if (x < 1.0)
+    x = 1.0;
+  int e;
+  std::frexp(1 / x, &e);
+  // we have 2^{e-1} <= 1/x < 2^e, i.e.,
+  //         2^{-e} < x <= 2^{-e+1}
+  // so ceil(log2(x)) = -e+1
+  return std::ldexp(1.0, -e + 1);
+}
+
 } // namespace helib

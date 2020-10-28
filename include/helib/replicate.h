@@ -127,6 +127,7 @@ void replicateAllOrig(const EncryptedArray& ea,
                       ReplicateHandler* handler,
                       RepAux* repAuxPtr = nullptr);
 
+// FIXME: Change to new PtxtArray API
 void replicate(const EncryptedArray& ea, PlaintextArray& pa, long i);
 
 /**

@@ -24,24 +24,14 @@
 NTL_CLIENT
 using namespace helib;
 
-bool verbose = false;
+bool verbose = true;
 
 bool reset = false;
 
 
 void resetPtxtMag(Ctxt& c, const PtxtArray& p)
 {
-  vector<cx_double> pp;
-  p.store(pp);
-  double maxAbs = Norm(pp);
-
-  if (maxAbs < 1.0)
-    maxAbs = 1.0;
-  else
-    maxAbs = std::pow(
-        2,
-        std::ceil(std::log(maxAbs) / std::log(2))); // next power of two
-
+  double maxAbs = NextPow2(Norm(p));
   c.setPtxtMag(NTL::xdouble(maxAbs));
 }
 
@@ -68,31 +58,36 @@ void debugCompare(const SecKey& sk,
                   const Ctxt& c)
 {
   PtxtArray pp(p.getView());
-  pp.decrypt(c, sk);
+  pp.rawDecryptComplex(c, sk);
 
-  vector<cx_double> pp_vec, p_vec;
-  pp.store(pp_vec);
-  p.store(p_vec);
-  double abs_err = Distance(pp_vec, p_vec);
-  double rel_err = abs_err / Norm(p_vec);
+  double err = Distance(pp, p);
+  double err_bound = c.errorBound();
+  double rel_err = err/Norm(p);
+  //double rel_err = abs_err / Norm(p);
   std::cout << "   "
-            << " abs_err=" << abs_err 
-            << " scaled_err=" << (c.getNoiseBound()/c.getRatFactor())
+            << " err=" << err 
+            << " err_bound=" << err_bound
+            << " err_bound/err=" << (err_bound/err)
             << " rel_err=" << rel_err
             //<< "   "
-            << " mag_est=" << c.getPtxtMag()
-            << " mag_act=" << Norm(p_vec)
+            //<< " mag=" << Norm(p)
+            //<< " mag_bound=" << c.getPtxtMag()
             //<< " scale=" << c.getRatFactor()
             << "\n";
+  if (err > err_bound) std::cout << "**** BAD BOUND\n";
 }
 
 #define DEBUG_COMPARE(C, P, M)                                                 \
   do {                                                                         \
     if (verbose) {                                                             \
       CheckCtxt(C, M);                                                         \
-      debugCompare(secretKey, P, C);                                       \
+      debugCompare(secretKey, P, C);                                           \
     }                                                                          \
   } while (0)
+
+
+
+
 
 void testGeneralOps(const PubKey& publicKey,
                     const SecKey& secretKey,
@@ -108,10 +103,10 @@ void testGeneralOps(const PubKey& publicKey,
   p3.random();
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  p0.encrypt(c0, /*mag=*/1.0);
-  p1.encrypt(c1, /*mag=*/1.0);
-  p2.encrypt(c2, /*mag=*/1.0);
-  p3.encrypt(c3, /*mag=*/1.0);
+  p0.encrypt(c0);
+  p1.encrypt(c1);
+  p2.encrypt(c2);
+  p3.encrypt(c3);
 
   HELIB_NTIMER_START(Circuit);
 
@@ -161,6 +156,12 @@ void testGeneralOps(const PubKey& publicKey,
     DEBUG_COMPARE(c0, p0, "c0 *= tmp1");
 
 #if 0
+    runningSums(p0);
+    runningSums(c0);
+    DEBUG_COMPARE(c0, p0, "totalSums");
+#endif
+
+#if 0
     p0 -= 17.5;
     c0 -= 17.5;
     DEBUG_COMPARE(c0, p0, "c0 -= 17.5");
@@ -200,7 +201,7 @@ void testGeneralOps(const PubKey& publicKey,
     DEBUG_COMPARE(tmp3, tmp3_p, "tmp3 = c2 * const2");
 
     p2 *= p3;
-    c2.multiplyBy(c3);
+    c2 *= c3;
     DEBUG_COMPARE(c2, p2, "c2 *= c3");
 
     p2 += tmp3_p;
@@ -215,10 +216,10 @@ void testGeneralOps(const PubKey& publicKey,
       // Check correctness after each round
       PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
 
-      pp0.decrypt(c0, secretKey);
-      pp1.decrypt(c1, secretKey);
-      pp2.decrypt(c2, secretKey);
-      pp3.decrypt(c3, secretKey);
+      pp0.rawDecryptComplex(c0, secretKey);
+      pp1.rawDecryptComplex(c1, secretKey);
+      pp2.rawDecryptComplex(c2, secretKey);
+      pp3.rawDecryptComplex(c3, secretKey);
 
       if (!(pp0 == Approx(p0) && pp1 == Approx(p1) && pp2 == Approx(p2) &&
           pp3 == Approx(p3))) {
@@ -230,12 +231,43 @@ void testGeneralOps(const PubKey& publicKey,
 
   HELIB_NTIMER_STOP(Circuit);
 
-  PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
+  if (verbose) {
+    std::cout << "===============\n";
 
-  pp0.decrypt(c0, secretKey);
-  pp1.decrypt(c1, secretKey);
-  pp2.decrypt(c2, secretKey);
-  pp3.decrypt(c3, secretKey);
+    DEBUG_COMPARE(c0, p0, "c0");
+    DEBUG_COMPARE(c1, p1, "c1");
+    DEBUG_COMPARE(c2, p2, "c2");
+    DEBUG_COMPARE(c3, p3, "c3");
+  }
+
+  PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
+  PtxtArray ppp0(context), ppp1(context), ppp2(context), ppp3(context);
+
+  pp0.decryptReal(c0, secretKey);
+  pp1.decryptReal(c1, secretKey);
+  pp2.decryptReal(c2, secretKey);
+  pp3.decryptReal(c3, secretKey);
+
+  ppp0.rawDecryptReal(c0, secretKey);
+  ppp1.rawDecryptReal(c1, secretKey);
+  ppp2.rawDecryptReal(c2, secretKey);
+  ppp3.rawDecryptReal(c3, secretKey);
+
+  if (verbose) {
+    std::cout << "======== rounded/raw differences\n";
+    std::cout << Distance(pp0, ppp0) << "\n";
+    std::cout << Distance(pp1, ppp1) << "\n";
+    std::cout << Distance(pp2, ppp2) << "\n";
+    std::cout << Distance(pp3, ppp3) << "\n";
+  }
+
+  if (verbose) {
+    std::cout << "======== actual/raw differences\n";
+    std::cout << Distance(p0, ppp0) << "\n";
+    std::cout << Distance(p1, ppp1) << "\n";
+    std::cout << Distance(p2, ppp2) << "\n";
+    std::cout << Distance(p3, ppp3) << "\n";
+  }
 
   if (pp0 == Approx(p0) && pp1 == Approx(p1) && pp2 == Approx(p2) &&
       pp3 == Approx(p3)) 
@@ -311,6 +343,7 @@ int main(int argc, char* argv[])
   addSome1DMatrices(secretKey); // compute key-switching matrices
 
   const PubKey& publicKey = secretKey;
+  //const PubKey publicKey = secretKey;
 
   if (verbose) {
     std::cout << "security=" << context.securityLevel() << std::endl;

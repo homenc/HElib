@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
   Context context(m, p, /*r=*/1, gens, ords);
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
-    context.makeBootstrappable(mvec, /*t=*/0);
+    context.enableBootStrapping(mvec);
   }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {

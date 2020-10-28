@@ -600,29 +600,24 @@ long PubKey::Encrypt(Ctxt& ciphertxt, const zzX& plaintxt, long ptxtSpace) const
 // These two specialisations are here to avoid a circular dependency on
 // EncryptedArray
 template <>
-long PubKey::Encrypt(Ctxt& ciphertxt,
-                     const Ptxt<BGV>& plaintxt,
-                     long ptxtSpace) const
+void PubKey::Encrypt(Ctxt& ciphertxt, const Ptxt<BGV>& plaintxt) const
 {
-  return Encrypt(ciphertxt,
-                 plaintxt.getPolyRepr(),
-                 ptxtSpace,
-                 /*highNoise=*/false);
+  EncodedPtxt eptxt;
+  plaintxt.encode(eptxt);
+  Encrypt(ciphertxt, eptxt);
 }
 
 template <>
-long PubKey::Encrypt(Ctxt& ciphertxt,
-                     const Ptxt<CKKS>& plaintxt,
-                     UNUSED long ptxtSpace) const
+void PubKey::Encrypt(Ctxt& ciphertxt, const Ptxt<CKKS>& plaintxt) const
 {
-  NTL::ZZX poly = plaintxt.getPolyRepr();
-  double f = ciphertxt.getContext().ea->getCx().encode(poly,
-                                                       plaintxt,
-                                                       /*useThisSize*/ -1.0,
-                                                       /*precision*/ -1);
-  CKKSencrypt(ciphertxt, poly, /*useThisSize*/ -1.0, /*scaling*/ f);
-  return 0; // DIRT: For some reason the BGV encrypt returns the ptxtSpace but
-            // CKKS does not have one
+  EncodedPtxt eptxt;
+  plaintxt.encode(eptxt, /*mag=*/NextPow2(Norm(plaintxt.getSlotRepr())));
+  // set mag=2^(ceil(log2(max(Norm(pa),1))))
+  // This hides the actual magnitude somewhat.
+  // Note that Encrypt(Ctxt,EncodedPtxt) does not attempt
+  // any hiding: this left up to the caller.
+  // This logic mimics the logic in the original CKKSencrypt function.
+  Encrypt(ciphertxt, eptxt);
 }
 
 void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
@@ -767,6 +762,10 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
   double mag = eptxt.getMag();
   double scale = eptxt.getScale();
   double err = eptxt.getErr();
+
+  assertTrue(mag > 0, "CKKS encryption: mag <= 0");
+  assertTrue(scale > 0, "CKKS encryption: scale <= 0");
+  assertTrue(err > 0, "CKKS encryption: err <= 0");
 
   long m = context.zMStar.getM();
 
@@ -1100,8 +1099,10 @@ long SecKey::ImportSecKey(const DoubleCRT& sKey,
   return keyID; // return the index where this key is stored
 }
 
-long SecKey::GenSecKey(long hwt, long ptxtSpace, long maxDegKswitch)
+long SecKey::GenSecKey(long ptxtSpace, long maxDegKswitch)
 {
+  long hwt = context.hwt_param;
+
   DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes);
 
   if (hwt > 0) {
@@ -1233,6 +1234,20 @@ void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt) const
 template <>
 void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
 {
+  const Context& context = ciphertxt.getContext();
+  assertTrue(&context == &plaintxt.getContext(),
+             "Decrypt: inconsistent contexts");
+
+  const View& view = context.getDefaultView();
+  std::vector<std::complex<double>> ptxt;
+  view.decrypt(ciphertxt, *this, ptxt);
+  plaintxt.setData(ptxt);
+}
+
+// VJS-NOTE: this is duplicated code...moroever, we
+// eventually need to modify to mitigate against CKKS vulnerability.
+#if 0
+{
   std::vector<std::complex<double>> ptxt;
   NTL::ZZX pp;
   Decrypt(pp, ciphertxt);
@@ -1263,6 +1278,7 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
 
   plaintxt.setData(ptxt);
 }
+#endif
 
 #define DECRYPT_ON_PWFL_BASIS
 

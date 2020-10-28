@@ -63,6 +63,12 @@ public:
   void read(std::istream& str);
   void write(std::ostream& str) const;
 
+  void clear()
+  {
+    sizes.clear();
+    iFFT_cost = -1;
+  }
+
 private:
   std::vector<Entry> sizes;
   long iFFT_cost = -1;

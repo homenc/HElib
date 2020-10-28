@@ -83,6 +83,8 @@ public:
     assertTrue(ctxt.inCanonicalForm(keyID),
                "Ciphertext is not in canonical form");
 
+    ctxt.relin_CKKS_adjust();
+
     // Compute the number of digits that we need and the estimated
     // added noise from switching this ciphertext.
 
@@ -97,8 +99,12 @@ public:
     double logProd = context.logOfProduct(context.specialPrimes);
     noise = ctxt.getNoiseBound() * NTL::xexp(logProd);
 
-    HELIB_STATS_UPDATE("KS-noise-ratio-hoist",
-                       NTL::conv<double>(addedNoise / noise));
+    double ratio = NTL::conv<double>(addedNoise / noise);
+
+    HELIB_STATS_UPDATE("KS-noise-ratio-hoist", ratio);
+    if (ratio > 1) {
+      Warning("KS-noise-ratio-hoist=" + std::to_string(ratio) + "\n");
+    }
     // std::stderr << "*** HOIST INIT\n";
     // fprintf(stderr, "   KS-log-noise-ratio-hoist: %f\n",
     // log(addedNoise/noise)/log(2.0));

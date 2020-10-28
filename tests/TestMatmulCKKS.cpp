@@ -170,8 +170,8 @@ TEST_P(TestMatmulCKKS, vectorToMatrixMultiplication)
   std::vector<double> v(ea.size());
   std::iota(v.begin(), v.end(), 1);
 
-  helib::MatMul_CKKS mat(context, [&v](long i, long j) -> std::complex<double> {
-    return i * v.size() + j;
+  helib::MatMul_CKKS_Complex mat(context, [&v](long i, long j) {
+    return ((i + j) % v.size()) / double(v.size());
   });
   // Note the use of a "lambda": this allows for quite
   // general ways to describe a matrix with minimal fuss
@@ -182,11 +182,11 @@ TEST_P(TestMatmulCKKS, vectorToMatrixMultiplication)
 
   // Encrypt ptxt. We have to supply *some* upper bound on the magnitude
   // of the slots.
-  ptxt.encrypt(ctxt, /*mag=*/helib::Norm(v));
+  ptxt.encrypt(ctxt);
 
   // Perform the linear transformation on the encrypted data
   helib::EncodedMatMul_CKKS emat(mat);
-  emat.upgrade();
+  // emat.upgrade();
   ctxt *= emat;
 
   // We can also do it this way:

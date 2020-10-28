@@ -162,17 +162,7 @@ void rotate(std::vector<std::complex<double>>& p, long amt)
 
 void resetPtxtMag(helib::Ctxt& c, const helib::PtxtArray& p)
 {
-  std::vector<std::complex<double>> pp;
-  p.store(pp);
-  double maxAbs = helib::Norm(pp);
-
-  if (maxAbs < 1.0)
-    maxAbs = 1.0;
-  else
-    maxAbs = std::pow(
-        2,
-        std::ceil(std::log(maxAbs) / std::log(2))); // next power of two
-
+  double maxAbs = helib::NextPow2(helib::Norm(p));
   c.setPtxtMag(NTL::xdouble(maxAbs));
 }
 
@@ -181,24 +171,22 @@ void debugCompare(const helib::SecKey& sk,
                   const helib::Ctxt& c)
 {
   helib::PtxtArray pp(p.getView());
-  pp.decrypt(c, sk);
+  pp.rawDecryptComplex(c, sk);
 
-  std::vector<std::complex<double>> pp_vec, p_vec;
-  pp.store(pp_vec);
-  p.store(p_vec);
-  double abs_err = helib::Distance(pp_vec, p_vec);
-  double rel_err = abs_err / helib::Norm(p_vec);
-  if (helib_test::verbose) {
-    std::cout << "   "
-              << " abs_err=" << abs_err
-              << " scaled_err=" << (c.getNoiseBound() / c.getRatFactor())
-              << " rel_err="
-              << rel_err
-              //<< "   "
-              << " mag_est=" << c.getPtxtMag() << " mag_act="
-              << helib::Norm(p_vec)
-              //<< " scale=" << c.getRatFactor()
-              << "\n";
+  double err = helib::Distance(pp, p);
+  double err_bound = c.errorBound();
+  double rel_err = err / helib::Norm(p);
+  std::cout << "   "
+            << " err=" << err << " err_bound=" << err_bound
+            << " err_bound/err=" << (err_bound / err) << " rel_err="
+            << rel_err
+            //<< "   "
+            << " mag=" << helib::Norm(p) << " mag_bound="
+            << c.getPtxtMag()
+            //<< " scale=" << c.getRatFactor()
+            << "\n";
+  if (err > err_bound) {
+    std::cout << "**** BAD BOUND\n";
   }
 }
 
@@ -214,7 +202,7 @@ protected:
 
   helib::Context context;
   helib::SecKey secretKey;
-  const helib::PubKey publicKey;
+  const helib::PubKey& publicKey;
   const helib::EncryptedArrayCx& ea;
 
   GTestApproxNums() :
@@ -277,7 +265,7 @@ TEST_P(GTestApproxNums, basicArithmeticWorks)
   ea.encrypt(c2, publicKey, vd2, /*size=*/1.0);
 
   // Test - Multiplication
-  c1 *= c2;
+  c1.multiplyBy(c2);
   for (long i = 0; i < helib::lsize(vd1); i++)
     vd1[i] *= vd2[i];
 
@@ -615,10 +603,10 @@ TEST_P(GTestApproxNums, generalOpsWorkWithNewAPI)
   p3.random();
 
   helib::Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  p0.encrypt(c0, /*mag=*/1.0);
-  p1.encrypt(c1, /*mag=*/1.0);
-  p2.encrypt(c2, /*mag=*/1.0);
-  p3.encrypt(c3, /*mag=*/1.0);
+  p0.encrypt(c0);
+  p1.encrypt(c1);
+  p2.encrypt(c2);
+  p3.encrypt(c3);
 
   for (long i = 0; i < R; i++) {
 
@@ -686,7 +674,7 @@ TEST_P(GTestApproxNums, generalOpsWorkWithNewAPI)
     debugCompare(secretKey, tmp3_p, tmp3);
 
     p2 *= p3;
-    c2.multiplyBy(c3);
+    c2 *= c3;
     debugCompare(secretKey, p2, c2);
 
     p2 += tmp3_p;
@@ -701,10 +689,10 @@ TEST_P(GTestApproxNums, generalOpsWorkWithNewAPI)
       // Check correctness after each round
       helib::PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
 
-      pp0.decrypt(c0, secretKey);
-      pp1.decrypt(c1, secretKey);
-      pp2.decrypt(c2, secretKey);
-      pp3.decrypt(c3, secretKey);
+      pp0.rawDecryptComplex(c0, secretKey);
+      pp1.rawDecryptComplex(c1, secretKey);
+      pp2.rawDecryptComplex(c2, secretKey);
+      pp3.rawDecryptComplex(c3, secretKey);
 
       EXPECT_TRUE(pp0 == helib::Approx(p0)) << "Round " << i;
       EXPECT_TRUE(pp1 == helib::Approx(p1)) << "Round " << i;
@@ -714,11 +702,31 @@ TEST_P(GTestApproxNums, generalOpsWorkWithNewAPI)
   }
 
   helib::PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
+  helib::PtxtArray ppp0(context), ppp1(context), ppp2(context), ppp3(context);
 
-  pp0.decrypt(c0, secretKey);
-  pp1.decrypt(c1, secretKey);
-  pp2.decrypt(c2, secretKey);
-  pp3.decrypt(c3, secretKey);
+  pp0.decryptReal(c0, secretKey);
+  pp1.decryptReal(c1, secretKey);
+  pp2.decryptReal(c2, secretKey);
+  pp3.decryptReal(c3, secretKey);
+
+  if (helib_test::verbose) {
+    ppp0.rawDecryptReal(c0, secretKey);
+    ppp1.rawDecryptReal(c1, secretKey);
+    ppp2.rawDecryptReal(c2, secretKey);
+    ppp3.rawDecryptReal(c3, secretKey);
+
+    std::cout << "======= rounded/raw differences\n"
+              << helib::Distance(pp0, ppp0) << "\n"
+              << helib::Distance(pp1, ppp1) << "\n"
+              << helib::Distance(pp2, ppp2) << "\n"
+              << helib::Distance(pp3, ppp3) << "\n";
+
+    std::cout << "======= actual/raw differences\n"
+              << helib::Distance(p0, ppp0) << "\n"
+              << helib::Distance(p1, ppp1) << "\n"
+              << helib::Distance(p2, ppp2) << "\n"
+              << helib::Distance(p3, ppp3) << "\n";
+  }
 
   EXPECT_TRUE(pp0 == helib::Approx(p0));
   EXPECT_TRUE(pp1 == helib::Approx(p1));

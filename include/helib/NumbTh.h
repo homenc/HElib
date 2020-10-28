@@ -1042,6 +1042,11 @@ bool operator!=(const T& x, const ApproxClass<U>& y)
   return !approx_equal(x, y.val, y.tolerance, y.floor);
 }
 
+//! @brief Compute next power of two in floating point
+//! NextPow2(x) returns 1 if x < 1, and otherwise returns
+//! 2^(ceil(log2(x)))
+double NextPow2(double x);
+
 //! This should go in NTL some day...
 //! Just call as make_lazy(obj, ...) to initialize a lazy object
 //! via a call to a constructor T(...)

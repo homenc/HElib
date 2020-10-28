@@ -27,7 +27,12 @@
 
 #include <NTL/Lazy.h>
 
+#define FHE_DISABLE_CONTEXT_CONSTRUCTOR
+
 namespace helib {
+
+constexpr int MIN_SK_HWT = 120;
+constexpr int BOOT_DFLT_SK_HWT = MIN_SK_HWT;
 
 /**
  * @brief An estimate for the security-level. This has a lower bound of 0.
@@ -57,10 +62,11 @@ namespace helib {
  *   + sparse keys (weight=120): security ~ 2.4*X  +19
  * ```
  */
+
 inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
 {
-  if (hwt < 0 || (hwt > 0 && hwt < 120)) {
-    throw LogicError("Cannot estimate security for keys of weight<120");
+  if (hwt < 0 || (hwt > 0 && hwt < MIN_SK_HWT)) {
+    return 0;
   }
 
   // clang-format off
@@ -120,6 +126,11 @@ long FindM(long k,
 
 class EncryptedArray;
 struct PolyModRing;
+
+// Forward declaration of ContextBuilder
+template <typename SCHEME>
+class ContextBuilder;
+
 /**
  * @class Context
  * @brief Maintaining the parameters
@@ -131,11 +142,6 @@ class Context
   // primes only grows and no prime is ever modified or removed.
 
 public:
-  // Context is meant for convenience, not encapsulation: Most data
-  // members are public and can be initialized by the application program.
-  // VJS-FIXME: it is time to move away from this philosophy
-
-  //============================================================
   // Here are some "getter" methods that give direct
   // access to important parameters.  These are for convenience,
   // as well as allowing for future re-organization.
@@ -178,7 +184,6 @@ public:
   // These are NOT invariant: it is possible to work
   // with View objects that use a different PAlgebra object.
 
-  // FIXME: This should be disabled for CKKS.
   /**
    * @brief Getter method for the default `r` value of the created `context`.
    * @return The `r` value representing the Hensel lifting for `BGV` or the bit
@@ -188,7 +193,6 @@ public:
    **/
   long getDefaultR() const { return alMod.getR(); }
 
-  // FIXME: This should be disabled for CKKS.
   /**
    * @brief Getter method for the default `p^r` value of the created `context`.
    * @return The raised plaintext modulus `p^r`.
@@ -197,7 +201,6 @@ public:
    **/
   long getDefaultPPowR() const { return alMod.getPPowR(); }
 
-  // FIXME: This should be disabled for BGV.
   // synonymn for getDefaultR().
   // this is used in various corner cases in CKKS where
   // we really need some default precisiion parameter.
@@ -211,6 +214,8 @@ public:
    * that use different `PAlgebra` objects.
    **/
   long getDefaultPrecision() const { return alMod.getR(); }
+
+  bool isCKKS() const { return alMod.getTag() == PA_cx_tag; }
 
   //============================================================
 
@@ -408,11 +413,9 @@ public:
 
   //! NOTE: this is still valid even when m is a power of 2
 
-  double stdDevForRecryption(long skHwt = 0) const
+  double stdDevForRecryption() const
   {
-    if (!skHwt)
-      skHwt = rcData.skHwt;
-    // the default reverts to rcData.skHwt, *not* rcData.defSkHwt
+    long skHwt = hwt_param;
 
     long k = zMStar.getNFactors();
     // number of prime factors of m
@@ -425,12 +428,13 @@ public:
     return std::sqrt(mrat * double(skHwt) * double(1L << k) / 3.0) * 0.5;
   }
 
-  double boundForRecryption(long skHwt = 0) const
+  double boundForRecryption() const
   {
     double c_m = zMStar.get_cM();
     // multiply by this fudge factor
+    // VJS-FIXME: this fudge factor has to go
 
-    return 0.5 + c_m * scale * stdDevForRecryption(skHwt);
+    return 0.5 + c_m * scale * stdDevForRecryption();
   }
 
   /**
@@ -477,6 +481,16 @@ public:
   // includes both thin and thick
   ThinRecryptData rcData;
 
+  //=======================================
+
+  // These parameters are currently set by buildPrimeChain
+
+  long hwt_param = 0; // Hamming weight of all keys associated with context
+                      // 0 means "dense"
+
+  long e_param = 0; // parameters specific to bootstrapping
+  long ePrime_param = 0;
+
   /******************************************************************/
   // constructor
   /**
@@ -502,6 +516,25 @@ public:
    **/
   ~Context() = default;
 
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
+  /**
+   * @brief Default copy constructor.
+   * @param other `Context` to copy.
+   **/
+  Context(const Context& other) = delete;
+
+  /**
+   * @brief Default move constructor.
+   * @param other `Context` to copy.
+   **/
+  Context(Context&& other) = delete;
+
+  template <typename SCHEME>
+  explicit Context(const ContextBuilder<SCHEME>&);
+  // Marked explicit to avoid dangerous implicit conversions.
+
+#else
+
   /**
    * @brief Default copy constructor.
    * @param other `Context` to copy.
@@ -513,27 +546,29 @@ public:
    * @param other `Context` to copy.
    **/
   Context(Context&& other);
+#endif
+
   // Deleted assignment operators.
   Context& operator=(const Context& other) = delete;
   Context& operator=(Context&& other) = delete;
 
-  // FIXME: Description for build_cache. I've dug through the code and all I
-  // can see is it is used in EvalMap to decide on if we want to upgrade
-  // encoded constants from zzX for DoubleCRT. What this does I do not know.
   /**
    * @brief Initialises the recryption data.
    * @param mvec A `std::vector` of unique prime factors of `m`.
-   * @param skWht The Hamming weight for the secret key.
-   * @param build_cache Default is false.
+   * @param build_cache Flag for building a cache for improved efficiency.
+   * Default is false.
    * @param alsoThick Flag for initialising additional information needed for
    * thick bootstrapping. Default is true.
    **/
-  void makeBootstrappable(const NTL::Vec<long>& mvec,
-                          long skWht = 0,
-                          bool build_cache = false,
-                          bool alsoThick = true)
+  void enableBootStrapping(const NTL::Vec<long>& mvec,
+                           bool build_cache = false,
+                           bool alsoThick = true)
   {
-    rcData.init(*this, mvec, alsoThick, skWht, build_cache);
+    assertTrue(e_param > 0,
+               "enableBootStrapping invoked but willBeBootstrappable "
+               "not set in buildModChain");
+
+    rcData.init(*this, mvec, alsoThick, build_cache);
   }
 
   /**
@@ -709,7 +744,7 @@ public:
    * Let s=3.2 if m is a power of two, or s=3.2*sqrt(m) otherwise. For the
    * estimator we use alpha=s/q (so log2AlphaInv = log_2(q/s)), and n=phi(m).
    */
-  double securityLevel(int hwt = 0) const
+  double securityLevel() const
   {
     IndexSet primes = ctxtPrimes | specialPrimes;
     if (primes.card() == 0) {
@@ -722,7 +757,7 @@ public:
       s *= sqrt(zMStar.getM());
     }
     double log2AlphaInv = (logOfProduct(primes) - log(s)) / log(2.0);
-    return lweEstimateSecurity(zMStar.getPhiM(), log2AlphaInv, hwt);
+    return lweEstimateSecurity(zMStar.getPhiM(), log2AlphaInv, hwt_param);
   }
 
   /**
@@ -831,6 +866,22 @@ public:
 
   friend void writeContextBinary(std::ostream& str, const Context& context);
   friend void readContextBinary(std::istream& str, Context& context);
+
+  // internal function to undo buldModChain...used for parameter
+  // generation programs
+
+  void clearModChain()
+  {
+    moduli.clear();
+    ctxtPrimes.clear();
+    specialPrimes.clear();
+    smallPrimes.clear();
+    modSizes.clear();
+    digits.clear();
+    hwt_param = 0;
+    e_param = 0;
+    ePrime_param = 0;
+  }
 };
 
 //! @brief write [m p r gens ords] data
@@ -861,13 +912,6 @@ void readContextBinary(std::istream& str, Context& context);
 
 // Build modulus chain with nBits worth of ctxt primes,
 // using nDgts digits in key-switching.
-// The willBeBootstrappable and skHwt parameters are needed to get around some
-// some circularity when making the context boostrappable.
-// If you later call context.makeBootstrappable with a given value
-// of skHwt, you should first buildModChain with willBeBootstrappable
-// set to true and the given value of skHwt.
-// FIXME: We should really have a simpler way to do this.
-// resolution ... FIXME
 
 /**
  * @brief Build the modulus chain for given `Context` object.
@@ -893,10 +937,6 @@ void buildModChain(Context& context,
 // should be called if after you build the mod chain in some way
 // *other* than calling buildModChain.
 void endBuildModChain(Context& context);
-
-// Forward declaration of ContextBuilder
-template <typename SCHEME>
-class ContextBuilder;
 
 /**
  * @brief `ostream` operator for serializing the `ContextBuilder` object.
@@ -1174,7 +1214,15 @@ public:
    * `ContextBuilder` object.
    * @return A `Context` object.
    **/
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
+
+  // compatibility interface
+  ContextBuilder& build() { return *this; }
+
+  friend class Context;
+#else
   Context build() const;
+#endif
 
   friend std::ostream& operator<<<SCHEME>(std::ostream& os,
                                           const ContextBuilder& cb);

@@ -1042,6 +1042,45 @@ void encode(const EncryptedArray& ea, PlaintextArray& pa, double val)
 //=============================================================================
 
 template <typename type>
+class randomReal_pa_impl
+{
+public:
+  // TODO: The following may be removed as its injected fields are never used
+  // PA_INJECT(type)
+
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa)
+  {
+    // TODO: The following may be removed as the function is not implemented
+    // PA_BOILER(type)
+
+    throw LogicError("function not implemented");
+  }
+};
+
+template <>
+class randomReal_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(PA_cx)
+
+    for (long i = 0; i < n; i++)
+      data[i] = RandomReal();
+  }
+};
+
+void randomReal(const EncryptedArray& ea, PlaintextArray& pa)
+{
+  ea.dispatch<randomReal_pa_impl>(pa);
+}
+
+//=============================================================================
+
+template <typename type>
 class random_pa_impl
 {
 public:
@@ -1062,6 +1101,46 @@ class random_pa_impl<PA_cx>
 public:
   PA_INJECT(PA_cx)
 
+  // same as randomReal
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(PA_cx)
+
+    for (long i = 0; i < n; i++)
+      data[i] = RandomReal();
+  }
+};
+
+void random(const EncryptedArray& ea, PlaintextArray& pa)
+{
+  ea.dispatch<random_pa_impl>(pa);
+}
+
+//=============================================================================
+
+template <typename type>
+class randomComplex_pa_impl
+{
+public:
+  // TODO: The following may be removed as its injected fields are never used
+  // PA_INJECT(type)
+
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa)
+  {
+    // TODO: The following may be removed as the function is not implemented
+    // PA_BOILER(type)
+
+    throw LogicError("function not implemented");
+  }
+};
+
+template <>
+class randomComplex_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
   static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
   {
     PA_BOILER(PA_cx)
@@ -1071,9 +1150,9 @@ public:
   }
 };
 
-void random(const EncryptedArray& ea, PlaintextArray& pa)
+void randomComplex(const EncryptedArray& ea, PlaintextArray& pa)
 {
-  ea.dispatch<random_pa_impl>(pa);
+  ea.dispatch<randomComplex_pa_impl>(pa);
 }
 
 //=============================================================================
@@ -1228,20 +1307,6 @@ public:
     convert(odata, other);
     res = (data == odata);
   }
-
-  // exact comparison...not very useful
-  static void apply(const EncryptedArrayDerived<type>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const PlaintextArray& other,
-                    UNUSED double tolerance,
-                    UNUSED double floor)
-  {
-    CPA_BOILER(type)
-
-    const std::vector<RX>& odata = other.getData<type>();
-    res = (data == odata);
-  }
 };
 
 template <>
@@ -1250,7 +1315,7 @@ class equals_pa_impl<PA_cx>
 public:
   PA_INJECT(PA_cx)
 
-  // exact comparison...nor very useful
+  // exact comparison...not very useful
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
                     bool& res,
                     const PlaintextArray& pa,
@@ -1276,20 +1341,6 @@ public:
                     UNUSED const std::vector<NTL::ZZX>& other)
   {
     throw LogicError("function not implemented");
-  }
-
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const PlaintextArray& other,
-                    double tolerance,
-                    double floor)
-  {
-    CPA_BOILER(PA_cx)
-
-    const std::vector<RX>& odata = other.getData<PA_cx>();
-    res = approx_equal(data, odata, tolerance, floor);
-    // defined in NumTh.h
   }
 };
 
@@ -1317,28 +1368,6 @@ bool equals(const EncryptedArray& ea,
 {
   bool res;
   ea.dispatch<equals_pa_impl>(res, pa, other);
-  return res;
-}
-
-bool approx_equal(const EncryptedArray& ea,
-                  const PlaintextArray& pa,
-                  const PlaintextArray& other,
-                  double tolerance,
-                  double floor)
-{
-  bool res;
-  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
-  return res;
-}
-
-bool equals(const EncryptedArray& ea,
-            const PlaintextArray& pa,
-            const PlaintextArray& other,
-            double tolerance,
-            double floor)
-{
-  bool res;
-  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
   return res;
 }
 
@@ -1621,6 +1650,141 @@ void print(const EncryptedArray& ea, std::ostream& s, const PlaintextArray& pa)
 {
   ea.dispatch<print_pa_impl>(s, pa);
 }
+
+//=============================================================================
+
+template <typename type>
+class Norm_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    double& res,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(type)
+
+    res = 0;
+    for (long i = 0; i < n; i++)
+      if (data[i] != 0) {
+        res = 1;
+        return;
+      }
+  }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    double& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other)
+  {
+    CPA_BOILER(type)
+
+    const std::vector<RX>& odata = other.getData<type>();
+
+    res = 0;
+    for (long i = 0; i < n; i++)
+      if (data[i] != odata[i]) {
+        res = 1;
+        return;
+      }
+  }
+};
+
+template <>
+class Norm_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    double& res,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(PA_cx)
+
+    res = Norm(data);
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    double& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other)
+  {
+    CPA_BOILER(PA_cx)
+
+    const std::vector<RX>& odata = other.getData<PA_cx>();
+
+    res = Distance(data, odata);
+  }
+};
+
+double Norm(const EncryptedArray& ea, const PlaintextArray& pa)
+{
+  double res;
+  ea.dispatch<Norm_pa_impl>(res, pa);
+  return res;
+}
+
+double Distance(const EncryptedArray& ea,
+                const PlaintextArray& pa,
+                const PlaintextArray& other)
+{
+  double res;
+  ea.dispatch<Norm_pa_impl>(res, pa, other);
+  return res;
+}
+
+//=============================================================================
+
+template <typename type>
+class totalSums_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(type)
+
+    RX sum(0);
+
+    for (long i = 0; i < n; i++)
+      sum += data[i];
+
+    for (long i = 0; i < n; i++)
+      data[i] = sum;
+  }
+};
+
+void totalSums(const EncryptedArray& ea, PlaintextArray& pa)
+{
+  ea.dispatch<totalSums_pa_impl>(pa);
+}
+
+//=============================================================================
+
+template <typename type>
+class runningSums_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(type)
+
+    for (long i = 1; i < n; i++)
+      data[i] += data[i - 1];
+  }
+};
+
+void runningSums(const EncryptedArray& ea, PlaintextArray& pa)
+{
+  ea.dispatch<runningSums_pa_impl>(pa);
+}
+
+//=============================================================================
 
 // Explicit instantiation
 

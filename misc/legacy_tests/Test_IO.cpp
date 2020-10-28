@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
       contexts[i]->zMStar.printout();
 
     buildModChain(*contexts[i], L, c);  // Set the modulus chain
-    if (mm==0 && m==1023) contexts[i]->makeBootstrappable(mvec);
+    if (mm==0 && m==1023) contexts[i]->enableBootStrapping(mvec);
 
     // Output the Context to file
     writeContextBase(keyFile, *contexts[i]);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     keyFile << *contexts[i] << endl;
 
     sKeys[i].reset(new SecKey(*contexts[i]));
-    sKeys[i]->GenSecKey(0,ptxtSpace); // A +-1/0 secret key
+    sKeys[i]->GenSecKey(); // A +-1/0 secret key
     addSome1DMatrices(*sKeys[i]);// compute key-switching matrices that we need
     const PubKey publicKey = *sKeys[i];
     eas[i].reset(new EncryptedArray(*contexts[i]));
