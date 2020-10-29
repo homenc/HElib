@@ -14,6 +14,8 @@
 #include <functional>
 #include <helib/Matrix.h>
 #include <helib/helib.h>
+#include <helib/debugging.h>
+#include <helib/fhe_stats.h>
 
 #include "test_common.h"
 #include "gtest/gtest.h"
@@ -196,6 +198,16 @@ protected:
       pk((sk.GenSecKey(), sk)),
       ea(*context.ea)
   {}
+
+  virtual void SetUp() override
+  {
+    helib::setupDebugGlobals(&sk, context.ea);
+    if (!helib_test::noPrint) {
+      helib::fhe_stats = true;
+    }
+  };
+
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 namespace {
