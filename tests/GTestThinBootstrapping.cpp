@@ -257,10 +257,9 @@ protected:
       std::cout << "scale=" << context.scale << std::endl;
     }
 
-    context.makeBootstrappable(mvec,
-                               /*t=*/skHwt,
-                               useCache,
-                               /*alsoThick=*/false);
+    context.enableBootStrapping(mvec,
+                                useCache,
+                                /*alsoThick=*/false);
     // save time...disable some fat boot precomputation
 
     // if (skHwt>0) context.rcData.skHwt = skHwt;
@@ -283,7 +282,7 @@ protected:
     double t = -NTL::GetTime();
     if (!helib_test::noPrint)
       std::cout << "Generating keys, " << std::flush;
-    secKey.GenSecKey(64); // A Hamming-weight-64 secret key
+    secKey.GenSecKey();
     helib::addSome1DMatrices(
         secKey); // compute key-switching matrices that we need
     helib::addFrbMatrices(secKey);

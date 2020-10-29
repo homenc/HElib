@@ -26,6 +26,7 @@
 
 using namespace std;
 
+
 struct CKKSparams {
   int m, L, c;
   int nCtxtPrimes;
@@ -59,8 +60,10 @@ struct CKKSparams {
     this->L = 0;
     this->ctxtBits = 0;
     for (int L2try=totalBits; L2try>40; --L2try) {
-      // copy the empty context and build a chain for the copy
-      helib::Context cntxt = theContext;     // Can we copy contexts?
+      // create a new context and build a chain for it
+      //helib::Context cntxt(theM, /*p=*/-1, /*r=*/16);
+      helib::Context& cntxt = theContext;
+      cntxt.clearModChain();
       helib::buildModChain(cntxt, L2try, c2try);
       if (cntxt.securityLevel() >= security) {
         this->ctxtBits = cntxt.logOfProduct(cntxt.ctxtPrimes)/log(2.0);
@@ -76,7 +79,9 @@ struct CKKSparams {
     // reducing L always reduces the actual number of bits
     int betterL = 0;
     for (int delta=1; delta<10; delta++) {
-      helib::Context cntxt = theContext;
+      //helib::Context cntxt(theM, /*p=*/-1, /*r=*/16);
+      helib::Context& cntxt = theContext;
+      cntxt.clearModChain();
       helib::buildModChain(cntxt, this->L -delta, c2try);
       double realBits = cntxt.logOfProduct(cntxt.ctxtPrimes)/log(2.0);
       if (realBits > this->ctxtBits) {

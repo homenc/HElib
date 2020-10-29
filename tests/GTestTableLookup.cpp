@@ -184,7 +184,7 @@ protected:
     printPreContextPrepDiagnostics(bitSize, outSize, nTests, nthreads);
     helib::buildModChain(context, L, c, /*willBeBootstrappable*/ bootstrap);
     if (bootstrap) {
-      context.makeBootstrappable(mvec, /*t=*/0);
+      context.enableBootStrapping(mvec);
     }
     helib::buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
     printPostContextPrepDiagnostics(context, L);

@@ -500,6 +500,9 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
                          double ptxtSize,
                          double scaling) const
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
 
   if (ptxtSize <= 0)
@@ -537,7 +540,7 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
 
   NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
-  // VJS-FIXME: why don't the error bounds include the encoding error?
+  // VJS-NOTE: why don't the error bounds include the encoding error?
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2() == 0) // not power of two
@@ -597,29 +600,257 @@ long PubKey::Encrypt(Ctxt& ciphertxt, const zzX& plaintxt, long ptxtSpace) const
 // These two specialisations are here to avoid a circular dependency on
 // EncryptedArray
 template <>
-long PubKey::Encrypt(Ctxt& ciphertxt,
-                     const Ptxt<BGV>& plaintxt,
-                     long ptxtSpace) const
+void PubKey::Encrypt(Ctxt& ciphertxt, const Ptxt<BGV>& plaintxt) const
 {
-  return Encrypt(ciphertxt,
-                 plaintxt.getPolyRepr(),
-                 ptxtSpace,
-                 /*highNoise=*/false);
+  EncodedPtxt eptxt;
+  plaintxt.encode(eptxt);
+  Encrypt(ciphertxt, eptxt);
 }
 
 template <>
-long PubKey::Encrypt(Ctxt& ciphertxt,
-                     const Ptxt<CKKS>& plaintxt,
-                     UNUSED long ptxtSpace) const
+void PubKey::Encrypt(Ctxt& ciphertxt, const Ptxt<CKKS>& plaintxt) const
 {
-  NTL::ZZX poly = plaintxt.getPolyRepr();
-  double f = ciphertxt.getContext().ea->getCx().encode(poly,
-                                                       plaintxt,
-                                                       /*useThisSize*/ -1.0,
-                                                       /*precision*/ -1);
-  CKKSencrypt(ciphertxt, poly, /*useThisSize*/ -1.0, /*scaling*/ f);
-  return 0; // DIRT: For some reason the BGV encrypt returns the ptxtSpace but
-            // CKKS does not have one
+  EncodedPtxt eptxt;
+  plaintxt.encode(eptxt, /*mag=*/NextPow2(Norm(plaintxt.getSlotRepr())));
+  // set mag=2^(ceil(log2(max(Norm(pa),1))))
+  // This hides the actual magnitude somewhat.
+  // Note that Encrypt(Ctxt,EncodedPtxt) does not attempt
+  // any hiding: this left up to the caller.
+  // This logic mimics the logic in the original CKKSencrypt function.
+  Encrypt(ciphertxt, eptxt);
+}
+
+void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
+{
+  HELIB_TIMER_START;
+
+  assertTrue(!isCKKS(), "Encrypt: mismatched BGV ptxt / CKKS ctxt");
+  assertEq(this, &ctxt.pubKey, "Encrypt: public key mismatch");
+  assertEq(&context, &eptxt.getContext(), "Encrypt: context mismatch");
+
+  long ptxtSpace = eptxt.getPtxtSpace();
+  NTL::ZZX ptxt;
+
+  convert(ptxt, eptxt.getPoly());
+
+  // The rest of the code is copy/pasted from the
+  // original Encrypt code, except that for now, highNoise
+  // is not implemented.  We can put it back if necessary.
+  // We may eventually want to completely deprecate the original
+  // Encrypt code, which is why it is copy/pasted for now.
+  // We could also just invoke
+  //    Encrypt(ctxt, ptxt, ptxtSpace, /*highNoise=*/false);
+  // at this point for the same effect.
+
+  // VJS-FIXME: I really should get rid of the unnecessary
+  // connversions from zzX to ZZX...I've added a zzX version
+  // of balanced_mulMod...but I also need zzX versions
+  // of DoubleCRT += and friends.
+
+  if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mismatch
+    ptxtSpace = NTL::GCD(ptxtSpace, pubEncrKey.ptxtSpace);
+    if (ptxtSpace <= 1)
+      throw RuntimeError("Plaintext-space mismatch on encryption");
+  }
+
+  // generate a random encryption of zero from the public encryption key
+  ctxt = pubEncrKey; // already an encryption of zero, just not a random one
+                     // ctxt with two parts, each with all the ctxtPrimes
+  ctxt.noiseBound = 0;
+
+  // choose a random small scalar r and a small random error vector (e0,e1),
+  // then set ctxt = r*pk + p*(e0,e1) + (ptxt,0),
+  // where pk = pubEncrKey, and p = ptxtSpace.
+
+  // The resulting ciphertext decrypts to
+  //   r*<sk,pk> + p*(e0 + sk1*e1) + ptxt,
+  // where sk = (1, sk1) is the secret key.
+  // This leads to a noise bound of:
+  //   r_bound*pubEncrKey.noiseBound
+  //     + p*e0_bound + p*e1_bound*getSKeyBound()
+  //     + ptxt_bound
+  //  Here, r_bound, e0_bound, and e1_bound are values
+  //  returned by the corresponding sampling routines.
+  //  ptxt_bound is somewhat heuristically set assuming
+  //  that the coefficients of the ciphertext are uniformly
+  //  and independently chosen from the interval [-p/2, p/2].
+
+  DoubleCRT e(context, context.ctxtPrimes);
+  DoubleCRT r(context, context.ctxtPrimes);
+  double r_bound = r.sampleSmallBounded();
+
+  ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
+
+  // std::cerr << "*** r_bound*pubEncrKey.noiseBound " << r_bound *
+  // pubEncrKey.noiseBound << "\n";
+
+  double stdev = to_double(context.stdev);
+  if (context.zMStar.getPow2() == 0) // not power of two
+    stdev *= sqrt(context.zMStar.getM());
+
+  for (size_t i = 0; i < ctxt.parts.size(); i++) { // add noise to all the parts
+    ctxt.parts[i] *= r;
+    NTL::xdouble e_bound;
+
+    e_bound = e.sampleGaussianBounded(stdev);
+
+    e *= ptxtSpace;
+    e_bound *= ptxtSpace;
+
+    if (i == 1) {
+      e_bound *= getSKeyBound(ctxt.parts[i].skHandle.getSecretKeyID());
+    }
+
+    ctxt.parts[i] += e;
+    ctxt.noiseBound += e_bound;
+
+    // std::cerr << "*** e_bound " << e_bound << "\n";
+  }
+
+  // add in the plaintext
+  // FIXME: we should really randomize ptxt, so that each coefficient
+  //    has expected value 0
+  // NOTE: This relies on the first part, ctxt[0], to have handle to 1
+
+  // This code sequence could be optimized, but there is no point
+  long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
+  NTL::ZZX ptxt_fixed;
+  balanced_MulMod(ptxt_fixed, ptxt, QmodP, ptxtSpace);
+  ctxt.parts[0] += ptxt_fixed;
+
+  // NOTE: this is a heuristic, as the ptxt is not really random.
+  // although, when ptxtSpace == 2, the balanced_MulMod will
+  // randomize it
+  double ptxt_bound =
+      context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+
+  // FIXME: for now, we print out a warning, but we can consider
+  // implementing a more robust randomization and rejection sampling
+  // strategy.
+  double ptxt_sz =
+      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+
+  if (ptxt_sz > ptxt_bound) {
+    Warning("noise bound exceeded in encryption");
+  }
+
+  double ptxt_rat = ptxt_sz / ptxt_bound;
+  HELIB_STATS_UPDATE("ptxt_rat", ptxt_rat);
+
+  ctxt.noiseBound += ptxt_bound;
+
+  // std::cerr << "*** ptxt_bound " << ptxt_bound << "\n";
+
+  // fill in the other ciphertext data members
+  ctxt.ptxtSpace = ptxtSpace;
+  ctxt.intFactor = 1;
+  ctxt.ratFactor = ctxt.ptxtMag = 1.0;
+
+  // std::cerr << "*** ctxt.noiseBound " << ctxt.noiseBound << "\n";
+
+  // CheckCtxt(ctxt, "after encryption");
+}
+
+void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
+{
+  assertTrue(isCKKS(), "Encrypt: mismatched CKKS ptxt / BGV ctxt");
+  assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
+  assertEq(&context, &eptxt.getContext(), "Encrypt: context mismatch");
+
+  NTL::ZZX ptxt;
+  convert(ptxt, eptxt.getPoly());
+  double mag = eptxt.getMag();
+  double scale = eptxt.getScale();
+  double err = eptxt.getErr();
+
+  assertTrue(mag > 0, "CKKS encryption: mag <= 0");
+  assertTrue(scale > 0, "CKKS encryption: scale <= 0");
+  assertTrue(err > 0, "CKKS encryption: err <= 0");
+
+  long m = context.zMStar.getM();
+
+  // generate a random encryption of zero from the public encryption key
+  ctxt = pubEncrKey; // already an encryption of zero, just not a random one
+
+  // choose a random small scalar r and a small random error vector
+  // (e0,e1), then set ctxt = r*pk + (e0,e1) + (ef*ptxt,0), where
+  // pk = pubEncrKey, and ef (the "extra factor") is described below
+
+  // The resulting ciphertext decrypts to
+  //   r*<sk,pk> + e0 + sk1*e1 + ef*ptxt,
+  // where sk = (1,s) is the secret key.
+  // So the noise added to ptxt by the encryption process is
+  //    error_bound = r_bound*pubEncrKey.noiseBound
+  //                  + e0_bound + e1_bound*getSKeyBound()
+  // Here, r_bound, e0_bound, and e1_bound are values returned by the
+  // corresponding sampling routines.
+  //
+  // The input ptxt is already scaled by a factor f=scale, and is being
+  // further scaled by the extra factor ef, so ef*f is the new scaling
+  // factor. The extra factor ef is set as ceil(error_bound/err),
+  // so that we have error_bound/(ef*f) < err/fac....that is,
+  // the scaled noise added by encryption is less than the scaled
+  // noise already present in the encoded ptxt.
+
+  DoubleCRT e(context, context.ctxtPrimes);
+  DoubleCRT r(context, context.ctxtPrimes);
+
+  double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
+
+  NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
+
+  double stdev = to_double(context.stdev);
+
+  // VJS-NOTE: this should never happen for CKKS
+  if (context.zMStar.getPow2() == 0) // not power of two
+    stdev *= sqrt(m);
+
+  for (size_t i = 0; i < ctxt.parts.size(); i++) {
+    // add noise to all the parts
+
+    ctxt.parts[i] *= r;
+
+    double e_bound = e.sampleGaussianBounded(stdev);
+    // zero-mean Gaussian, sigma=stdev
+
+    ctxt.parts[i] += e;
+    if (i == 1) {
+      e_bound *= getSKeyBound(ctxt.parts[i].skHandle.getSecretKeyID());
+    }
+    error_bound += e_bound;
+  }
+
+  // Compute the extra scaling factor, if needed
+
+  // VJS-NOTE: note the new logic for computing ef...
+  // see comment above.
+  long ef = NTL::conv<long>(ceil(error_bound / err));
+
+  if (ef > 1) { // scale up some more
+    ctxt.parts[0] += ptxt * ef;
+    scale *= ef;
+    err *= ef;
+  } else { // no need for extra scaling
+    ctxt.parts[0] += ptxt;
+  }
+
+  // VJS-NOTE: we no longer round to the next power of two:
+  // Then encoding routine should take care of setting mag correctly.
+  ctxt.ptxtMag = mag;
+  ctxt.ratFactor = scale;
+  ctxt.noiseBound = error_bound + err;
+  ctxt.ptxtSpace = 1;
+  ctxt.intFactor = 1;
+}
+
+void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const
+{
+  if (eptxt.isBGV())
+    Encrypt(ctxt, eptxt.getBGV());
+  else if (eptxt.isCKKS())
+    Encrypt(ctxt, eptxt.getCKKS());
+  else
+    throw LogicError("Encrypt: bad EncodedPtxt");
 }
 
 bool PubKey::isCKKS() const
@@ -868,8 +1099,10 @@ long SecKey::ImportSecKey(const DoubleCRT& sKey,
   return keyID; // return the index where this key is stored
 }
 
-long SecKey::GenSecKey(long hwt, long ptxtSpace, long maxDegKswitch)
+long SecKey::GenSecKey(long ptxtSpace, long maxDegKswitch)
 {
+  long hwt = context.hwt_param;
+
   DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes);
 
   if (hwt > 0) {
@@ -1001,6 +1234,20 @@ void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt) const
 template <>
 void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
 {
+  const Context& context = ciphertxt.getContext();
+  assertTrue(&context == &plaintxt.getContext(),
+             "Decrypt: inconsistent contexts");
+
+  const View& view = context.getDefaultView();
+  std::vector<std::complex<double>> ptxt;
+  view.decrypt(ciphertxt, *this, ptxt);
+  plaintxt.setData(ptxt);
+}
+
+// VJS-NOTE: this is duplicated code...moroever, we
+// eventually need to modify to mitigate against CKKS vulnerability.
+#if 0
+{
   std::vector<std::complex<double>> ptxt;
   NTL::ZZX pp;
   Decrypt(pp, ciphertxt);
@@ -1031,6 +1278,7 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
 
   plaintxt.setData(ptxt);
 }
+#endif
 
 #define DECRYPT_ON_PWFL_BASIS
 
@@ -1055,9 +1303,7 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
   double bnd = getContext().zMStar.getPolyNormBnd();
 #endif
 
-  // VJS-FIXME: we should use totalNoiseBounde() here (for CKKS)
-
-  if (ciphertxt.getNoiseBound() * bnd > 0.48 * xQ)
+  if (ciphertxt.totalNoiseBound() * bnd > 0.48 * xQ)
     Warning("decrypting with too much noise");
 
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
@@ -1134,6 +1380,9 @@ long SecKey::skEncrypt(Ctxt& ctxt,
                        long ptxtSpace,
                        long skIdx) const
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   HELIB_TIMER_START;
 
   assertEq(((const PubKey*)this),
@@ -1189,6 +1438,7 @@ long SecKey::skEncrypt(Ctxt& ctxt,
     ctxt.ptxtMag = EncryptedArrayCx::roundedSize(ptxtSize);
     ctxt.ratFactor = f;
     ctxt.noiseBound += ptxtSize * ctxt.ratFactor;
+    // VJS-NOTE: the above noise calculation makes no sense to me
     return long(f);
 
   } else { // BGV
@@ -1252,6 +1502,133 @@ long SecKey::Encrypt(Ctxt& ciphertxt, const zzX& plaintxt, long ptxtSpace) const
 {
   return skEncrypt(ciphertxt, plaintxt, ptxtSpace, /*skIdx=*/0);
 }
+
+//=============== new EncodedPtxt interface ==================
+
+void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const
+{
+  if (eptxt.isBGV())
+    Encrypt(ctxt, eptxt.getBGV());
+  else if (eptxt.isCKKS())
+    Encrypt(ctxt, eptxt.getCKKS());
+  else
+    throw LogicError("Encrypt: bad EncodedPtxt");
+}
+
+void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
+{
+  HELIB_TIMER_START;
+
+  assertTrue(!isCKKS(), "Encrypt: mismatched BGV ptxt / CKKS ctxt");
+  assertEq((const PubKey*)this, &ctxt.pubKey, "Encrypt: public key mismatch");
+  assertEq(&context, &eptxt.getContext(), "Encrypt: context mismatch");
+
+  long ptxtSpace = eptxt.getPtxtSpace();
+  NTL::ZZX ptxt;
+
+  convert(ptxt, eptxt.getPoly());
+
+  long skIdx = 0; // in case we eventually want to generalize
+
+  ctxt.ptxtSpace = ptxtSpace;
+  ctxt.primeSet = context.ctxtPrimes;
+  ctxt.intFactor = 1;
+  ctxt.ratFactor = ctxt.ptxtMag = 1.0;
+  ctxt.parts.assign(2, CtxtPart(context, context.ctxtPrimes));
+
+  // make parts[0],parts[1] point to (1,s)
+  ctxt.parts[0].skHandle.setOne();
+  ctxt.parts[1].skHandle.setBase(skIdx);
+
+  // Sample a new RLWE instance
+  const DoubleCRT& sKey = sKeys.at(skIdx);
+  ctxt.noiseBound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
+
+  // The logic here has changed to be identical
+  // to that used in public key encryption
+
+  // add in the plaintext
+  // FIXME: we should really randomize ptxt, so that each coefficient
+  //    has expected value 0
+  // NOTE: This relies on the first part, ctxt[0], to have handle to 1
+
+  // This code sequence could be optimized, but there is no point
+  long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
+  NTL::ZZX ptxt_fixed;
+  balanced_MulMod(ptxt_fixed, ptxt, QmodP, ptxtSpace);
+  ctxt.parts[0] += ptxt_fixed;
+
+  // NOTE: this is a heuristic, as the ptxt is not really random,
+  // although, when ptxtSpace == 2, the balanced_MulMod will
+  // randomize it
+  double ptxt_bound =
+      context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+
+  // FIXME: for now, we print out a warning, but we can consider
+  // implementing a more robust randomization and rejection sampling
+  // strategy.
+  double ptxt_sz =
+      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+
+  if (ptxt_sz > ptxt_bound) {
+    Warning("noise bound exceeded in encryption");
+  }
+
+  double ptxt_rat = ptxt_sz / ptxt_bound;
+  HELIB_STATS_UPDATE("ptxt_rat_sk", ptxt_rat);
+
+  ctxt.noiseBound += ptxt_bound;
+}
+
+void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
+{
+  HELIB_TIMER_START;
+
+  assertTrue(isCKKS(), "Encrypt: mismatched CKKS ptxt / BGV ctxt");
+  assertEq((const PubKey*)this, &ctxt.pubKey, "Encrypt: public key mismatch");
+  assertEq(&context, &eptxt.getContext(), "Encrypt: context mismatch");
+
+  NTL::ZZX ptxt;
+  convert(ptxt, eptxt.getPoly());
+  double mag = eptxt.getMag();
+  double scale = eptxt.getScale();
+  double err = eptxt.getErr();
+
+  long skIdx = 0; // in case we eventually want to generalize
+
+  ctxt.parts.assign(2, CtxtPart(context, context.ctxtPrimes));
+
+  // make parts[0],parts[1] point to (1,s)
+  ctxt.parts[0].skHandle.setOne();
+  ctxt.parts[1].skHandle.setBase(skIdx);
+
+  // Sample a new RLWE instance
+  const DoubleCRT& sKey = sKeys.at(skIdx);
+  double error_bound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, 1);
+
+  // This follows the same logic in PubKey::Encrypt(EncodedPtxt_CKKS).
+  // See documentation there
+  long ef = NTL::conv<long>(ceil(error_bound / err));
+
+  if (ef > 1) { // scale up some more
+    ctxt.parts[0] += ptxt * ef;
+    scale *= ef;
+    err *= ef;
+  } else { // no need for extra scaling
+    ctxt.parts[0] += ptxt;
+  }
+
+  // VJS-NOTE: we no longer round to the next power of two:
+  // Then encoding routine should take care of setting mag correctly.
+  ctxt.primeSet = context.ctxtPrimes;
+  ctxt.ptxtMag = mag;
+  ctxt.ratFactor = scale;
+  ctxt.noiseBound = error_bound + err;
+  ctxt.ptxtSpace = 1;
+  ctxt.intFactor = 1;
+}
+
+//============================================================
 
 // Generate bootstrapping data if needed, returns index of key
 long SecKey::genRecryptData()

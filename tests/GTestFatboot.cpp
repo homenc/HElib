@@ -277,7 +277,7 @@ TEST_P(GTestFatboot, correctlyPerformsFatboot)
     std::cout << "scale=" << context.scale << std::endl;
   }
 
-  context.makeBootstrappable(mvec, /*t=*/skHwt, useCache);
+  context.enableBootStrapping(mvec, useCache);
   time += NTL::GetTime();
 
   if (!helib_test::noPrint) {
@@ -299,7 +299,7 @@ TEST_P(GTestFatboot, correctlyPerformsFatboot)
       std::cout << "Generating keys, " << std::flush;
     helib::SecKey secretKey(context);
     helib::PubKey& publicKey = secretKey;
-    secretKey.GenSecKey(skHwt); // A +-1/0 secret key
+    secretKey.GenSecKey(); // A +-1/0 secret key
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
     helib::addFrbMatrices(secretKey);

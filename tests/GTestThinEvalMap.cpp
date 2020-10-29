@@ -158,9 +158,11 @@ protected:
     return context;
   };
 
-  static helib::SecKey& prepareSecretKey(helib::SecKey& secretKey, const long w)
+  // FIXME: Due to Victor removing skhwt this needs looking at.
+  static helib::SecKey& prepareSecretKey(helib::SecKey& secretKey,
+                                         UNUSED long w)
   {
-    secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+    secretKey.GenSecKey();
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
     helib::addFrbMatrices(

@@ -106,7 +106,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
 
 
-  context.makeBootstrappable(mvec, /*t=*/skHwt, build_cache);
+  context.enableBootStrapping(mvec, build_cache);
   t += GetTime();
 
   if (!noPrint) {
@@ -127,7 +127,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   if (!noPrint) cout << "Generating keys, " << std::flush;
   SecKey secretKey(context);
   PubKey& publicKey = secretKey;
-  secretKey.GenSecKey(skHwt);      // A +-1/0 secret key
+  secretKey.GenSecKey();      // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
   if (!noPrint) cout << "computing key-dependent tables..." << std::flush;

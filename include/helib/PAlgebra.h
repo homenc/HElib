@@ -141,6 +141,8 @@ class PAlgebra
   // an optimization for FFT's with m = 0 (mod 4)
 
 public:
+  PAlgebra& operator=(const PAlgebra&) = delete;
+
   PAlgebra(long mm,
            long pp = 2,
            const std::vector<long>& _gens = std::vector<long>(),
@@ -348,6 +350,10 @@ public:
   DummyContext(long) {}
 };
 
+class DummyModulus
+{};
+// placeholder class for CKKS
+
 // some stuff to help with template code
 template <typename R>
 struct GenericModulus
@@ -413,6 +419,33 @@ public:
   typedef NTL::mat_zz_p mat_R;
   typedef NTL::vec_zz_p vec_R;
 };
+
+class PA_cx
+{
+  // typedefs for algebraic structures built up from complex<double>
+
+public:
+  static const PA_tag tag = PA_cx_tag;
+  typedef double R;
+  typedef std::complex<double> RX;
+  typedef NTL::Vec<RX> vec_RX;
+  typedef DummyModulus RXModulus;
+  typedef DummyBak RBak;
+  typedef DummyContext RContext;
+
+  // the other typedef's should not ever be used...they
+  // are all defined as void, so that PA_INJECT still works
+  typedef void RE;
+  typedef void vec_RE;
+  typedef void mat_RE;
+  typedef void REX;
+  typedef void REBak;
+  typedef void vec_REX;
+  typedef void REContext;
+  typedef void mat_R;
+  typedef void vec_R;
+};
+
 //! \endcond
 
 //! Virtual base class for PAlgebraMod
@@ -555,6 +588,8 @@ private:
   void genCrtTable();
 
 public:
+  PAlgebraModDerived& operator=(const PAlgebraModDerived&) = delete;
+
   PAlgebraModDerived(const PAlgebra& zMStar, long r);
 
   PAlgebraModDerived(const PAlgebraModDerived& other) // copy constructor
@@ -572,30 +607,6 @@ public:
     maskTable = other.maskTable;
     crtTable = other.crtTable;
     crtTree = other.crtTree;
-  }
-
-  PAlgebraModDerived& operator=(const PAlgebraModDerived& other) // assignment
-  {
-    if (this == &other)
-      return *this;
-
-    assertEq(&zMStar,
-             &other.zMStar,
-             "Cannot assign PAlgebras with different zMStar values");
-    r = other.r;
-    pPowR = other.pPowR;
-    pPowRContext = other.pPowRContext;
-
-    RBak bak;
-    bak.save();
-    restoreContext();
-    PhimXMod = other.PhimXMod;
-    factors = other.factors;
-    maskTable = other.maskTable;
-    crtTable = other.crtTable;
-    crtTree = other.crtTree;
-
-    return *this;
   }
 
   //! Returns a pointer to a "clone"
@@ -754,13 +765,14 @@ private:
 //! A different derived class to be used for the approximate-numbers scheme
 //! This is mostly a dummy class, but needed since the context always has a
 //! PAlgebraMod data member.
-class PAlgebraModCx : public PAlgebraModBase
+template <>
+class PAlgebraModDerived<PA_cx> : public PAlgebraModBase
 {
   const PAlgebra& zMStar;
   long r; // counts bits of precision
 
 public:
-  PAlgebraModCx(const PAlgebra& palg, long _r) : zMStar(palg), r(_r)
+  PAlgebraModDerived(const PAlgebra& palg, long _r) : zMStar(palg), r(_r)
   {
     assertInRange<InvalidArgument>(r,
                                    1l,
@@ -768,7 +780,10 @@ public:
                                    "Invalid bit precision r");
   }
 
-  PAlgebraModBase* clone() const override { return new PAlgebraModCx(*this); }
+  PAlgebraModBase* clone() const override
+  {
+    return new PAlgebraModDerived(*this);
+  }
   PA_tag getTag() const override { return PA_cx_tag; }
 
   const PAlgebra& getZMStar() const override { return zMStar; }
@@ -787,6 +802,8 @@ public:
   }
 };
 
+typedef PAlgebraModDerived<PA_cx> PAlgebraModCx;
+
 //! Builds a table, of type PA_GF2 if p == 2 and r == 1, and PA_zz_p otherwise
 PAlgebraModBase* buildPAlgebraMod(const PAlgebra& zMStar, long r);
 
@@ -803,10 +820,12 @@ private:
 
 public:
   // copy constructor: default
-  // assignment: default
+  // assignment: deleted
   // destructor: default
-  // NOTE: the use of cloned_ptr ensures that the default copy constructor,
-  // assignment operator, and destructor will work correctly.
+  // NOTE: the use of cloned_ptr ensures that the default copy constructor
+  // and destructor will work correctly.
+
+  PAlgebraMod& operator=(const PAlgebraMod&) = delete;
 
   explicit PAlgebraMod(const PAlgebra& zMStar, long r) :
       rep(buildPAlgebraMod(zMStar, r))

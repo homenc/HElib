@@ -704,6 +704,28 @@ long ord(long N, long p)
   return o;
 }
 
+double RandomReal()
+{
+  NTL::ZZ num;
+  NTL::RandomBits(num, 53);
+  // assumes 53 bits of mantissa
+  // we could also write this as std::numeric_limits<double>::digits
+
+  double denom = std::ldexp(1.0, 53); // 2^53
+
+  return NTL::conv<double>(num) / denom;
+}
+
+std::complex<double> RandomComplex()
+{
+  double r = std::sqrt(RandomReal());
+  double theta = RandomReal() * 2 * PI;
+
+  return std::polar(r, theta);
+  // See:
+  // https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly/50746409#50746409
+}
+
 NTL::ZZX RandPoly(long n, const NTL::ZZ& p)
 {
   NTL::ZZX F;
@@ -1909,6 +1931,18 @@ void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff)
   trunc(P2, P2, n);
   sub(P2, P2, P3);
   r = P2;
+}
+
+double NextPow2(double x)
+{
+  if (x < 1.0)
+    x = 1.0;
+  int e;
+  std::frexp(1 / x, &e);
+  // we have 2^{e-1} <= 1/x < 2^e, i.e.,
+  //         2^{-e} < x <= 2^{-e+1}
+  // so ceil(log2(x)) = -e+1
+  return std::ldexp(1.0, -e + 1);
 }
 
 } // namespace helib

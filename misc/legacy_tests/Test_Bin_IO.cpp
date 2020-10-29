@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     }
     std::unique_ptr<SecKey> secKey(new SecKey(*context));
     PubKey* pubKey = (PubKey*) secKey.get();
-    secKey->GenSecKey(w);
+    secKey->GenSecKey();
     addSome1DMatrices(*secKey);
     addFrbMatrices(*secKey);
 

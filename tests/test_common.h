@@ -36,6 +36,7 @@ extern char* path_of_executable;
 extern bool noPrint;
 extern bool verbose;
 extern bool dry;
+extern bool reset;
 extern unsigned int random_seed;
 extern long special_bits;
 

@@ -154,7 +154,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   //   issue that buildModChain must be called BEFORE the context is made
   //   botstrappable (else the "powerful" basis is not initialized correctly.)
 
-  context.makeBootstrappable(mvec, /*t=*/skHwt, build_cache);
+  context.enableBootStrapping(mvec, build_cache);
   t += GetTime();
 
   if (!noPrint) {

@@ -220,8 +220,12 @@ bool Context::operator==(const Context& other) const
   if (scale != other.scale)
     return false;
 
+  if (hwt_param != other.hwt_param)
+    return false;
+
   if (rcData != other.rcData)
     return false;
+
   return true;
 }
 
@@ -324,9 +328,11 @@ void writeContextBinary(std::ostream& str, const Context& context)
     }
   }
 
-  write_ntl_vec_long(str, context.rcData.mvec);
+  write_raw_int(str, context.hwt_param);
+  write_raw_int(str, context.e_param);
+  write_raw_int(str, context.ePrime_param);
 
-  write_raw_int(str, context.rcData.skHwt);
+  write_ntl_vec_long(str, context.rcData.mvec);
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
@@ -387,6 +393,9 @@ void readContextBinary(std::istream& str, Context& context)
       context.digits[i].insert(tmp);
     }
   }
+  context.hwt_param = read_raw_int(str);
+  context.e_param = read_raw_int(str);
+  context.ePrime_param = read_raw_int(str);
 
   endBuildModChain(context);
 
@@ -394,10 +403,9 @@ void readContextBinary(std::istream& str, Context& context)
   NTL::Vec<long> mv;
   read_ntl_vec_long(str, mv);
 
-  long t = read_raw_int(str);
-
   if (mv.length() > 0) {
-    context.makeBootstrappable(mv, t);
+    context.enableBootStrapping(mv);
+    // VJS-FIXME: what about the build_cache and alsoThick params?
   }
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
@@ -454,8 +462,11 @@ std::ostream& operator<<(std::ostream& str, const Context& context)
 
   str << "\n";
 
+  str << context.hwt_param << " ";
+  str << context.e_param << " ";
+  str << context.ePrime_param << "\n";
+
   str << context.rcData.mvec;
-  str << " " << context.rcData.skHwt;
   str << " " << context.rcData.build_cache;
 
   str << "]\n";
@@ -531,17 +542,21 @@ std::istream& operator>>(std::istream& str, Context& context)
   for (long i = 0; i < (long)context.digits.size(); i++)
     str >> context.digits[i];
 
+  str >> context.hwt_param;
+  str >> context.e_param;
+  str >> context.ePrime_param;
+
   endBuildModChain(context);
 
   // Read in the partition of m into co-prime factors (if bootstrappable)
   NTL::Vec<long> mv;
-  long t;
   int build_cache;
   str >> mv;
-  str >> t;
   str >> build_cache;
   if (mv.length() > 0) {
-    context.makeBootstrappable(mv, t, build_cache);
+    context.enableBootStrapping(mv, build_cache);
+    // VJS-FIXME: what about alsoThick? why is this different
+    // than the binary case??
   }
   seekPastChar(str, ']');
   return str;
@@ -575,7 +590,23 @@ Context::Context(unsigned long m,
                  const std::vector<long>& ords) :
     zMStar(m, p, gens, ords),
     alMod(zMStar, r),
+
+    // VJS-FIXME: I'm not sure this makes sense.
+    // This constrictor was provided mainly for bootstrapping.
+    // Most BGV applications wil *not* use fully packed slots
     ea(std::make_shared<EncryptedArray>(*this, alMod)),
+
+    // ea(std::make_shared<EncryptedArray>(*this)),
+    // This constructor uses the polynomial X, which
+    // corresponds to thinly packed slots for BGV.
+    // Unfortunately, this doesn't work...the problem is that
+    // the bootstrapping rountines, even thin bootstrapping,
+    // require G=F0 here.  What we really need to do is
+    // put an EA wit G=F0 in rcData, separate from the
+    // default EA.  They could, in fact, be the same if default
+    // EA has G=F0 (if we allow the default EA G-value to be set
+    // by the user.
+
     pwfl_converter(nullptr),
     stdev(3.2),
     scale(10.0)
@@ -583,11 +614,12 @@ Context::Context(unsigned long m,
   // NOTE: pwfl_converter will be set in buildModChain (or endBuildModChain),
   // after the prime chain has been built, as it depends on the primeChain
 
-  if (this->alMod.getTag() != PA_cx_tag) {
+  if (!isCKKS()) {
     slotRing =
         std::make_shared<PolyModRing>(zMStar.getP(), alMod.getR(), getG(*ea));
   }
 }
+#if 0
 
 Context::Context(const Context& other) :
     moduli(other.moduli),
@@ -603,7 +635,10 @@ Context::Context(const Context& other) :
     smallPrimes(other.smallPrimes),
     modSizes(other.modSizes),
     digits(other.digits),
-    rcData(other.rcData)
+    rcData(other.rcData),
+    hwt_param(other.hwt_param),
+    e_param(other.e_param),
+    ePrime_param(other.ePrime_param)
 {}
 
 Context::Context(Context&& other) :
@@ -620,22 +655,48 @@ Context::Context(Context&& other) :
     smallPrimes(std::move(other.smallPrimes)),
     modSizes(std::move(other.modSizes)),
     digits(std::move(other.digits)),
-    rcData(std::move(other.rcData))
+    rcData(std::move(other.rcData)),
+    hwt_param(std::move(other.hwt_param)),
+    e_param(std::move(other.e_param)),
+    ePrime_param(std::move(other.ePrime_param))
 {
   std::move(other.alMod);
 }
+
+#endif
 
 void Context::printout(std::ostream& out) const
 {
   ea->getPAlgebra().printout(out);
   out << "r = " << alMod.getR() << "\n"
       << "nslots = " << ea->size() << "\n"
+      << "hwt = " << hwt_param << "\n"
       << "ctxtPrimes = " << ctxtPrimes << "\n"
       << "specialPrimes = " << specialPrimes << "\n"
       << "number of bits = " << bitSizeOfQ() << "\n\n"
       << "security level = " << securityLevel() << std::endl;
 }
 
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
+template <typename SCHEME>
+Context::Context(const ContextBuilder<SCHEME>& b) :
+    Context(b.m_, b.p_, b.r_, b.gens_, b.ords_) // delegation
+{
+  if (b.buildModChainFlag_) {
+    // Not the builder's setter method.
+    ::helib::buildModChain(*this,
+                           b.bits_,
+                           b.c_,
+                           b.bootstrappableFlag_,
+                           b.skHwt_,
+                           b.resolution_,
+                           b.bitsInSpecialPrimes_);
+    if (b.bootstrappableFlag_) {
+      this->enableBootStrapping(b.mvec_, b.buildCacheFlag_, b.thickFlag_);
+    }
+  }
+}
+#else
 template <typename SCHEME>
 Context ContextBuilder<SCHEME>::build() const
 {
@@ -650,13 +711,14 @@ Context ContextBuilder<SCHEME>::build() const
                            resolution_,
                            bitsInSpecialPrimes_);
     if (bootstrappableFlag_) {
-      context.makeBootstrappable(mvec_, skHwt_, buildCacheFlag_, thickFlag_);
+      context.enableBootStrapping(mvec_, buildCacheFlag_, thickFlag_);
     }
     return context;
   } else {
     return Context(m_, p_, r_, gens_, ords_);
   }
 }
+#endif
 
 template <>
 std::ostream& operator<<<BGV>(std::ostream& os, const ContextBuilder<BGV>& cb)
@@ -705,5 +767,10 @@ std::ostream& operator<<<CKKS>(std::ostream& os, const ContextBuilder<CKKS>& cb)
 
 template class ContextBuilder<BGV>;
 template class ContextBuilder<CKKS>;
+
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
+template Context::Context(const ContextBuilder<BGV>&);
+template Context::Context(const ContextBuilder<CKKS>&);
+#endif
 
 } // namespace helib

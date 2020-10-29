@@ -135,7 +135,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     std::cout << "scale=" << context.scale<<endl;
   }
 
-  context.makeBootstrappable(mvec,/*t=*/skHwt,build_cache,/*alsoThick=*/false);
+  context.enableBootStrapping(mvec,,build_cache,/*alsoThick=*/false);
   // save time...disable some fat boot precomputation
 
   t += GetTime();
@@ -159,7 +159,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   t = -GetTime();
   if (!noPrint) cout << "Generating keys, " << std::flush;
   SecKey secretKey(context);
-  secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
+  secretKey.GenSecKey(); 
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
   if (!noPrint) cout << "computing key-dependent tables..." << std::flush;

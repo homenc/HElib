@@ -603,8 +603,13 @@ void CKKS_embedInSlots(zzX& f,
 
   hfft.fft.apply(&buf[0]);
   f.SetLength(m / 2);
-  for (long i : range(m / 2))
-    f[i] = std::round(MUL(buf[i], pow[i]).real() * scaling);
+  for (long i : range(m / 2)) {
+    double f_i = std::round(MUL(buf[i], pow[i]).real() * scaling);
+    f[i] = f_i;
+    if (f[i] != f_i) {
+      throw LogicError("overflow in encoding");
+    }
+  }
 
   normalize(f);
 }

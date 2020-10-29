@@ -24,6 +24,7 @@
 #include <helib/assertions.h>
 #include <helib/PolyMod.h>
 #include <helib/scheme.h>
+#include <helib/EncodedPtxt.h>
 
 /**
  * @file Ptxt.h
@@ -423,6 +424,15 @@ public:
    * @note `NTL::ZZX` representation loses some precision in the `CKKS` case.
    **/
   NTL::ZZX getPolyRepr() const;
+
+  /**
+   * @brief Converts the slot data in `this` to a corresponding EncodedPtxt
+   * object. mag,scale,err must be defaulted for BGV (runtime error if not).
+   **/
+  void encode(EncodedPtxt& eptxt,
+              double mag = -1,
+              double scale = -1,
+              double err = -1) const;
 
   /**
    * @brief Square bracket accessor operator.

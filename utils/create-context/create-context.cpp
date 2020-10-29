@@ -222,15 +222,13 @@ int main(int argc, char* argv[])
                            paramsOpts.c,
                            /*willBeBootstrappable=*/true);
       if (cmdLineOpts.bootstrappable == "THICK")
-        context.makeBootstrappable(paramsOpts.mvec,
-                                   /*skWht=*/0,
-                                   /*build_cache=*/false,
-                                   /*alsoThick=*/true);
+        context.enableBootStrapping(paramsOpts.mvec,
+                                    /*build_cache=*/false,
+                                    /*alsoThick=*/true);
       else if (cmdLineOpts.bootstrappable == "THIN")
-        context.makeBootstrappable(paramsOpts.mvec,
-                                   /*skWht=*/0,
-                                   /*build_cache=*/false,
-                                   /*alsoThick=*/false);
+        context.enableBootStrapping(paramsOpts.mvec,
+                                    /*build_cache=*/false,
+                                    /*alsoThick=*/false);
     }
 
     if (p == -1)

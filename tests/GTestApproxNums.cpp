@@ -16,6 +16,7 @@
 #include <helib/norms.h>
 #include <helib/helib.h>
 #include <helib/debugging.h>
+#include <helib/fhe_stats.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -23,14 +24,15 @@
 namespace {
 struct Parameters
 {
-  Parameters(long R, long m, long r, long L, double epsilon) :
-      R(R), m(m), r(r), L(L), epsilon(epsilon){};
+  Parameters(long R, long m, long r, long L, double epsilon, long seed) :
+      R(R), m(m), r(r), L(L), epsilon(epsilon), seed(seed){};
 
-  const long R; // number of rounds
-  const long m;
-  const long r;
-  const long L;
-  const double epsilon;
+  const long R;         // Number of rounds
+  const long m;         // Cyclotomic index
+  const long r;         // Bits of precision
+  const long L;         // Number of bits in modulus
+  const double epsilon; // Accepted accuracy
+  const long seed;      // PRG seed
 
   friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
   {
@@ -39,7 +41,8 @@ struct Parameters
               << "m=" << params.m << ","
               << "r=" << params.r << ","
               << "L=" << params.L << ","
-              << "epsilon=" << params.epsilon << "}";
+              << "epsilon=" << params.epsilon << ","
+              << "seed=" << params.seed << "}";
   }
 };
 
@@ -157,6 +160,36 @@ void rotate(std::vector<std::complex<double>>& p, long amt)
   p = tmp;
 }
 
+void resetPtxtMag(helib::Ctxt& c, const helib::PtxtArray& p)
+{
+  double maxAbs = helib::NextPow2(helib::Norm(p));
+  c.setPtxtMag(NTL::xdouble(maxAbs));
+}
+
+void debugCompare(const helib::SecKey& sk,
+                  const helib::PtxtArray& p,
+                  const helib::Ctxt& c)
+{
+  helib::PtxtArray pp(p.getView());
+  pp.rawDecryptComplex(c, sk);
+
+  double err = helib::Distance(pp, p);
+  double err_bound = c.errorBound();
+  double rel_err = err / helib::Norm(p);
+  std::cout << "   "
+            << " err=" << err << " err_bound=" << err_bound
+            << " err_bound/err=" << (err_bound / err) << " rel_err="
+            << rel_err
+            //<< "   "
+            << " mag=" << helib::Norm(p) << " mag_bound="
+            << c.getPtxtMag()
+            //<< " scale=" << c.getRatFactor()
+            << "\n";
+  if (err > err_bound) {
+    std::cout << "**** BAD BOUND\n";
+  }
+}
+
 class GTestApproxNums : public ::testing::TestWithParam<Parameters>
 {
 protected:
@@ -165,10 +198,11 @@ protected:
   const long r;
   const long L;
   const double epsilon;
+  const long seed;
 
   helib::Context context;
   helib::SecKey secretKey;
-  const helib::PubKey publicKey;
+  const helib::PubKey& publicKey;
   const helib::EncryptedArrayCx& ea;
 
   GTestApproxNums() :
@@ -177,9 +211,9 @@ protected:
       r(GetParam().r),
       L(GetParam().L),
       epsilon(GetParam().epsilon),
+      seed(GetParam().seed),
       context(m, /*p=*/-1, r),
-      secretKey(
-          (context.scale = 4, buildModChain(context, L, /*c=*/2), context)),
+      secretKey((context.scale = 4, buildModChain(context, L), context)),
       publicKey(
           (secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
       ea(context.ea->getCx())
@@ -187,18 +221,27 @@ protected:
 
   virtual void SetUp() override
   {
+    if (seed) {
+      NTL::SetSeed(NTL::ZZ(seed));
+    }
     if (helib_test::verbose) {
       ea.getPAlgebra().printout();
       std::cout << "r = " << context.alMod.getR() << std::endl;
       std::cout << "ctxtPrimes=" << context.ctxtPrimes
                 << ", specialPrimes=" << context.specialPrimes << std::endl
                 << std::endl;
+      helib::fhe_stats = true;
     }
-
     helib::setupDebugGlobals(&secretKey, context.ea);
   }
 
-  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
+  virtual void TearDown() override
+  {
+    if (helib_test::verbose) {
+      helib::print_stats(std::cout);
+    }
+    helib::cleanupDebugGlobals();
+  }
 };
 
 TEST_P(GTestApproxNums, basicArithmeticWorks)
@@ -222,7 +265,7 @@ TEST_P(GTestApproxNums, basicArithmeticWorks)
   ea.encrypt(c2, publicKey, vd2, /*size=*/1.0);
 
   // Test - Multiplication
-  c1 *= c2;
+  c1.multiplyBy(c2);
   for (long i = 0; i < helib::lsize(vd1); i++)
     vd1[i] *= vd2[i];
 
@@ -551,13 +594,158 @@ TEST_P(GTestApproxNums, generalOpsWorks)
   helib::resetAllTimers();
 }
 
+TEST_P(GTestApproxNums, generalOpsWorkWithNewAPI)
+{
+  helib::PtxtArray p0(context), p1(context), p2(context), p3(context);
+  p0.random();
+  p1.random();
+  p2.random();
+  p3.random();
+
+  helib::Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
+  p0.encrypt(c0);
+  p1.encrypt(c1);
+  p2.encrypt(c2);
+  p3.encrypt(c3);
+
+  for (long i = 0; i < R; i++) {
+
+    if (helib_test::verbose)
+      std::cout << "*** round " << i << "..." << std::endl;
+
+    if (helib_test::reset) {
+      resetPtxtMag(c0, p0);
+      resetPtxtMag(c1, p1);
+      resetPtxtMag(c2, p2);
+      resetPtxtMag(c3, p3);
+    }
+
+    debugCompare(secretKey, p0, c0);
+    debugCompare(secretKey, p1, c1);
+    debugCompare(secretKey, p2, c2);
+    debugCompare(secretKey, p3, c3);
+
+    long nslots = context.zMStar.getNSlots();
+
+    // Random number in [-(nslots-1)..nslots-1]
+    long rotamt = NTL::RandomBnd(2 * nslots - 1) - (nslots - 1);
+
+    // Two random constants
+    helib::PtxtArray const1(context), const2(context);
+    const1.random();
+    const2.random();
+
+    helib::PtxtArray tmp1_p(p0);
+    rotate(tmp1_p, rotamt);
+    helib::Ctxt tmp1(c0);
+    rotate(tmp1, rotamt);
+    debugCompare(secretKey, tmp1_p, tmp1);
+
+    tmp1_p += const1;
+    tmp1 += const1;
+    debugCompare(secretKey, tmp1_p, tmp1);
+
+    p0 += const2;
+    c0 += const2;
+    debugCompare(secretKey, p0, c0);
+
+    p0 *= tmp1_p;
+    c0.multiplyBy(tmp1);
+    debugCompare(secretKey, p0, c0);
+
+    helib::PtxtArray tmp2_p(p1);
+    tmp2_p *= const1;
+    helib::Ctxt tmp2(c1);
+    tmp2 *= const1;
+    debugCompare(secretKey, tmp2_p, tmp2);
+
+    rotate(p1, rotamt);
+    rotate(c1, rotamt);
+    debugCompare(secretKey, p1, c1);
+
+    p1 += tmp2_p;
+    c1 += tmp2;
+    debugCompare(secretKey, p1, c1);
+
+    helib::PtxtArray tmp3_p(p2);
+    tmp3_p *= const2;
+    helib::Ctxt tmp3(c2);
+    tmp3 *= const2;
+    debugCompare(secretKey, tmp3_p, tmp3);
+
+    p2 *= p3;
+    c2 *= c3;
+    debugCompare(secretKey, p2, c2);
+
+    p2 += tmp3_p;
+    c2 += tmp3;
+    debugCompare(secretKey, p2, c2);
+
+    p3 *= const1;
+    c3 *= const1;
+    debugCompare(secretKey, p3, c3);
+
+    if (helib_test::verbose) {
+      // Check correctness after each round
+      helib::PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
+
+      pp0.rawDecryptComplex(c0, secretKey);
+      pp1.rawDecryptComplex(c1, secretKey);
+      pp2.rawDecryptComplex(c2, secretKey);
+      pp3.rawDecryptComplex(c3, secretKey);
+
+      EXPECT_TRUE(pp0 == helib::Approx(p0)) << "Round " << i;
+      EXPECT_TRUE(pp1 == helib::Approx(p1)) << "Round " << i;
+      EXPECT_TRUE(pp2 == helib::Approx(p2)) << "Round " << i;
+      EXPECT_TRUE(pp3 == helib::Approx(p3)) << "Round " << i;
+    }
+  }
+
+  helib::PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
+  helib::PtxtArray ppp0(context), ppp1(context), ppp2(context), ppp3(context);
+
+  pp0.decryptReal(c0, secretKey);
+  pp1.decryptReal(c1, secretKey);
+  pp2.decryptReal(c2, secretKey);
+  pp3.decryptReal(c3, secretKey);
+
+  if (helib_test::verbose) {
+    ppp0.rawDecryptReal(c0, secretKey);
+    ppp1.rawDecryptReal(c1, secretKey);
+    ppp2.rawDecryptReal(c2, secretKey);
+    ppp3.rawDecryptReal(c3, secretKey);
+
+    std::cout << "======= rounded/raw differences\n"
+              << helib::Distance(pp0, ppp0) << "\n"
+              << helib::Distance(pp1, ppp1) << "\n"
+              << helib::Distance(pp2, ppp2) << "\n"
+              << helib::Distance(pp3, ppp3) << "\n";
+
+    std::cout << "======= actual/raw differences\n"
+              << helib::Distance(p0, ppp0) << "\n"
+              << helib::Distance(p1, ppp1) << "\n"
+              << helib::Distance(p2, ppp2) << "\n"
+              << helib::Distance(p3, ppp3) << "\n";
+  }
+
+  EXPECT_TRUE(pp0 == helib::Approx(p0));
+  EXPECT_TRUE(pp1 == helib::Approx(p1));
+  EXPECT_TRUE(pp2 == helib::Approx(p2));
+  EXPECT_TRUE(pp3 == helib::Approx(p3));
+}
+
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestApproxNums,
                          ::testing::Values(
                              // SLOW
-                             Parameters(1, 1024, 8, 150, 0.01)
+                             Parameters(/*R=*/1,
+                                        /*m=*/1024,
+                                        /*r=*/8,
+                                        /*L=*/150,
+                                        /*epsilon=*/0.01,
+                                        /*seed=*/0)
                              // FAST
-                             // Parameters(1, 128, 8, 150, 0.01)
+                             // Parameters(1, 128, 8, 150, 0.01, 0)
                              ));
 // if (R<=0) R=1;
 // if (R<=2)

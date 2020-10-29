@@ -112,7 +112,7 @@ protected:
   {
     context.zMStar.set_cM(c_m / 100);
     helib::buildModChain(context, bits, c, true, t);
-    context.makeBootstrappable(mvec, t, 0);
+    context.enableBootStrapping(mvec);
     return context;
   }
 
@@ -330,7 +330,7 @@ protected:
   {
     context.zMStar.set_cM(c_m / 100);
     helib::buildModChain(context, bits, c, true, t);
-    context.makeBootstrappable(mvec, t, 0, false);
+    context.enableBootStrapping(mvec);
     return context;
   }
 

@@ -212,6 +212,8 @@ BGV::SlotType randomSlot<BGV>(const Context& context)
 template <>
 CKKS::SlotType randomSlot<CKKS>(UNUSED const Context& context)
 {
+  // VJS-FIXME: see new function RandomComplex in NumbTh.h
+  // for an alternative
   std::mt19937 gen{std::random_device{}()};
   std::uniform_real_distribution<> dist{-1e10, 1e10};
 
@@ -241,6 +243,7 @@ const std::vector<typename Ptxt<Scheme>::SlotType>& Ptxt<Scheme>::getSlotRepr()
  * @return Single encoded polynomial.
  * @note Only enabled for the `BGV` scheme.
  **/
+
 template <>
 NTL::ZZX Ptxt<BGV>::getPolyRepr() const
 {
@@ -255,19 +258,40 @@ NTL::ZZX Ptxt<BGV>::getPolyRepr() const
   return repr;
 }
 
+template <>
+void Ptxt<BGV>::encode(EncodedPtxt& eptxt,
+                       double mag,
+                       double scale,
+                       double err) const
+{
+  assertTrue<LogicError>(isValid(),
+                         "Cannot call encide on default-constructed Ptxt");
+
+  assertTrue<LogicError>(mag < 0 && scale < 0 && err < 0,
+                         "mag,scale,err must be defaulted for BGV");
+
+  std::vector<NTL::ZZX> slots_data(context->ea->size());
+  for (std::size_t i = 0; i < slots_data.size(); ++i) {
+    slots_data[i] = slots[i].getData();
+  }
+
+  context->ea->encode(eptxt, slots_data);
+}
+
 /**
  * @brief CKKS specialisation of the `getPolyRepr` function.
  * @return Single encoded polynomial.
  * @note Only enabled for the `CKKS` scheme.
  **/
 template <>
-NTL::ZZX Ptxt<CKKS>::getPolyRepr() const
+void Ptxt<CKKS>::encode(EncodedPtxt& eptxt,
+                        double mag,
+                        double scale,
+                        double err) const
 {
   assertTrue<LogicError>(isValid(),
-                         "Cannot call getPolyRepr on default-constructed Ptxt");
-  NTL::ZZX repr;
-  context->ea->getCx().encode(repr, slots);
-  return repr;
+                         "Cannot call encode on default-constructed Ptxt");
+  context->ea->encode(eptxt, slots, mag, scale, err);
 }
 
 template <typename Scheme>
@@ -855,6 +879,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::mapTo01()
       slot = 1;
   return *this;
 }
+
+// VJS-FIXME: all of this logic for coordToIndex and indexToCoord
+// duplicates logic already implemented in EncryptedArrayBase.
 
 template <typename Scheme>
 long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)

@@ -69,13 +69,13 @@ int main(int argc, char* argv[])
   // Modify the context, adding primes to the modulus chain.
   // This defines the ciphertext space.
   std::cout << "Building modulus chain..." << std::endl;
-  buildModChain(context, bits, c);
+  buildModChain(context, bits, c, /*willBeBootstrappable=*/true);
 
   // Make bootstrappable.
   // Modify the context, providing bootstrapping capabilities.
   // Boostrapping has the affect of 'refreshing' a ciphertext back to a higher
   // level so more operations can be performed.
-  context.makeBootstrappable(
+  context.enableBootStrapping(
       helib::convert<NTL::Vec<long>, std::vector<long>>(mvec));
 
   // Print the context.

@@ -90,6 +90,10 @@ inline zzX MulMod(const zzX& a, const zzX& b, const PAlgebra& palg)
 zzX balanced_zzX(const NTL::zz_pX& f);
 zzX balanced_zzX(const NTL::GF2X& f);
 
+//! Multiply the polynomial f by the integer a modulo q
+//! output coefficients are balanced (appropriately randomized for even q)
+void balanced_MulMod(zzX& out, const zzX& f, long a, long q);
+
 } // namespace helib
 
 #endif // ifndef HELIB_ZZX_H

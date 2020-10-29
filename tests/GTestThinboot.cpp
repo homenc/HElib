@@ -384,7 +384,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     std::cout << "scale=" << context.scale << std::endl;
   }
 
-  context.makeBootstrappable(mvec, /*t=*/skHwt, useCache, /*alsoThick=*/false);
+  context.enableBootStrapping(mvec, useCache, /*alsoThick=*/false);
   // save time...disable some fat boot precomputation
 
   time += NTL::GetTime();
@@ -418,7 +418,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     if (!helib_test::noPrint)
       std::cout << "Generating keys, " << std::flush;
     helib::SecKey secretKey(context);
-    secretKey.GenSecKey(skHwt); // A Hamming-weight-64 secret key
+    secretKey.GenSecKey(); // A Hamming-weight-64 secret key
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
     helib::addFrbMatrices(secretKey);
