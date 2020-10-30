@@ -427,12 +427,11 @@ public:
 
   /**
    * @brief Converts the slot data in `this` to a corresponding EncodedPtxt
-   * object. mag,scale,err must be defaulted for BGV (runtime error if not).
+   * object. mag,prec must be defaulted for BGV (runtime error if not).
    **/
   void encode(EncodedPtxt& eptxt,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const;
+              OptLong prec = OptLong()) const;
 
   /**
    * @brief Square bracket accessor operator.
