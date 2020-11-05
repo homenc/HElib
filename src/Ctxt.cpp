@@ -2893,6 +2893,19 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
 
   double addedNoiseBound = sigma*B;
 
+  double ratio = sigma/sigma_min;
+  HELIB_STATS_UPDATE("ckks:sigma/sigma_min", ratio);
+
+  if (sigma_target < sigma_min) {
+    Warning("CKKS decryption: sigma_target < sigma_min, some accuracy may be lost");
+  }
+
+#if 0
+  if (sigma_target > sigma_max) {
+    std::cerr << "*** sigma clipped\n";
+  }
+#endif
+
   // Now add Gaussian noise with standard deviation sigma
 
   // NOTE: the added noise is generated using pseudorandom bits
@@ -2931,6 +2944,7 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
 
     // on block exit, NTL's old PRG state is restored
   }
+
 
   addPart(addedNoise, SKHandle(0, 1, 0));
   noiseBound += addedNoiseBound;

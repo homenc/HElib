@@ -463,7 +463,11 @@ long PubKey::Encrypt(Ctxt& ctxt,
       NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
 
   if (ptxt_sz > ptxt_bound) {
+#ifdef HELIB_DEBUG
     Warning("noise bound exceeded in encryption");
+#else
+    throw LogicError("noise bound exceeded in encryption");
+#endif
   }
 
   double ptxt_rat = ptxt_sz / ptxt_bound;

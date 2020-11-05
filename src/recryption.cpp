@@ -446,8 +446,12 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   HELIB_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
 
   if (noise_rat > 1) {
-    Warning("rawModSwitch scaled noise exceeds bound: " +
-            std::to_string(noise_rat));
+#ifdef HELIB_DEBUG
+    Warning
+#else
+    throw LogicError
+#endif
+    ("rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat));
   }
 
   assertEq(zzParts.size(),
@@ -1038,8 +1042,12 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   HELIB_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
 
   if (noise_rat > 1) {
-    Warning("rawModSwitch scaled noise exceeds bound: " +
-            std::to_string(noise_rat));
+#ifdef HELIB_DEBUG
+    Warning
+#else
+    throw LogicError
+#endif
+    ("rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat));
   }
 
   assertEq(zzParts.size(),
