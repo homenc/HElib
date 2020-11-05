@@ -1292,7 +1292,11 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
 {
   HELIB_TIMER_START;
 
-  assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
+  // VJS-NOTE: why are we comapring contexts, rather
+  // than addresses, which is what we do everywhere else?
+  // I'm changing this for now...
+  // assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
+  assertEq(&getContext(), &ciphertxt.getContext(), "Context mismatch");
 
   // this will trigger a warning if any operations that were
   // previously performed on the polynomial basis were invalid
@@ -1676,6 +1680,15 @@ std::ostream& operator<<(std::ostream& str, const SecKey& sk)
       << sk.sKeys.size() << std::endl;
   for (long i = 0; i < (long)sk.sKeys.size(); i++)
     str << sk.sKeys[i] << std::endl;
+  return str << "]";
+}
+
+std::ostream& SecKey::writeSecKeyDerivedASCII(std::ostream& str) const
+{
+  str << "[" 
+      << sKeys.size() << std::endl;
+  for (long i = 0; i < (long)sKeys.size(); i++)
+    str << sKeys[i] << std::endl;
   return str << "]";
 }
 

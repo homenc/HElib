@@ -99,11 +99,14 @@ int main(int argc, char *argv[])
   vector<long> tmp = v;
   long pp = p2r;
   for (long i=0; i<(long)digits.size(); i++) {
+#if 0
+// removed isCorrect() for now as it is incorrectly defined
     if (!digits[i].isCorrect()) {
       cout << " BAD, potential decryption error for "<<i<<"th digit ";
       CheckCtxt(digits[i], "");
       exit(0);
     }
+#endif
     ea.decrypt(digits[i], secretKey, pDigits);
     if (ea.size()<=20 && !noPrint)
       cout << i << "th digit="<<pDigits<<endl;

@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/BasicThreadPool.h>
+#include <NTL/ZZ.h>
 
 #include <helib/binio.h>
 #include <helib/timing.h>
@@ -25,8 +26,11 @@
 #include <helib/fhe_stats.h>
 #include <helib/powerful.h>
 #include <helib/log.h>
+#include <helib/keys.h>
+#include <helib/sample.h>
 
 namespace helib {
+
 
 extern int fhe_watcher;
 static const double safety = 1 * log(2.0); // 1 bits of safety
@@ -2849,6 +2853,87 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
 
   return scaledNoise;
   // this is returned so that caller in recryption.cpp can check bounds
+}
+
+void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
+{
+  assertTrue(&sk.getContext() == &context, "context mismatch");
+
+  double sigma_min = to_double(context.stdev);
+  // NOTE: the RLWE sampler multiplies by sqrt(m) if m is
+  // not a power of 2, but that should never happen for CKKS
+
+  // We want HELIB_GAUSS_TRUNC * sigma to not overflow
+  // a long int in the sampleGaussian routine.
+  // We divide by an extra factor of 2 just to be on the safe side.
+  long sigma_max = LONG_MAX/(HELIB_GAUSS_TRUNC*2);
+
+  // sanity check
+  assertTrue(sigma_min < sigma_max, "sigma_min >= sigma_max");
+
+  double B = sampleGaussianBoundedEffectiveBound(context);
+  // the noise bound for a given sigma value is sigma*B
+
+  NTL::xdouble f = ratFactor;
+
+  // we want to choose sigma so that sigma*B/f = eps
+  NTL::xdouble sigma_target = eps * f / B;
+
+  double sigma;
+  // so now set sigma to be sigma_target, but ensure that it
+  // is no larger than sigma_max (to avoid overflow)
+  // and is no smaller than sgma_min (to ensure security).
+
+  if (sigma_target > sigma_max)
+    sigma = sigma_max;
+  else if (sigma_target < sigma_min)
+    sigma = sigma_min;
+  else
+    sigma = to_double(sigma_target);
+
+  double addedNoiseBound = sigma*B;
+
+  // Now add Gaussian noise with standard deviation sigma
+
+  // NOTE: the added noise is generated using pseudorandom bits
+  // derived from a  hash of sk and the ciphertext *this.
+  // In the current implementation, we do this by writing 
+  // sk and *this to a string, and using that string to seed NTL's PRG.
+  // NTL's setSeed routine will hash this string using a
+  // cryptographically strong hash function.
+  // If we model the hash function as a random oracle,
+  // this is a cryptographically sound construction.
+  // In the grand and glorious future, we may want to
+  // implement a more modular approach, for example, (1) perhaps
+  // sk should contain a PRF key, and (2) perhaps we should support
+  // different PRF's and PRG's.
+
+  DoubleCRT addedNoise(context, primeSet);
+
+  {
+    NTL::RandomStreamPush push(); 
+    // save NTL's current PRG state
+
+    std::stringstream ss;
+    sk.writeSecKeyDerivedASCII(ss); 
+    // write everything but the pubKey part, as we do not want to write
+    // all of the key switching matrices
+    ss << *this;
+    // write the ciphertext itself
+    std::string s = ss.str();
+    NTL::SetSeed((const unsigned char*)s.c_str(), s.size()); 
+    // Set current PRG seed, which hashes sk and ctxt to derive the seed.
+    // NOTE: that SetSeed requires unsigned char*, while c_str()
+    // returns a char*; this is fine, as this kind of "type punning"
+    // is explicitly allowed by the C++ standard.
+
+    addedNoise.sampleGaussianBounded(sigma);
+
+    // on block exit, NTL's old PRG state is restored
+  }
+
+  addPart(addedNoise, SKHandle(0, 1, 0));
+  noiseBound += addedNoiseBound;
 }
 
 } // namespace helib

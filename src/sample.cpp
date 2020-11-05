@@ -129,8 +129,10 @@ void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
     double r2 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
     double theta = 2.0L * PI * r1;
     double rr = sqrt(-2.0 * log(r2)) * stdev;
-    if (rr > 8 * stdev) // sanity-check, truncate at 8 standard deviations
-      rr = 8 * stdev;
+    if (rr > HELIB_GAUSS_TRUNC * stdev) {
+      // sanity-check, truncate at HELIB_GAUSS_TRUNC standard deviations
+      rr = HELIB_GAUSS_TRUNC * stdev;
+    }
 
     // Generate two Gaussians RV's
     dvec[i] = rr * cos(theta);
@@ -413,19 +415,27 @@ double sampleGaussian(zzX& poly, const Context& context, double stdev)
 
   return retval;
 }
-// Same as above, but ensure the result is not too much larger than typical
-double sampleGaussianBounded(zzX& poly, const Context& context, double stdev)
+
+double sampleGaussianBoundedEffectiveBound(const Context& context)
 {
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();
 
-  double bound = stdev * (((palg.getPow2() == 0) ? sqrt(m * log(phim))
-                                                 : sqrt(phim * log(phim))));
+  return (((palg.getPow2() == 0) ? sqrt(m * log(phim))
+                                 : sqrt(phim * log(phim))));
   // should be good with probability at least 1/2
   // NOTE: the general formula is sigma*sqrt(log(phim)),
   // assuming we are sampling from a zero mean complex Gaussian
   // with std deviation sigma
+}
+
+// Same as above, but ensure the result is not too much larger than typical
+double sampleGaussianBounded(zzX& poly, const Context& context, double stdev)
+{
+  const PAlgebra& palg = context.zMStar;
+
+  double bound = stdev * sampleGaussianBoundedEffectiveBound(context);
 
 #if 1
   double val;

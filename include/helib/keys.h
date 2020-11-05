@@ -326,6 +326,9 @@ public:
   friend std::istream& operator>>(std::istream& str, SecKey& sk);
   friend void ::helib::writeSecKeyBinary(std::ostream& str, const SecKey& sk);
   friend void ::helib::readSecKeyBinary(std::istream& str, SecKey& sk);
+
+  // This just writes the derived part, not including the public key
+  std::ostream& writeSecKeyDerivedASCII(std::ostream& str) const;
 };
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
