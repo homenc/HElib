@@ -134,8 +134,20 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 
   // now add noise to a copy of ctxt
   Ctxt ctxt1 = ctxt;
-  ctxt1.addNoiseForCKKSDecryption(sKey, eps);
 
+  // But first, drop down to the "natural" prime set...
+  // This seems safer
+  // ctxt1.bringToSet(ctxt1.naturalPrimeSet());
+
+  // But first, drop small and special primes...
+  // This seems safer
+  // ctxt1.dropSmallAndSpecialPrimes();
+
+  // But first, make the primeSet equal to context.ctxtPrimes
+  // This will protect accuracy
+  ctxt1.bringToSet(ctxt1.getContext().ctxtPrimes); 
+
+  ctxt1.addNoiseForCKKSDecryption(sKey, eps);
 
   // finally, perform the decryption
   rawDecrypt(ctxt1, sKey, ptxt);

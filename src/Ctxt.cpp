@@ -2859,9 +2859,10 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
 {
   assertTrue(&sk.getContext() == &context, "context mismatch");
 
-  double sigma_min = to_double(context.stdev);
+  double sigma_min = to_double(context.stdev) * 2;
   // NOTE: the RLWE sampler multiplies by sqrt(m) if m is
   // not a power of 2, but that should never happen for CKKS
+  // NOTE: we multiply by two just for extra safety
 
   // We want HELIB_GAUSS_TRUNC * sigma to not overflow
   // a long int in the sampleGaussian routine.

@@ -113,9 +113,6 @@ void sampleSmall(NTL::ZZX& poly, long n, double prob)
 // Choose a vector of continuous Gaussians
 void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
 {
-  static double const bignum = static_cast<double>(LONG_MAX);
-  // THREADS: C++11 guarantees these are initialized only once
-
   if (n <= 0)
     n = lsize(dvec);
   if (n <= 0)
@@ -125,19 +122,19 @@ void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
   // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
   for (long i = 0; i < n; i += 2) {
     // r1, r2 are "uniform in (0,1)"
-    double r1 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
-    double r2 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
+    double r1 = RandomReal(); 
+    double r2 = RandomReal();
     double theta = 2.0L * PI * r1;
-    double rr = sqrt(-2.0 * log(r2)) * stdev;
+    double rr = std::sqrt(-2.0 * log(r2)) * stdev;
     if (rr > HELIB_GAUSS_TRUNC * stdev) {
       // sanity-check, truncate at HELIB_GAUSS_TRUNC standard deviations
       rr = HELIB_GAUSS_TRUNC * stdev;
     }
 
     // Generate two Gaussians RV's
-    dvec[i] = rr * cos(theta);
+    dvec[i] = rr * std::cos(theta);
     if (i + 1 < n)
-      dvec[i + 1] = rr * sin(theta);
+      dvec[i + 1] = rr * std::sin(theta);
   }
 }
 

@@ -33,24 +33,6 @@ namespace helib {
 
 typedef std::complex<double> cx_double;
 
-// This is for internal use only...
-// Represents the set of long int's plus a distinguished value
-// that can be used to denote "undefined".
-// Similary in spirit to C++17's optional<long> type.
-// We could move this to NumbTh.h.
-
-struct OptLong {
-  long data;
-  bool defined;
-
-  OptLong() : defined(false) { }
-  OptLong(long _data) : data(_data), defined(true) { }
-  // implict conversion from long
-  
-  bool isDefined() const { return defined; }
-  operator long() const { return data; }
-  // implict conversion to long
-};
 
 // DIRT: we're using undocumented NTL interfaces here
 //   also...this probably should be defined in NTL, anyway....

@@ -289,7 +289,7 @@ public:
    * @param ciphertxt Ciphertext to decrypt.
    **/
   template <typename Scheme>
-  void Decrypt(Ptxt<Scheme>& plaintxt, const Ctxt& ciphertxt) const;
+  void Decrypt(Ptxt<Scheme>& plaintxt, const Ctxt& ciphertxt, OptLong prec=OptLong()) const;
 
   //! @brief Debugging version, returns in f the polynomial
   //! before reduction modulo the ptxtSpace

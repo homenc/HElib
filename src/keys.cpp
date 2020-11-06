@@ -1232,7 +1232,7 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt& ciphertxt) const
 // These two specialisations are here to avoid a circular dependency on
 // EncryptedArray
 template <>
-void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt) const
+void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt, UNUSED OptLong prec) const
 {
   NTL::ZZX pp;
   Decrypt(pp, ciphertxt);
@@ -1240,7 +1240,7 @@ void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt) const
 }
 
 template <>
-void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
+void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt, OptLong prec) const
 {
   const Context& context = ciphertxt.getContext();
   assertTrue(&context == &plaintxt.getContext(),
@@ -1248,12 +1248,12 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
 
   const View& view = context.getDefaultView();
   std::vector<std::complex<double>> ptxt;
-  view.decrypt(ciphertxt, *this, ptxt);
+  view.decrypt(ciphertxt, *this, ptxt, prec);
   plaintxt.setData(ptxt);
 }
 
-// VJS-NOTE: this is duplicated code...moroever, we
-// eventually need to modify to mitigate against CKKS vulnerability.
+// VJS-NOTE: this is duplicated code...moreover, it does
+// not implement the mitigation against CKKS vulnerability.
 #if 0
 {
   std::vector<std::complex<double>> ptxt;

@@ -1047,6 +1047,23 @@ bool operator!=(const T& x, const ApproxClass<U>& y)
 //! 2^(ceil(log2(x)))
 double NextPow2(double x);
 
+//! @brief Represents the set of long int's plus a distinguished value
+//! that can be used to denote "undefined".
+//! Similary in spirit to C++17's optional<long> type.
+class OptLong {
+  long data;
+  bool defined;
+
+public:
+  OptLong() : defined(false) { }
+  OptLong(long _data) : data(_data), defined(true) { }
+  // implict conversion from long
+  
+  bool isDefined() const { return defined; }
+  operator long() const { return data; }
+  // implict conversion to long
+};
+
 //! This should go in NTL some day...
 //! Just call as make_lazy(obj, ...) to initialize a lazy object
 //! via a call to a constructor T(...)
