@@ -2882,7 +2882,7 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
   double sigma;
   // so now set sigma to be sigma_target, but ensure that it
   // is no larger than sigma_max (to avoid overflow)
-  // and is no smaller than sgma_min (to ensure security).
+  // and is no smaller than sigma_min (to ensure security).
 
   if (sigma_target > sigma_max)
     sigma = sigma_max;
