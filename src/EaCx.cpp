@@ -136,15 +136,11 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   Ctxt ctxt1 = ctxt;
 
   // But first, drop down to the "natural" prime set...
-  // This seems safer
+  // This will replace much of the noise in the ciphertext
+  // by mod switch added noise
   // ctxt1.bringToSet(ctxt1.naturalPrimeSet());
 
-  // But first, drop small and special primes...
-  // This seems safer
-  // ctxt1.dropSmallAndSpecialPrimes();
-
-  // But first, make the primeSet equal to context.ctxtPrimes
-  // This will protect accuracy
+  // This will protect accuracy when we add extra noise
   ctxt1.bringToSet(ctxt1.getContext().ctxtPrimes); 
 
   ctxt1.addNoiseForCKKSDecryption(sKey, eps);
