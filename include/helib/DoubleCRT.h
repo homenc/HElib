@@ -397,6 +397,7 @@ public:
   //! Return a high probability bound on L-infty norm of canonical embedding
   double sampleGaussian(double stdev = 0.0);
   double sampleGaussianBounded(double stdev = 0.0);
+  NTL::xdouble sampleGaussianBounded(NTL::xdouble stdev);
 
   //! @brief Coefficients are uniform in [-B..B]
   double sampleUniform(long B);

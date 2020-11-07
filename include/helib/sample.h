@@ -37,7 +37,6 @@ void sampleHWt(NTL::ZZX& poly, long n, long Hwt = 100);
 
 //! Sample polynomials with Gaussian coefficients.
 void sampleGaussian(zzX& poly, long n, double stdev);
-void sampleGaussian(NTL::ZZX& poly, long n, double stdev);
 
 //! Sample a degree-(n-1) ZZX, with coefficients uniform in [-B,B]
 void sampleUniform(zzX& poly, long n, long B = 100);
@@ -64,6 +63,7 @@ double sampleSmallBounded(zzX& poly, const Context& context);
 double sampleGaussian(zzX& poly, const Context& context, double stdev);
 // Same as above, but ensure the result is not too much larger than typical
 double sampleGaussianBounded(zzX& poly, const Context& context, double stdev);
+NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly, const Context& context, NTL::xdouble stdev);
 
 // Return value times stdev is the bound used in sampleGaussianBounded
 double sampleGaussianBoundedEffectiveBound(const Context& context);

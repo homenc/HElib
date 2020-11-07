@@ -127,7 +127,7 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   }
   else {
     // use eps = err/2^{adjust}
-    const int adjust = 4;
+    const int adjust = 20;
     
     eps = ctxt.errorBound() * std::pow(2.0, -adjust);
   }
@@ -135,12 +135,7 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   // now add noise to a copy of ctxt
   Ctxt ctxt1 = ctxt;
 
-  // But first, drop down to the "natural" prime set...
-  // This will replace much of the noise in the ciphertext
-  // by mod switch added noise
-  // ctxt1.bringToSet(ctxt1.naturalPrimeSet());
-
-  // This will protect accuracy when we add extra noise
+  // This will help protect accuracy when we add extra noise
   ctxt1.bringToSet(ctxt1.getContext().ctxtPrimes); 
 
   ctxt1.addNoiseForCKKSDecryption(sKey, eps);

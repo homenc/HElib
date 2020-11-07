@@ -354,6 +354,11 @@ public:
     return scale * std::sqrt(double(degBound)) * sigma;
   }
 
+  NTL::xdouble noiseBoundForGaussian(NTL::xdouble sigma, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound)) * sigma;
+  }
+
   //=======================================
 
   //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
