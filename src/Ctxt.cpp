@@ -2884,7 +2884,7 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
 
   NTL::xdouble addedNoiseBound = sigma*B;
 
-  std::cerr << "************** " << (sigma/noiseBound) << "\n";
+  // std::cerr << "************** " << (sigma/noiseBound) << "\n";
 
 
   // Now add Gaussian noise with standard deviation sigma
