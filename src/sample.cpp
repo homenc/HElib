@@ -406,6 +406,9 @@ double sampleGaussian(zzX& poly, const Context& context, double stdev)
     long m = palg.getM();
     sampleGaussian(poly, m, stdev);
     reduceModPhimX(poly, palg);
+    // VJS-FIXME: in most (all?) uses of this routine,
+    // we eventually convert to DoubleCRT, so do we really need
+    // to redice mod PhimX?
     retval = context.noiseBoundForGaussian(stdev, m);
   } else { // power of two
     long phim = palg.getPhiM();
@@ -422,15 +425,14 @@ NTL::xdouble sampleGaussian(NTL::ZZX& poly, const Context& context, NTL::xdouble
   NTL::xdouble retval;
 
   if (palg.getPow2() == 0) { // not power of two
-#if 1
-    throw LogicError("not implemented");
-    // NOTE: for now, we only need this for CKKS
-#else
+    // NOTE: this branch is currently not used anywhere
     long m = palg.getM();
     sampleGaussian(poly, m, stdev);
-    reduceModPhimX(poly, palg);
+    NTL::rem(poly, poly, palg.getPhimX());
+    // VJS-FIXME: in most (all?) uses of this routine,
+    // we eventually convert to DoubleCRT, so do we really need
+    // to redice mod PhimX?
     retval = context.noiseBoundForGaussian(stdev, m);
-#endif
   } else { // power of two
     long phim = palg.getPhiM();
     sampleGaussian(poly, phim, stdev);
