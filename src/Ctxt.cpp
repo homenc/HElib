@@ -2973,15 +2973,10 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
   double ratio = sigma/sigma_min;
   HELIB_STATS_UPDATE("ckks:sigma/sigma_min", ratio);
 
-  if (sigma_target < sigma_min) {
-    Warning("CKKS decryption: sigma_target < sigma_min, some accuracy may be lost");
+  if (addedNoiseBound > noiseBound) {
+    Warning("CKKS decryption: some accuracy may be lost");
   }
 
-#if 0
-  if (sigma_target > sigma_max) {
-    std::cerr << "*** sigma clipped\n";
-  }
-#endif
 
   // Now add Gaussian noise with standard deviation sigma
 

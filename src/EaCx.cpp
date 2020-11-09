@@ -113,24 +113,11 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   // to maintain a certain level of security as the cost
   // of accuracy.
 
-  double eps;
+  long r = alMod.getR(); // default r-value
+  if (prec.isDefined()) r = prec; // override if necessary
 
-  if (prec.isDefined()) {
-    // use eps = 2^{-prec}
+  double eps = std::ldexp(1.0, -r);
 
-    long p = prec;
-    // some sanity checking/correcting
-    const int p_bound = 100;
-    if (p > p_bound) p = p_bound;
-    if (p < -p_bound) p = -p_bound;
-    eps = std::pow(2.0, -p);
-  }
-  else {
-    // use eps = err/2^{adjust}
-    const int adjust = 20;
-    
-    eps = ctxt.errorBound() * std::pow(2.0, -adjust);
-  }
 
   // now add noise to a copy of ctxt
   Ctxt ctxt1 = ctxt;
