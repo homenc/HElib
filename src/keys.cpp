@@ -617,6 +617,10 @@ void PubKey::Encrypt(Ctxt& ciphertxt, const Ptxt<CKKS>& plaintxt) const
   // Note that Encrypt(Ctxt,EncodedPtxt) does not attempt
   // any hiding: this left up to the caller.
   // This logic mimics the logic in the original CKKSencrypt function.
+
+  // Note also that this API does not allow the user to set precision
+  // parameter in encode.
+
   Encrypt(ciphertxt, eptxt);
 }
 

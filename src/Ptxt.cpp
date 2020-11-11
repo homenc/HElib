@@ -261,14 +261,13 @@ NTL::ZZX Ptxt<BGV>::getPolyRepr() const
 template <>
 void Ptxt<BGV>::encode(EncodedPtxt& eptxt,
                        double mag,
-                       double scale,
-                       double err) const
+                       OptLong prec) const
 {
   assertTrue<LogicError>(isValid(),
                          "Cannot call encide on default-constructed Ptxt");
 
-  assertTrue<LogicError>(mag < 0 && scale < 0 && err < 0,
-                         "mag,scale,err must be defaulted for BGV");
+  assertTrue<LogicError>(mag < 0 && !prec.isDefined(),
+                         "mag,prec must be defaulted for BGV");
 
   std::vector<NTL::ZZX> slots_data(context->ea->size());
   for (std::size_t i = 0; i < slots_data.size(); ++i) {
@@ -286,12 +285,11 @@ void Ptxt<BGV>::encode(EncodedPtxt& eptxt,
 template <>
 void Ptxt<CKKS>::encode(EncodedPtxt& eptxt,
                         double mag,
-                        double scale,
-                        double err) const
+                        OptLong prec) const
 {
   assertTrue<LogicError>(isValid(),
                          "Cannot call encode on default-constructed Ptxt");
-  context->ea->encode(eptxt, slots, mag, scale, err);
+  context->ea->encode(eptxt, slots, mag, prec);
 }
 
 template <typename Scheme>

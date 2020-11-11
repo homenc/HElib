@@ -274,8 +274,7 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
                               const std::vector<cx_double>& array,
                               double mag,
-                              double scale,
-                              double err) const
+                              OptLong prec) const
 {
   double actual_mag = Norm(array);
   if (mag < 0)
@@ -286,17 +285,15 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
           "EncryptedArrayCx::encode: actual magnitude exceeds mag parameter");
   }
 
-  if (err < 0)
-    err = defaultErr(); // default err
+  double err = defaultErr(); 
+  // For now, we use defaultErr().  We may want to eventually
+  // allow APIs that use a different err value (such as the *actual*
+  // err value).  However, if we encrypt this encoding, we
+  // should not use a data-dependent err value. Moreover, I did
+  // not want to have yet another esteric parameter for the user
+  // to worry about.  We can revisit this later.
 
-  if (err < 1.0)
-    err = 1.0; // enforce some sanity
-
-  if (scale < 0)
-    scale = defaultScale(err); // default scale
-
-  if (scale < 1.0)
-    scale = 1.0; // enforce some sanity
+  double  scale = defaultScale(err, prec); // default scale
 
   zzX poly;
   CKKS_embedInSlots(poly, array, getPAlgebra(), scale);
@@ -319,10 +316,9 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
                               const PlaintextArray& array,
                               double mag,
-                              double scale,
-                              double err) const
+                              OptLong prec) const
 {
-  encode(eptxt, array.getData<PA_cx>(), mag, scale, err);
+  encode(eptxt, array.getData<PA_cx>(), mag, prec);
 }
 
 void EncryptedArrayCx::decryptComplex(const Ctxt& ctxt,

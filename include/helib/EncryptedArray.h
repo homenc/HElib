@@ -33,6 +33,25 @@ namespace helib {
 
 typedef std::complex<double> cx_double;
 
+// This is for internal use only...
+// Represents the set of long int's plus a distinguished value
+// that can be used to denote "undefined".
+// Similary in spirit to C++17's optional<long> type.
+// We could move this to NumbTh.h.
+
+struct OptLong {
+  long data;
+  bool defined;
+
+  OptLong() : defined(false) { }
+  OptLong(long _data) : data(_data), defined(true) { }
+  // implict conversion from long
+  
+  bool isDefined() const { return defined; }
+  operator long() const { return data; }
+  // implict conversion to long
+};
+
 // DIRT: we're using undocumented NTL interfaces here
 //   also...this probably should be defined in NTL, anyway....
 #define HELIB_MORE_UNWRAPARGS(n)                                               \
@@ -174,38 +193,50 @@ public:
                       const std::vector<long>& array) const = 0;
 
   // CKKS only
-  // mag: default sets mag to maximum magnitude of array
-  // scale: default sets scale to defaultScale(err)
-  // err: default sets err to defaultErr()
+  // mag: defaults to Norm(array).
+  // prec: defaults to r=getAlMod().getR(), which
+  // is usually the same as context.getDefaultPrecision().
+
+  // mag should be an upper bound on Norm(array).
+  // If an encoding will be encrypted, the user may wish
+  // to hide Norm(array) by setting mag to some data-independent
+  // upper bound. A warning is issued if Norm(array) > mag.
+
+  // The encoding will normally have an accuracy of 2^{-prec}, meaning that
+  // Norm(array - decode(encode(array))) <= 2^{-prec}.
+  // Note that prec may be positive, negative, or zero.
+  // The exact logic is a bit heuristic, and a warning is 
+  // issued if the the accuracy exceeds 2^{-prec}.
+
+  // NOTE: Norm above is the infinity (i.e., max) norm.
+
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<cx_double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const = 0;
+                      OptLong prec = OptLong()) const = 0;
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const = 0;
+                      OptLong prec = OptLong()) const = 0;
 
   // BGV and CKKS
   virtual void encode(EncodedPtxt& eptxt,
                       const PlaintextArray& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const = 0;
-  // NOTE: for BGV, mag,scale,err must be defaulted
+                      OptLong prec = OptLong()) const = 0;
+  // NOTE: for BGV, mag,prec must be defaulted
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<bool>& array) const = 0;
-  // NOTE: for CKKS, mag,scale,err are default
+  // NOTE: for CKKS, mag,prec are default
 
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const = 0;
-  // NOTE: for CKKS, mag,scale,err are defaulted
+  // NOTE: for CKKS, mag,prec are default
 
-  virtual double defaultScale(UNUSED double err) const
+  virtual double defaultScale(UNUSED double err, 
+                              UNUSED OptLong prec = OptLong()) const
   {
     throw LogicError("function not implemented");
   }
@@ -630,8 +661,7 @@ public:
   virtual void encode(UNUSED EncodedPtxt& eptxt,
                       UNUSED const std::vector<cx_double>& array,
                       UNUSED double mag = -1,
-                      UNUSED double scale = -1,
-                      UNUSED double err = -1) const override
+                      UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented for BGV");
   }
@@ -639,8 +669,7 @@ public:
   virtual void encode(UNUSED EncodedPtxt& eptxt,
                       UNUSED const std::vector<double>& array,
                       UNUSED double mag = -1,
-                      UNUSED double scale = -1,
-                      UNUSED double err = -1) const override
+                      UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented for BGV");
   }
@@ -648,11 +677,10 @@ public:
   virtual void encode(EncodedPtxt& eptxt,
                       const PlaintextArray& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override
+                      OptLong prec = OptLong()) const override
   {
-    assertTrue(mag < 0 && scale < 0 && err < 0,
-               "BGV encoding: mag,scale,err set must be defaulted");
+    assertTrue(mag < 0 && !prec.isDefined(),
+               "BGV encoding: mag,prec set must be defaulted");
     zzX poly;
     encode(poly, array);
     eptxt.resetBGV(poly, getP2R(), getContext());
@@ -1156,26 +1184,23 @@ public:
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<cx_double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override;
+                      OptLong prec = OptLong()) const override;
   // implemented in EaCx.cpp
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override
+                      OptLong prec = OptLong()) const override
   {
     std::vector<cx_double> array1;
     convert(array1, array);
-    encode(eptxt, array1, mag, scale, err);
+    encode(eptxt, array1, mag, prec);
   }
 
   virtual void encode(EncodedPtxt& eptxt,
                       const PlaintextArray& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override;
+                      OptLong prec = OptLong()) const override;
   // implemented in EaCx.cpp
 
   virtual void encode(EncodedPtxt& eptxt,
@@ -1293,11 +1318,14 @@ public:
     return context.noiseBoundForUniform(0.5, phim);
   }
 
-  virtual double defaultScale(double err) const override
+  virtual double defaultScale(double err,
+                              OptLong prec = OptLong()) const override
   {
     if (err < 1.0)
       err = 1.0;
-    long r = alMod.getR();
+    long r = alMod.getR(); // default r-value
+    if (prec.isDefined()) r = prec; // override if necessary
+
     // we want to compute
     //   2^(ceil(log2(err*2^r))) = 2^(ceil(log2(err) + r))
     //                           = 2^(r + ceil(log2(err)))
@@ -1667,28 +1695,25 @@ public:
   void encode(EncodedPtxt& eptxt,
               const std::vector<cx_double>& array,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
-    rep->encode(eptxt, array, mag, scale, err);
+    rep->encode(eptxt, array, mag, prec);
   }
 
   void encode(EncodedPtxt& eptxt,
               const std::vector<double>& array,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
-    rep->encode(eptxt, array, mag, scale, err);
+    rep->encode(eptxt, array, mag, prec);
   }
 
   void encode(EncodedPtxt& eptxt,
               const PlaintextArray& array,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
-    rep->encode(eptxt, array, mag, scale, err);
+    rep->encode(eptxt, array, mag, prec);
   }
 
   void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
@@ -1759,46 +1784,42 @@ public:
                const PubKey& key,
                const std::vector<cx_double>& array,
                double mag,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
     if (mag < 0)
       throw LogicError("CKKS encryption: mag must be set to non-default");
     EncodedPtxt eptxt;
-    encode(eptxt, array, mag, scale, err);
+    encode(eptxt, array, mag, prec);
     key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt,
                const std::vector<cx_double>& array,
-               double mag,
-               double scale = -1,
-               double err = -1) const
+               UNUSED double mag,
+               OptLong prec = OptLong()) const
   {
-    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+    encrypt(ctxt, ctxt.getPubKey(), array, prec);
   }
 
   void encrypt(Ctxt& ctxt,
                const PubKey& key,
                const std::vector<double>& array,
                double mag,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
     if (mag < 0)
       throw LogicError("CKKS encryption: mag must be set to non-default");
     EncodedPtxt eptxt;
-    encode(eptxt, array, mag, scale, err);
+    encode(eptxt, array, mag, prec);
     key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt,
                const std::vector<double>& array,
                double mag,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
-    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+    encrypt(ctxt, ctxt.getPubKey(), array, mag, prec);
   }
 
   // BGV and CKKS
@@ -1806,25 +1827,23 @@ public:
                const PubKey& key,
                const PlaintextArray& array,
                double mag = -1,
-               double scale = -1,
-               double err = -1) const
-  // NOTES: (1) for BGV, mag,scale,err must be defaulted;
+               OptLong prec = OptLong()) const
+  // NOTES: (1) for BGV, mag,prec must be defaulted;
   // (2) for CKKS, mag must be set to non-default value
   {
     if (getTag() == PA_cx_tag && mag < 0)
       throw LogicError("CKKS encryption: mag must be set to non-default");
     EncodedPtxt eptxt;
-    encode(eptxt, array, mag, scale, err);
+    encode(eptxt, array, mag, prec);
     key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt,
                const PlaintextArray& array,
                double mag = -1,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
-    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+    encrypt(ctxt, ctxt.getPubKey(), array, mag, prec);
   }
 
   //=========================
@@ -2142,27 +2161,25 @@ public:
   // direct encode, encrypt, and decrypt methods
   void encode(EncodedPtxt& eptxt,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
     if (ea.isCKKS())
-      ea.encode(eptxt, pa, mag, scale, err);
+      ea.encode(eptxt, pa, mag, prec);
     else
-      ea.encode(eptxt, pa); // ignore mag,scale,err for BGV
+      ea.encode(eptxt, pa); // ignore mag,prec for BGV
   }
 
   void encrypt(Ctxt& ctxt,
                double mag = -1,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
     if (ea.isCKKS()) {
       if (mag < 0)
         mag = NextPow2(Norm(pa.getData<PA_cx>()));
       // if mag is defaulted, set it to 2^(ceil(log2(max(Norm(pa),1))))
-      ea.encrypt(ctxt, pa, mag, scale, err);
+      ea.encrypt(ctxt, pa, mag, prec);
     } else {
-      ea.encrypt(ctxt, pa); // ignore mag,scale,err for BGV
+      ea.encrypt(ctxt, pa); // ignore mag,prec for BGV
     }
   }
 
