@@ -56,8 +56,11 @@ set(TRGTS bgv_basic
           bgv_fatboot
           ckks_basic)
 
-# Sources derived form their targets.
-list(TRANSFORM TRGTS APPEND ".cpp" OUTPUT_VARIABLE SRCS)
+# Sources derived from their targets.
+set(SRCS "")
+foreach(TRGT ${TRGTS})
+  list(APPEND SRCS "${TRGT}.cpp")
+endforeach()
 
 if(SINGLE_EXEC)
   # Add each benchmark source file to the executable list
