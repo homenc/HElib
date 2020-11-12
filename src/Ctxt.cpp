@@ -31,7 +31,6 @@
 
 namespace helib {
 
-
 extern int fhe_watcher;
 static const double safety = 1 * log(2.0); // 1 bits of safety
 
@@ -2879,32 +2878,31 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
 
   if (sigma_target < sigma_min) {
     sigma = sigma_min;
-    Warning("CKKS decryption: sigma set to sigma_min, accuracy may be affected");
-  }
-  else
+    Warning(
+        "CKKS decryption: sigma set to sigma_min, accuracy may be affected");
+  } else
     sigma = sigma_target;
 
 #ifdef HELIB_DEBUG
 
-  if (sigma/sigma_min < 1000) {
-    Warning("CKKS decryption: sigma/sigma_min = " + std::to_string(convert<double>(sigma/sigma_min)));
+  if (sigma / sigma_min < 1000) {
+    Warning("CKKS decryption: sigma/sigma_min = " +
+            std::to_string(convert<double>(sigma / sigma_min)));
   }
-
 
 #endif
 
   // std::cerr << "***** " << (sigma/sigma_min) << "\n";
 
-  NTL::xdouble addedNoiseBound = sigma*B;
+  NTL::xdouble addedNoiseBound = sigma * B;
 
   // std::cerr << "************** " << (sigma/noiseBound) << "\n";
-
 
   // Now add Gaussian noise with standard deviation sigma
 
   // NOTE: the added noise is generated using pseudorandom bits
   // derived from a hash of sk and the ciphertext *this.
-  // In the current implementation, we do this by writing 
+  // In the current implementation, we do this by writing
   // sk and *this to a string, and using that string to seed NTL's PRG.
   // NTL's setSeed routine will hash this string using a
   // cryptographically strong hash function.
@@ -2922,13 +2920,13 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
     // save NTL's current PRG state
 
     std::stringstream ss;
-    sk.writeSecKeyDerivedASCII(ss); 
+    sk.writeSecKeyDerivedASCII(ss);
     // write everything but the pubKey part, as we do not want to write
     // all of the key switching matrices
     ss << *this;
     // write the ciphertext itself
     std::string s = ss.str();
-    NTL::SetSeed((const unsigned char*)s.c_str(), s.size()); 
+    NTL::SetSeed((const unsigned char*)s.c_str(), s.size());
     // Set current PRG seed, which hashes sk and ctxt to derive the seed.
     // NOTE: that SetSeed requires unsigned char*, while c_str()
     // returns a char*; this is fine, as this kind of "type punning"
@@ -2938,7 +2936,6 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
 
     // on block exit, NTL's old PRG state is restored
   }
-
 
   addPart(addedNoise, SKHandle(0, 1, 0));
   noiseBound += addedNoiseBound;
@@ -2956,7 +2953,7 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
   // We want HELIB_GAUSS_TRUNC * sigma to not overflow
   // a long int in the sampleGaussian routine.
   // We divide by an extra factor of 2 just to be on the safe side.
-  long sigma_max = LONG_MAX/(HELIB_GAUSS_TRUNC*2);
+  long sigma_max = LONG_MAX / (HELIB_GAUSS_TRUNC * 2);
 
   // sanity check
   assertTrue(sigma_min < sigma_max, "sigma_min >= sigma_max");
@@ -2979,13 +2976,12 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
   else if (sigma_target < sigma_min) {
     sigma = sigma_min;
     Warning("CKKS decryption: sigma_target == sigma_min");
-  }
-  else
+  } else
     sigma = to_double(sigma_target);
 
-  double addedNoiseBound = sigma*B;
+  double addedNoiseBound = sigma * B;
 
-  double ratio = sigma/sigma_min;
+  double ratio = sigma / sigma_min;
   std::cerr << "*** CKKS ratio: " << ratio << "\n";
   HELIB_STATS_UPDATE("ckks:sigma/sigma_min", ratio);
 
@@ -2993,12 +2989,11 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
     Warning("CKKS decryption: some accuracy may be lost");
   }
 
-
   // Now add Gaussian noise with standard deviation sigma
 
   // NOTE: the added noise is generated using pseudorandom bits
   // derived from a  hash of sk and the ciphertext *this.
-  // In the current implementation, we do this by writing 
+  // In the current implementation, we do this by writing
   // sk and *this to a string, and using that string to seed NTL's PRG.
   // NTL's setSeed routine will hash this string using a
   // cryptographically strong hash function.
@@ -3012,17 +3007,17 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
   DoubleCRT addedNoise(context, primeSet);
 
   {
-    NTL::RandomStreamPush push(); 
+    NTL::RandomStreamPush push();
     // save NTL's current PRG state
 
     std::stringstream ss;
-    sk.writeSecKeyDerivedASCII(ss); 
+    sk.writeSecKeyDerivedASCII(ss);
     // write everything but the pubKey part, as we do not want to write
     // all of the key switching matrices
     ss << *this;
     // write the ciphertext itself
     std::string s = ss.str();
-    NTL::SetSeed((const unsigned char*)s.c_str(), s.size()); 
+    NTL::SetSeed((const unsigned char*)s.c_str(), s.size());
     // Set current PRG seed, which hashes sk and ctxt to derive the seed.
     // NOTE: that SetSeed requires unsigned char*, while c_str()
     // returns a char*; this is fine, as this kind of "type punning"
@@ -3032,7 +3027,6 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
 
     // on block exit, NTL's old PRG state is restored
   }
-
 
   addPart(addedNoise, SKHandle(0, 1, 0));
   noiseBound += addedNoiseBound;

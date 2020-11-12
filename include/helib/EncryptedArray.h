@@ -191,7 +191,6 @@ public:
 
   // NOTE: Norm above is the infinity (i.e., max) norm.
 
-
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<cx_double>& array,
                       double mag = -1,
@@ -755,7 +754,8 @@ public:
                        OptLong prec = OptLong()) const override
   {
     if (prec.isDefined())
-      throw LogicError("EncryptedArray::decrypt: the precision parameter (prec) must be defaulted");
+      throw LogicError("EncryptedArray::decrypt: the precision parameter "
+                       "(prec) must be defaulted");
 
     genericDecrypt(ctxt, sKey, ptxt);
     if (ctxt.getPtxtSpace() < getP2R()) {
@@ -1322,7 +1322,8 @@ public:
     if (err < 1.0)
       err = 1.0;
     long r = alMod.getR(); // default r-value
-    if (prec.isDefined()) r = prec; // override if necessary
+    if (prec.isDefined())
+      r = prec; // override if necessary
 
     // we want to compute
     //   2^(ceil(log2(err*2^r))) = 2^(ceil(log2(err) + r))
@@ -1435,9 +1436,9 @@ public:
    * @param ctxt Ciphertext to decrypt.
    * @param sKey Secret key to be used for decryption.
    * @param ptxt Plaintext into which to decrypt.
-   * @param prec `CKKS` precision to be used (must be defaulted if Scheme is `BGV`).
-   * Decrypt a `Ctxt` ciphertext object to a `Ptxt` plaintext one relative to
-   * a specific scheme.
+   * @param prec `CKKS` precision to be used (must be defaulted if Scheme is
+   *`BGV`). Decrypt a `Ctxt` ciphertext object to a `Ptxt` plaintext one
+   *relative to a specific scheme.
    **/
 
   // VJS-FIXME: something seems odd here. This code clearly only
@@ -1446,7 +1447,10 @@ public:
   // version of this somewhere?
   // TODO: document this better (especially the prec parameter)
   template <typename Scheme>
-  void decrypt(const Ctxt& ctxt, const SecKey& sKey, Ptxt<Scheme>& ptxt, OptLong prec = OptLong()) const
+  void decrypt(const Ctxt& ctxt,
+               const SecKey& sKey,
+               Ptxt<Scheme>& ptxt,
+               OptLong prec = OptLong()) const
   {
     std::vector<cx_double> ptxtArray;
     decrypt(ctxt, sKey, ptxtArray, prec);
@@ -1866,7 +1870,10 @@ public:
   }
 
   template <typename T>
-  void decrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt, OptLong prec) const
+  void decrypt(const Ctxt& ctxt,
+               const SecKey& sKey,
+               T& ptxt,
+               OptLong prec) const
   {
     rep->decrypt(ctxt, sKey, ptxt, prec);
   }
@@ -2188,9 +2195,7 @@ public:
       ea.encode(eptxt, pa); // ignore mag,prec for BGV
   }
 
-  void encrypt(Ctxt& ctxt,
-               double mag = -1,
-               OptLong prec = OptLong()) const
+  void encrypt(Ctxt& ctxt, double mag = -1, OptLong prec = OptLong()) const
   {
     if (ea.isCKKS()) {
       if (mag < 0)
@@ -2215,7 +2220,9 @@ public:
     ea.rawDecrypt(ctxt, sKey, pa);
   }
 
-  void decryptComplex(const Ctxt& ctxt, const SecKey& sKey, OptLong prec = OptLong())
+  void decryptComplex(const Ctxt& ctxt,
+                      const SecKey& sKey,
+                      OptLong prec = OptLong())
   {
     ea.decryptComplex(ctxt, sKey, pa, prec);
   }
@@ -2225,7 +2232,9 @@ public:
     ea.rawDecryptComplex(ctxt, sKey, pa);
   }
 
-  void decryptReal(const Ctxt& ctxt, const SecKey& sKey, OptLong prec = OptLong())
+  void decryptReal(const Ctxt& ctxt,
+                   const SecKey& sKey,
+                   OptLong prec = OptLong())
   {
     ea.decryptReal(ctxt, sKey, pa, prec);
   }

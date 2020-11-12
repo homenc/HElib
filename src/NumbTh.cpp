@@ -709,7 +709,7 @@ double RandomReal()
   NTL::ZZ num;
   NTL::RandomBits(num, NTL_DOUBLE_PRECISION);
 
-  double denom = std::ldexp(1.0, NTL_DOUBLE_PRECISION); 
+  double denom = std::ldexp(1.0, NTL_DOUBLE_PRECISION);
   // 2^NTL_DOUBLE_PRECISION
 
   return NTL::conv<double>(num) / denom;

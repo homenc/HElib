@@ -287,11 +287,14 @@ public:
    * @tparam Scheme Encryption scheme used (must be `BGV` or `CKKS`).
    * @param plaintxt Plaintext into which to decrypt.
    * @param ciphertxt Ciphertext to decrypt.
-   * @param prec `CKKS` precision to be used (must be defaulted if Scheme is `BGV`).
+   * @param prec `CKKS` precision to be used (must be defaulted if Scheme is
+   *`BGV`).
    **/
   // TODO: document this better (especially the prec parameter)
   template <typename Scheme>
-  void Decrypt(Ptxt<Scheme>& plaintxt, const Ctxt& ciphertxt, OptLong prec=OptLong()) const;
+  void Decrypt(Ptxt<Scheme>& plaintxt,
+               const Ctxt& ciphertxt,
+               OptLong prec = OptLong()) const;
 
   //! @brief Debugging version, returns in f the polynomial
   //! before reduction modulo the ptxtSpace

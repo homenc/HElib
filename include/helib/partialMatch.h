@@ -51,9 +51,9 @@ inline Matrix<TXT> calculateMasks(const EncryptedArray& ea,
   // TODO: Some such replication will be needed once blocks/bands exist
   std::vector<long> columns(database.dims(0), 0l);
   Matrix<TXT>& mask = query;
-  mask.transpose();
+  mask.inPlaceTranspose();
   mask = mask.columns(columns);
-  mask.transpose();
+  mask.inPlaceTranspose();
 
   (mask -= database)
       .apply([&](auto& entry) { mapTo01(ea, entry); })
@@ -90,9 +90,9 @@ Matrix<Ctxt> calculateMasks(const EncryptedArray& ea,
   // TODO: Some such replication will be needed once blocks/bands exist
   std::vector<long> columns(database.dims(0), 0l);
   Matrix<TXT>& mask = query;
-  mask.transpose();
+  mask.inPlaceTranspose();
   mask = mask.columns(columns);
-  mask.transpose();
+  mask.inPlaceTranspose();
 
   (mask -= database)
       .apply([&](auto& entry) { mapTo01(ea, entry); })

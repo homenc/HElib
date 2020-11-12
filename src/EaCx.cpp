@@ -114,16 +114,16 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   // of accuracy.
 
   long r = alMod.getR(); // default r-value
-  if (prec.isDefined()) r = prec; // override if necessary
+  if (prec.isDefined())
+    r = prec; // override if necessary
 
   double eps = std::ldexp(1.0, -r);
-
 
   // now add noise to a copy of ctxt
   Ctxt ctxt1 = ctxt;
 
   // This will help protect accuracy while allowing us to add a lot of noise
-  ctxt1.bringToSet(ctxt1.getContext().fullPrimes()); 
+  ctxt1.bringToSet(ctxt1.getContext().fullPrimes());
 
   ctxt1.addNoiseForCKKSDecryption(sKey, eps);
 
@@ -252,7 +252,7 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
           "EncryptedArrayCx::encode: actual magnitude exceeds mag parameter");
   }
 
-  double err = defaultErr(); 
+  double err = defaultErr();
   // For now, we use defaultErr().  We may want to eventually
   // allow APIs that use a different err value (such as the *actual*
   // err value).  However, if we encrypt this encoding, we
@@ -260,7 +260,7 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
   // not want to have yet another esteric parameter for the user
   // to worry about.  We can revisit this later.
 
-  double  scale = defaultScale(err, prec); // default scale
+  double scale = defaultScale(err, prec); // default scale
 
   zzX poly;
   CKKS_embedInSlots(poly, array, getPAlgebra(), scale);

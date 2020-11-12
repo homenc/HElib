@@ -137,7 +137,7 @@ public:
   //! @param indexSet Which primes to use for this object, if not specified then
   //! use all of them
   // VJS-FIXME: it is not clear what the restrictions on deg(poly) are:
-  // must we have deg(poly) < phi(m)? Or is it deg(poly) < m? 
+  // must we have deg(poly) < phi(m)? Or is it deg(poly) < m?
   DoubleCRT(const NTL::ZZX& poly,
             const Context& _context,
             const IndexSet& indexSet);

@@ -447,7 +447,8 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
   if (noise_rat > 1) {
     // TODO: Turn the following preprocessor logics into a warnOrThrow function
-    std::string message = "rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat);
+    std::string message =
+        "rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat);
 #ifdef HELIB_DEBUG
     Warning(message);
 #else
@@ -1044,7 +1045,8 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 
   if (noise_rat > 1) {
     // TODO: Turn the following preprocessor logics into a warnOrThrow function
-    std::string message = "rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat);
+    std::string message =
+        "rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat);
 #ifdef HELIB_DEBUG
     Warning(message);
 #else

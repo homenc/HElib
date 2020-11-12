@@ -1050,15 +1050,16 @@ double NextPow2(double x);
 //! @brief Represents the set of long int's plus a distinguished value
 //! that can be used to denote "undefined".
 //! Similary in spirit to C++17's optional<long> type.
-class OptLong {
+class OptLong
+{
   long data;
   bool defined;
 
 public:
-  OptLong() : defined(false) { }
-  OptLong(long _data) : data(_data), defined(true) { }
+  OptLong() : defined(false) {}
+  OptLong(long _data) : data(_data), defined(true) {}
   // implict conversion from long
-  
+
   bool isDefined() const { return defined; }
   operator long() const { return data; }
   // implict conversion to long

@@ -23,6 +23,7 @@
 #include <helib/EncryptedArray.h>
 #include <helib/assertions.h>
 #include <helib/PolyMod.h>
+#include <helib/keys.h>
 #include <helib/scheme.h>
 #include <helib/EncodedPtxt.h>
 
@@ -280,6 +281,13 @@ public:
    * @param context `Context` to use.
    **/
   explicit Ptxt(const Context& context);
+
+  /**
+   * @brief Public key only constructor, defaults all slots to `0`.
+   * @param pk The public key used as a proxy to the context.
+   * @note This is needed to match calls to `Ctxt`.
+   **/
+  explicit Ptxt(const PubKey& pk) : Ptxt(pk.getContext()){};
 
   /**
    * @brief Single slot constructor, set all slots to `value`.

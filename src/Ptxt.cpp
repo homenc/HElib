@@ -259,9 +259,7 @@ NTL::ZZX Ptxt<BGV>::getPolyRepr() const
 }
 
 template <>
-void Ptxt<BGV>::encode(EncodedPtxt& eptxt,
-                       double mag,
-                       OptLong prec) const
+void Ptxt<BGV>::encode(EncodedPtxt& eptxt, double mag, OptLong prec) const
 {
   assertTrue<LogicError>(isValid(),
                          "Cannot call encide on default-constructed Ptxt");
@@ -283,9 +281,7 @@ void Ptxt<BGV>::encode(EncodedPtxt& eptxt,
  * @note Only enabled for the `CKKS` scheme.
  **/
 template <>
-void Ptxt<CKKS>::encode(EncodedPtxt& eptxt,
-                        double mag,
-                        OptLong prec) const
+void Ptxt<CKKS>::encode(EncodedPtxt& eptxt, double mag, OptLong prec) const
 {
   assertTrue<LogicError>(isValid(),
                          "Cannot call encode on default-constructed Ptxt");

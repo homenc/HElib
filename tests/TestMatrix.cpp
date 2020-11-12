@@ -299,15 +299,18 @@ TEST(TestMatrix, EqualsOpertorForMatrices)
   helib::Matrix<int> M2 = {{1, 2}, {3, 4}, {5, 6}, {7, 8}};
   helib::Matrix<int> M3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
   helib::Matrix<int> M4 = {{0, 1}, {2, 3}, {4, 5}};
-  helib::Matrix<int> M5 = M1;
-  // FIXME: Transpose of M5 = M1
-  // M5.transpose();
+  helib::Matrix<int> M5 = M1.transpose();
+  helib::Matrix<int> M6 = M1.deepCopy();
+
+  M6.inPlaceTranspose();
 
   EXPECT_TRUE(M1 == M1);
   EXPECT_TRUE(M1 == M2);
   EXPECT_FALSE(M1 == M3);
   EXPECT_FALSE(M1 == M4);
-  // EXPECT_FALSE(M1 == M5);
+  EXPECT_FALSE(M1 == M5);
+  EXPECT_FALSE(M1 == M6);
+  EXPECT_TRUE(M5 == M6);
 }
 
 TEST(TestMatrix, MoveMatrix)
@@ -326,15 +329,18 @@ TEST(TestMatrix, NotEqualsOpertorForMatrices)
   helib::Matrix<int> M2 = {{1, 2}, {3, 4}, {5, 6}, {7, 8}};
   helib::Matrix<int> M3 = {{0, 1}, {2, 3}, {4, 5}, {6, 7}};
   helib::Matrix<int> M4 = {{0, 1}, {2, 3}, {4, 5}};
-  helib::Matrix<int> M5 = M1;
-  // FIXME: Transpose of M5 = M1
-  // M5.transpose();
+  helib::Matrix<int> M5 = M1.transpose();
+  helib::Matrix<int> M6 = M1.deepCopy();
+
+  M6.inPlaceTranspose();
 
   EXPECT_FALSE(M1 != M1);
   EXPECT_FALSE(M1 != M2);
   EXPECT_TRUE(M1 != M3);
   EXPECT_TRUE(M1 != M4);
-  // EXPECT_TRUE(M1 != M5);
+  EXPECT_TRUE(M1 != M5);
+  EXPECT_TRUE(M1 != M6);
+  EXPECT_FALSE(M5 != M6);
 }
 
 TEST(TestMatrix, AccessingMatrixElementOutOfBound)
@@ -411,7 +417,78 @@ TEST(TestMatrix, GetMatrixColumn)
   EXPECT_EQ(subM2(2), 6);
 }
 
+TEST(TestMatrix, CreateSubmatrixFromRow)
+{
+  helib::Matrix<int> M(3, 2);
+  M(0, 0) = 1;
+  M(0, 1) = 2;
+  M(1, 0) = 3;
+  M(1, 1) = 4;
+  M(2, 0) = 5;
+  M(2, 1) = 6;
+
+  helib::Matrix<int> row(M.getRow(1));
+
+  EXPECT_EQ(row.size(), M.dims(1));
+  EXPECT_EQ(row.dims(0), 1);
+  EXPECT_EQ(row.dims(1), M.dims(1));
+
+  EXPECT_EQ(row(0, 0), 3);
+  EXPECT_EQ(row(0, 1), 4);
+}
+
+TEST(TestMatrix, CreateSubmatrixFromColumn)
+{
+  helib::Matrix<int> M(3, 2);
+  M(0, 0) = 1;
+  M(0, 1) = 2;
+  M(1, 0) = 3;
+  M(1, 1) = 4;
+  M(2, 0) = 5;
+  M(2, 1) = 6;
+
+  helib::Matrix<int> column(M.getColumn(0));
+
+  EXPECT_EQ(column.size(), M.dims(0));
+  EXPECT_EQ(column.dims(0), M.dims(0));
+  EXPECT_EQ(column.dims(1), 1);
+
+  EXPECT_EQ(column(0, 0), 1);
+  EXPECT_EQ(column(1, 0), 3);
+  EXPECT_EQ(column(2, 0), 5);
+}
+
 TEST(TestMatrix, AddMatrices)
+{
+  helib::Matrix<int> M1(2, 3);
+  M1(0, 0) = 1;
+  M1(0, 1) = 2;
+  M1(0, 2) = 3;
+  M1(1, 0) = 4;
+  M1(1, 1) = 5;
+  M1(1, 2) = 6;
+
+  helib::Matrix<int> M2(2, 3);
+  M2(0, 0) = 1;
+  M2(0, 1) = -3;
+  M2(0, 2) = 7;
+  M2(1, 0) = 1;
+  M2(1, 1) = 7;
+  M2(1, 2) = 5;
+
+  auto M3 = M1 + M2;
+
+  EXPECT_EQ(M3(0, 0), 2);
+  EXPECT_EQ(M3(0, 1), -1);
+  EXPECT_EQ(M3(0, 2), 10);
+  EXPECT_EQ(M3(1, 0), 5);
+  EXPECT_EQ(M3(1, 1), 12);
+  EXPECT_EQ(M3(1, 2), 11);
+  EXPECT_TRUE(M1 != M3);
+  EXPECT_TRUE(M2 != M3);
+}
+
+TEST(TestMatrix, AddMatricesInPlace)
 {
   helib::Matrix<int> M1(2, 3);
   M1(0, 0) = 1;
@@ -440,6 +517,36 @@ TEST(TestMatrix, AddMatrices)
 }
 
 TEST(TestMatrix, SubtractMatrices)
+{
+  helib::Matrix<int> M1(2, 3);
+  M1(0, 0) = 1;
+  M1(0, 1) = 2;
+  M1(0, 2) = 3;
+  M1(1, 0) = 4;
+  M1(1, 1) = 5;
+  M1(1, 2) = 6;
+
+  helib::Matrix<int> M2(2, 3);
+  M2(0, 0) = 1;
+  M2(0, 1) = -3;
+  M2(0, 2) = 7;
+  M2(1, 0) = 1;
+  M2(1, 1) = 7;
+  M2(1, 2) = 5;
+
+  auto M3 = M1 - M2;
+
+  EXPECT_EQ(M3(0, 0), 0);
+  EXPECT_EQ(M3(0, 1), 5);
+  EXPECT_EQ(M3(0, 2), -4);
+  EXPECT_EQ(M3(1, 0), 3);
+  EXPECT_EQ(M3(1, 1), -2);
+  EXPECT_EQ(M3(1, 2), 1);
+  EXPECT_TRUE(M1 != M3);
+  EXPECT_TRUE(M2 != M3);
+}
+
+TEST(TestMatrix, SubtractMatricesInPlace)
 {
   helib::Matrix<int> M1(2, 3);
   M1(0, 0) = 1;
@@ -575,6 +682,27 @@ TEST(TestMatrix, ApplyTransformToElementsWithFullView)
   EXPECT_EQ(M(1, 2), 11);
 }
 
+TEST(TestMatrix, InPlaceTransposeMatrix)
+{
+
+  helib::Matrix<int> M(2, 3);
+  M(0, 0) = 1;
+  M(0, 1) = 2;
+  M(0, 2) = 3;
+  M(1, 0) = 4;
+  M(1, 1) = 5;
+  M(1, 2) = 6;
+
+  M.inPlaceTranspose();
+
+  EXPECT_EQ(M(0, 0), 1);
+  EXPECT_EQ(M(1, 0), 2);
+  EXPECT_EQ(M(2, 0), 3);
+  EXPECT_EQ(M(0, 1), 4);
+  EXPECT_EQ(M(1, 1), 5);
+  EXPECT_EQ(M(2, 1), 6);
+}
+
 TEST(TestMatrix, TransposeMatrix)
 {
 
@@ -586,7 +714,7 @@ TEST(TestMatrix, TransposeMatrix)
   M(1, 1) = 5;
   M(1, 2) = 6;
 
-  M.transpose();
+  M = M.transpose();
 
   EXPECT_EQ(M(0, 0), 1);
   EXPECT_EQ(M(1, 0), 2);
@@ -614,7 +742,7 @@ TEST(TestMatrix, MultiplyTwoMatrices)
   M2(1, 1) = 7;
   M2(1, 2) = 5;
 
-  helib::Matrix<int> M3 = M1 * M2.transpose();
+  helib::Matrix<int> M3 = M1 * M2.inPlaceTranspose();
 
   // Check dimensions (expect 2x2 Matrix)
   EXPECT_EQ(M3.size(), 2 * 2);
@@ -706,7 +834,7 @@ TEST(TestMatrix, ValidMultiplyTwoMatricesOfDifferentTypes)
   B(1, 1).data = 7;
   B(1, 2).data = 5;
 
-  helib::Matrix<TypeA> C = A * B.transpose();
+  helib::Matrix<TypeA> C = A * B.inPlaceTranspose();
 
   // Check dimensions (expect 2x2 Matrix)
   EXPECT_EQ(C.size(), 2 * 2);
@@ -759,7 +887,7 @@ TEST(TestMatrix, ConstructMatrixView)
   EXPECT_EQ(view(2, 5), 1);  // 2
 }
 
-TEST(TestMatrix, TransposeMatrixView)
+TEST(TestMatrix, InPlaceTransposeMatrixView)
 {
   helib::Matrix<int> M = {{10, 0, 3, 20, 6, 9, 30},
                           {11, 1, 4, 21, 7, 10, 31},
@@ -767,7 +895,7 @@ TEST(TestMatrix, TransposeMatrixView)
 
   helib::Matrix<int> view = M.columns({1, 2, 4, 5});
 
-  view.transpose();
+  view.inPlaceTranspose();
 
   EXPECT_EQ(view.size(), 4 * 3);
   EXPECT_EQ(view.dims(0), 4);
@@ -844,7 +972,7 @@ TEST(TestMatrix, MatrixMultiplicationOfTwoViewsFromSameData)
   helib::Matrix<int> view1 = M.columns({2, 2, 5, 6});
   helib::Matrix<int> view2 = M.columns({1, 2, 3, 5});
 
-  helib::Matrix<int> R = view1 * view2.transpose();
+  helib::Matrix<int> R = view1 * view2.inPlaceTranspose();
 
   // Check dimensions
   EXPECT_EQ(view1.size(), 3 * 4);
@@ -881,10 +1009,10 @@ TEST(TestMatrix, MatrixMultiplicationOfTwoViewsFromSameData)
   EXPECT_EQ(R(2, 2), -24);
 }
 
-TEST(TestMatrix, TransposeIssue)
+TEST(TestMatrix, InPlaceTransposeIssue)
 {
   helib::Matrix<int> M = {{1, 2, 3, 4, 5}};
-  M.transpose();
+  M.inPlaceTranspose();
   helib::Matrix<int> view = M.columns({0, 0, 0});
   // Make sure that the 'transposed' property of a matrix is preserved even
   // after taking a view
@@ -981,7 +1109,7 @@ TEST_P(TestMatrixWithCtxt, PopulateMatrixWithCtxt)
   EXPECT_TRUE(std::equal(P(1, 1).begin(), P(1, 1).end(), d4.begin()));
 }
 
-TEST_P(TestMatrixWithCtxt, TransposeCtxtMatrix)
+TEST_P(TestMatrixWithCtxt, InPlaceTransposeCtxtMatrix)
 {
   helib::Matrix<helib::Ctxt> M(helib::Ctxt(pk), 2, 3);
   helib::Matrix<std::vector<long>> P(3, 2);
@@ -1002,7 +1130,7 @@ TEST_P(TestMatrixWithCtxt, TransposeCtxtMatrix)
   ea.encrypt(M(1, 1), pk, d5);
   ea.encrypt(M(1, 2), pk, d6);
 
-  M.transpose();
+  M.inPlaceTranspose();
 
   // decrypt some values
   ea.decrypt(M(0, 0), sk, P(0, 0));
@@ -1063,7 +1191,7 @@ TEST_P(TestMatrixWithCtxt, MultiplyTwoCtxtMatrices)
   ea.encrypt(M2(1, 2), pk, d6);
 
   // multiply
-  helib::Matrix<helib::Ctxt> M3 = M1 * M2.transpose();
+  helib::Matrix<helib::Ctxt> M3 = M1 * M2.inPlaceTranspose();
   helib::Matrix<std::vector<long>> P(2, 2);
 
   // decrypt some values

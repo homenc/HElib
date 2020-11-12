@@ -1233,7 +1233,9 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt& ciphertxt) const
 // These two specialisations are here to avoid a circular dependency on
 // EncryptedArray
 template <>
-void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt, UNUSED OptLong prec) const
+void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt,
+                          const Ctxt& ciphertxt,
+                          UNUSED OptLong prec) const
 {
   NTL::ZZX pp;
   Decrypt(pp, ciphertxt);
@@ -1241,7 +1243,9 @@ void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt, UNUSED Opt
 }
 
 template <>
-void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt, OptLong prec) const
+void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt,
+                           const Ctxt& ciphertxt,
+                           OptLong prec) const
 {
   const Context& context = ciphertxt.getContext();
   assertTrue(&context == &plaintxt.getContext(),
@@ -1691,8 +1695,7 @@ std::ostream& operator<<(std::ostream& str, const SecKey& sk)
 
 std::ostream& SecKey::writeSecKeyDerivedASCII(std::ostream& str) const
 {
-  str << "[" 
-      << sKeys.size() << std::endl;
+  str << "[" << sKeys.size() << std::endl;
   for (long i = 0; i < (long)sKeys.size(); i++)
     str << sKeys[i] << std::endl;
   return str << "]";

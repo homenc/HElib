@@ -63,7 +63,9 @@ double sampleSmallBounded(zzX& poly, const Context& context);
 double sampleGaussian(zzX& poly, const Context& context, double stdev);
 // Same as above, but ensure the result is not too much larger than typical
 double sampleGaussianBounded(zzX& poly, const Context& context, double stdev);
-NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly, const Context& context, NTL::xdouble stdev);
+NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly,
+                                   const Context& context,
+                                   NTL::xdouble stdev);
 
 // Return value times stdev is the bound used in sampleGaussianBounded
 double sampleGaussianBoundedEffectiveBound(const Context& context);

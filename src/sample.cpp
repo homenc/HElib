@@ -123,8 +123,10 @@ void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
   // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
   for (long i = 0; i < n; i += 2) {
     // r1, r2 are "uniform in (0,1)"
-    double r1 = RandomReal(); 
-    double r2 = RandomReal(); while (r2 == 0) r2 = RandomReal(); 
+    double r1 = RandomReal();
+    double r2 = RandomReal();
+    while (r2 == 0)
+      r2 = RandomReal();
     double theta = 2.0 * PI * r1;
     double rr = std::sqrt(-2.0 * log(r2));
     if (rr > HELIB_GAUSS_TRUNC) {
@@ -151,8 +153,10 @@ void sampleGaussian(std::vector<NTL::xdouble>& dvec, long n, NTL::xdouble stdev)
   // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
   for (long i = 0; i < n; i += 2) {
     // r1, r2 are "uniform in (0,1)"
-    double r1 = RandomReal(); 
-    double r2 = RandomReal(); while (r2 == 0) r2 = RandomReal(); 
+    double r1 = RandomReal();
+    double r2 = RandomReal();
+    while (r2 == 0)
+      r2 = RandomReal();
     double theta = 2.0 * PI * r1;
     double rr = std::sqrt(-2.0 * log(r2));
     if (rr > HELIB_GAUSS_TRUNC) {
@@ -192,10 +196,9 @@ void sampleGaussian(NTL::ZZX& poly, long n, NTL::xdouble stdev)
   // round and copy to coefficients of poly
   poly.SetLength(n); // allocate space for degree-(n-1) polynomial
   for (long i = 0; i < n; i++)
-    NTL::conv(poly[i], dvec[i]+0.5); // round to nearest integer
+    NTL::conv(poly[i], dvec[i] + 0.5); // round to nearest integer
   poly.normalize();
 }
-
 
 // Sample a degree-(n-1) zzX, with coefficients uniform in [-B,B]
 void sampleUniform(zzX& poly, long n, long B)
@@ -419,7 +422,9 @@ double sampleGaussian(zzX& poly, const Context& context, double stdev)
   return retval;
 }
 
-NTL::xdouble sampleGaussian(NTL::ZZX& poly, const Context& context, NTL::xdouble stdev)
+NTL::xdouble sampleGaussian(NTL::ZZX& poly,
+                            const Context& context,
+                            NTL::xdouble stdev)
 {
   const PAlgebra& palg = context.zMStar;
   NTL::xdouble retval;
@@ -448,8 +453,7 @@ double sampleGaussianBoundedEffectiveBound(const Context& context)
   long m = palg.getM();
   long phim = palg.getPhiM();
 
-  return (((palg.getPow2() == 0) ? sqrt(m * log(phim))
-                                 : sqrt(phim * log(phim))));
+  return (palg.getPow2() == 0) ? sqrt(m * log(phim)) : sqrt(phim * log(phim));
   // should be good with probability at least 1/2
   // NOTE: the general formula is sigma*sqrt(log(phim)),
   // assuming we are sampling from a zero mean complex Gaussian
@@ -509,7 +513,9 @@ double sampleGaussianBounded(zzX& poly, const Context& context, double stdev)
   return bound;
 }
 
-NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly, const Context& context, NTL::xdouble stdev)
+NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly,
+                                   const Context& context,
+                                   NTL::xdouble stdev)
 {
   const PAlgebra& palg = context.zMStar;
 
