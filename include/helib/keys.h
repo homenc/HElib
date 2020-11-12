@@ -287,9 +287,11 @@ public:
    * @tparam Scheme Encryption scheme used (must be `BGV` or `CKKS`).
    * @param plaintxt Plaintext into which to decrypt.
    * @param ciphertxt Ciphertext to decrypt.
+   * @param prec `CKKS` precision to be used (must be defaulted if Scheme is `BGV`).
    **/
+  // TODO: document this better (especially the prec parameter)
   template <typename Scheme>
-  void Decrypt(Ptxt<Scheme>& plaintxt, const Ctxt& ciphertxt) const;
+  void Decrypt(Ptxt<Scheme>& plaintxt, const Ctxt& ciphertxt, OptLong prec=OptLong()) const;
 
   //! @brief Debugging version, returns in f the polynomial
   //! before reduction modulo the ptxtSpace
@@ -326,6 +328,10 @@ public:
   friend std::istream& operator>>(std::istream& str, SecKey& sk);
   friend void ::helib::writeSecKeyBinary(std::ostream& str, const SecKey& sk);
   friend void ::helib::readSecKeyBinary(std::istream& str, SecKey& sk);
+
+  // TODO: Add a similar method for binary serialization
+  // This just writes the derived part, not including the public key
+  std::ostream& writeSecKeyDerivedASCII(std::ostream& str) const;
 };
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e

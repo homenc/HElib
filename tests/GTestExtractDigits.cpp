@@ -138,10 +138,13 @@ TEST_P(GTestExtractDigits, correctlyExtractsDigits)
   std::vector<long> tmp = v;
   long pp = p2r;
   for (long i = 0; i < (long)digits.size(); i++) {
+#if 0
+// Removed isCorrect for now, as it is not correctly defined
     if (!digits[i].isCorrect()) {
       helib::CheckCtxt(digits[i], "");
       FAIL() << " potential decryption error for " << i << "th digit ";
     }
+#endif
     ea.decrypt(digits[i], secretKey, pDigits);
     if (ea.size() <= 20 && !helib_test::noPrint)
       std::cout << i << "th digit=" << helib::vecToStr(pDigits) << std::endl;

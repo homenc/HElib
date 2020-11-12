@@ -22,6 +22,9 @@
 
 namespace helib {
 
+const int HELIB_GAUSS_TRUNC = 8;
+// Gaussian sampling truncates to this many standard deviations
+
 //! Sample a degree-(n-1) poly, with -1/0/+1 coefficients.
 //! Each coefficients is +-1 with probability prob/2 each,
 //! and 0 with probability 1-prob. By default, pr[nonzero]=1/2.
@@ -34,7 +37,6 @@ void sampleHWt(NTL::ZZX& poly, long n, long Hwt = 100);
 
 //! Sample polynomials with Gaussian coefficients.
 void sampleGaussian(zzX& poly, long n, double stdev);
-void sampleGaussian(NTL::ZZX& poly, long n, double stdev);
 
 //! Sample a degree-(n-1) ZZX, with coefficients uniform in [-B,B]
 void sampleUniform(zzX& poly, long n, long B = 100);
@@ -61,6 +63,10 @@ double sampleSmallBounded(zzX& poly, const Context& context);
 double sampleGaussian(zzX& poly, const Context& context, double stdev);
 // Same as above, but ensure the result is not too much larger than typical
 double sampleGaussianBounded(zzX& poly, const Context& context, double stdev);
+NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly, const Context& context, NTL::xdouble stdev);
+
+// Return value times stdev is the bound used in sampleGaussianBounded
+double sampleGaussianBoundedEffectiveBound(const Context& context);
 
 double sampleUniform(zzX& poly, const Context& context, long B = 100);
 NTL::xdouble sampleUniform(NTL::ZZX& poly,

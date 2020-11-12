@@ -1283,6 +1283,14 @@ double DoubleCRT::sampleGaussianBounded(double stdev)
   return retval;
 }
 
+NTL::xdouble DoubleCRT::sampleGaussianBounded(NTL::xdouble stdev)
+{
+  NTL::ZZX poly;
+  NTL::xdouble retval = ::helib::sampleGaussianBounded(poly, context, stdev);
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
+
 // Coefficients are uniform in [-B..B]
 
 double DoubleCRT::sampleUniform(long B)

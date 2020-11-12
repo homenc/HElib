@@ -33,25 +33,6 @@ namespace helib {
 
 typedef std::complex<double> cx_double;
 
-// This is for internal use only...
-// Represents the set of long int's plus a distinguished value
-// that can be used to denote "undefined".
-// Similary in spirit to C++17's optional<long> type.
-// We could move this to NumbTh.h.
-
-struct OptLong {
-  long data;
-  bool defined;
-
-  OptLong() : defined(false) { }
-  OptLong(long _data) : data(_data), defined(true) { }
-  // implict conversion from long
-  
-  bool isDefined() const { return defined; }
-  operator long() const { return data; }
-  // implict conversion to long
-};
-
 // DIRT: we're using undocumented NTL interfaces here
 //   also...this probably should be defined in NTL, anyway....
 #define HELIB_MORE_UNWRAPARGS(n)                                               \
@@ -205,7 +186,7 @@ public:
   // The encoding will normally have an accuracy of 2^{-prec}, meaning that
   // Norm(array - decode(encode(array))) <= 2^{-prec}.
   // Note that prec may be positive, negative, or zero.
-  // The exact logic is a bit heuristic, and a warning is 
+  // The exact logic is a bit heuristic, and a warning is
   // issued if the the accuracy exceeds 2^{-prec}.
 
   // NOTE: Norm above is the infinity (i.e., max) norm.
@@ -235,7 +216,7 @@ public:
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const = 0;
   // NOTE: for CKKS, mag,prec are default
 
-  virtual double defaultScale(UNUSED double err, 
+  virtual double defaultScale(UNUSED double err,
                               UNUSED OptLong prec = OptLong()) const
   {
     throw LogicError("function not implemented");
@@ -293,11 +274,13 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<double>& ptxt) const = 0;
+                       std::vector<double>& ptxt,
+                       OptLong prec = OptLong()) const = 0;
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<cx_double>& ptxt) const = 0;
+                       std::vector<cx_double>& ptxt,
+                       OptLong prec = OptLong()) const = 0;
 
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
@@ -309,15 +292,18 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       PlaintextArray& ptxt) const = 0;
+                       PlaintextArray& ptxt,
+                       OptLong prec = OptLong()) const = 0;
 
   virtual void decryptComplex(const Ctxt& ctxt,
                               const SecKey& sKey,
-                              PlaintextArray& ptxt) const = 0;
+                              PlaintextArray& ptxt,
+                              OptLong prec = OptLong()) const = 0;
 
   virtual void decryptReal(const Ctxt& ctxt,
                            const SecKey& sKey,
-                           PlaintextArray& ptxt) const = 0;
+                           PlaintextArray& ptxt,
+                           OptLong prec = OptLong()) const = 0;
 
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
@@ -531,10 +517,13 @@ public:
    * @param ctxt Unused.
    * @param sKey Unused.
    * @param ptxt Unused.
+   * @param prec Unused.
    */
+  // TODO: document this better (especially the prec parameter)
   void decrypt(UNUSED const Ctxt& ctxt,
                UNUSED const SecKey& sKey,
-               UNUSED std::vector<double>& ptxt) const override
+               UNUSED std::vector<double>& ptxt,
+               UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("Unimplemented: "
                      "EncryptedArrayDerived::decrypt for CKKS type");
@@ -545,10 +534,13 @@ public:
    * @param ctxt Unused.
    * @param sKey Unused.
    * @param ptxt Unused.
+   * @param prec Unused.
    */
+  // TODO: document this better (especially the prec parameter)
   void decrypt(UNUSED const Ctxt& ctxt,
                UNUSED const SecKey& sKey,
-               UNUSED std::vector<cx_double>& ptxt) const override
+               UNUSED std::vector<cx_double>& ptxt,
+               UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("Unimplemented: "
                      "EncryptedArrayDerived::decrypt for CKKS type");
@@ -577,7 +569,8 @@ public:
 
   void decryptComplex(UNUSED const Ctxt& ctxt,
                       UNUSED const SecKey& sKey,
-                      UNUSED PlaintextArray& ptxt) const override
+                      UNUSED PlaintextArray& ptxt,
+                      UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented");
   }
@@ -591,7 +584,8 @@ public:
 
   void decryptReal(UNUSED const Ctxt& ctxt,
                    UNUSED const SecKey& sKey,
-                   UNUSED PlaintextArray& ptxt) const override
+                   UNUSED PlaintextArray& ptxt,
+                   UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented");
   }
@@ -757,8 +751,12 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       PlaintextArray& ptxt) const override
+                       PlaintextArray& ptxt,
+                       OptLong prec = OptLong()) const override
   {
+    if (prec.isDefined())
+      throw LogicError("EncryptedArray::decrypt: the precision parameter (prec) must be defaulted");
+
     genericDecrypt(ctxt, sKey, ptxt);
     if (ctxt.getPtxtSpace() < getP2R()) {
       throw LogicError("EncryptedArray::decrypt: bad plaintext modulus");
@@ -1382,10 +1380,13 @@ public:
 
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               std::vector<cx_double>& ptxt) const override;
+               std::vector<cx_double>& ptxt,
+               OptLong prec = OptLong()) const override;
+
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               std::vector<double>& ptxt) const override;
+               std::vector<double>& ptxt,
+               OptLong prec = OptLong()) const override;
 
   void rawDecrypt(const Ctxt& ctxt,
                   const SecKey& sKey,
@@ -1397,9 +1398,10 @@ public:
 
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               PlaintextArray& ptxt) const override
+               PlaintextArray& ptxt,
+               OptLong prec = OptLong()) const override
   {
-    decryptReal(ctxt, sKey, ptxt);
+    decryptReal(ctxt, sKey, ptxt, prec);
   }
 
   void rawDecrypt(const Ctxt& ctxt,
@@ -1411,7 +1413,8 @@ public:
 
   void decryptComplex(const Ctxt& ctxt,
                       const SecKey& sKey,
-                      PlaintextArray& ptxt) const override;
+                      PlaintextArray& ptxt,
+                      OptLong prec = OptLong()) const override;
 
   void rawDecryptComplex(const Ctxt& ctxt,
                          const SecKey& sKey,
@@ -1419,7 +1422,8 @@ public:
 
   void decryptReal(const Ctxt& ctxt,
                    const SecKey& sKey,
-                   PlaintextArray& ptxt) const override;
+                   PlaintextArray& ptxt,
+                   OptLong prec = OptLong()) const override;
 
   void rawDecryptReal(const Ctxt& ctxt,
                       const SecKey& sKey,
@@ -1431,14 +1435,21 @@ public:
    * @param ctxt Ciphertext to decrypt.
    * @param sKey Secret key to be used for decryption.
    * @param ptxt Plaintext into which to decrypt.
+   * @param prec `CKKS` precision to be used (must be defaulted if Scheme is `BGV`).
    * Decrypt a `Ctxt` ciphertext object to a `Ptxt` plaintext one relative to
    * a specific scheme.
    **/
+
+  // VJS-FIXME: something seems odd here. This code clearly only
+  // works for CKKS because ptxtArray has type vector<cx_double>.
+  // However, Scheme could be CKKS or BGV.  Is there a specialized
+  // version of this somewhere?
+  // TODO: document this better (especially the prec parameter)
   template <typename Scheme>
-  void decrypt(const Ctxt& ctxt, const SecKey& sKey, Ptxt<Scheme>& ptxt) const
+  void decrypt(const Ctxt& ctxt, const SecKey& sKey, Ptxt<Scheme>& ptxt, OptLong prec = OptLong()) const
   {
     std::vector<cx_double> ptxtArray;
-    decrypt(ctxt, sKey, ptxtArray);
+    decrypt(ctxt, sKey, ptxtArray, prec);
     ptxt.setData(std::move(ptxtArray));
   }
 
@@ -1855,6 +1866,12 @@ public:
   }
 
   template <typename T>
+  void decrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt, OptLong prec) const
+  {
+    rep->decrypt(ctxt, sKey, ptxt, prec);
+  }
+
+  template <typename T>
   void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt) const
   {
     rep->rawDecrypt(ctxt, sKey, ptxt);
@@ -1862,9 +1879,10 @@ public:
 
   void decryptComplex(const Ctxt& ctxt,
                       const SecKey& sKey,
-                      PlaintextArray& ptxt) const
+                      PlaintextArray& ptxt,
+                      OptLong prec = OptLong()) const
   {
-    rep->decryptComplex(ctxt, sKey, ptxt);
+    rep->decryptComplex(ctxt, sKey, ptxt, prec);
   }
 
   void rawDecryptComplex(const Ctxt& ctxt,
@@ -1876,9 +1894,10 @@ public:
 
   void decryptReal(const Ctxt& ctxt,
                    const SecKey& sKey,
-                   PlaintextArray& ptxt) const
+                   PlaintextArray& ptxt,
+                   OptLong prec = OptLong()) const
   {
-    rep->decryptReal(ctxt, sKey, ptxt);
+    rep->decryptReal(ctxt, sKey, ptxt, prec);
   }
 
   void rawDecryptReal(const Ctxt& ctxt,
@@ -2183,9 +2202,12 @@ public:
     }
   }
 
-  void decrypt(const Ctxt& ctxt, const SecKey& sKey)
+  void decrypt(const Ctxt& ctxt, const SecKey& sKey, OptLong prec = OptLong())
   {
-    ea.decrypt(ctxt, sKey, pa);
+    if (ea.isCKKS())
+      ea.decrypt(ctxt, sKey, pa, prec);
+    else
+      ea.decrypt(ctxt, sKey, pa);
   }
 
   void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey)
@@ -2193,9 +2215,9 @@ public:
     ea.rawDecrypt(ctxt, sKey, pa);
   }
 
-  void decryptComplex(const Ctxt& ctxt, const SecKey& sKey)
+  void decryptComplex(const Ctxt& ctxt, const SecKey& sKey, OptLong prec = OptLong())
   {
-    ea.decryptComplex(ctxt, sKey, pa);
+    ea.decryptComplex(ctxt, sKey, pa, prec);
   }
 
   void rawDecryptComplex(const Ctxt& ctxt, const SecKey& sKey)
@@ -2203,9 +2225,9 @@ public:
     ea.rawDecryptComplex(ctxt, sKey, pa);
   }
 
-  void decryptReal(const Ctxt& ctxt, const SecKey& sKey)
+  void decryptReal(const Ctxt& ctxt, const SecKey& sKey, OptLong prec = OptLong())
   {
-    ea.decryptReal(ctxt, sKey, pa);
+    ea.decryptReal(ctxt, sKey, pa, prec);
   }
 
   void rawDecryptReal(const Ctxt& ctxt, const SecKey& sKey)
