@@ -721,7 +721,7 @@ void recursiveEval(const CubeSlice<NTL::zz_p>& s,
 #if 0
 // Implementation of FFTHelper
 #include <helib/bluestein.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 
 FFTHelper::FFTHelper(long _m, NTL::zz_p x)
 {

@@ -18,7 +18,7 @@
 #include <helib/EncryptedArray.h>
 
 #include <helib/timing.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 #include <helib/norms.h>
 #include <helib/debugging.h>
 #include <helib/apiAttributes.h>

@@ -154,10 +154,10 @@ void replicate(const EncryptedArray&, Ptxt<Scheme>& ptxt, long i)
 class RepAux
 { // one table for the whole thing
 private:
-  std::vector<copied_ptr<FatEncodedPtxt>> _tab;
+  std::vector<CopiedPtr<FatEncodedPtxt>> _tab;
 
 public:
-  copied_ptr<FatEncodedPtxt>& tab(long i)
+  CopiedPtr<FatEncodedPtxt>& tab(long i)
   {
     if (i >= lsize(_tab))
       _tab.resize(i + 1);
@@ -168,10 +168,10 @@ public:
 class RepAuxDim
 { // two tables per dimension
 private:
-  std::vector<std::vector<copied_ptr<FatEncodedPtxt>>> _tab, _tab1;
+  std::vector<std::vector<CopiedPtr<FatEncodedPtxt>>> _tab, _tab1;
 
 public:
-  copied_ptr<FatEncodedPtxt>& tab(long d, long i)
+  CopiedPtr<FatEncodedPtxt>& tab(long d, long i)
   {
     if (d >= lsize(_tab))
       _tab.resize(d + 1);
@@ -180,7 +180,7 @@ public:
     return _tab[d][i];
   }
 
-  copied_ptr<FatEncodedPtxt>& tab1(long d, long i)
+  CopiedPtr<FatEncodedPtxt>& tab1(long d, long i)
   {
     if (d >= lsize(_tab1))
       _tab1.resize(d + 1);

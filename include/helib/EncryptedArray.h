@@ -122,7 +122,7 @@ public:
   virtual ~EncryptedArrayBase() {}
 
   virtual EncryptedArrayBase* clone() const = 0;
-  // makes this usable with cloned_ptr
+  // makes this usable with ClonedPtr
 
   virtual PA_tag getTag() const = 0;
 
@@ -1567,7 +1567,7 @@ class EncryptedArray
 {
 private:
   const PAlgebraMod& alMod;
-  cloned_ptr<EncryptedArrayBase> rep;
+  ClonedPtr<EncryptedArrayBase> rep;
 
 public:
   //! constructor: G defaults to the monomial X, PAlgebraMod from context
@@ -1627,19 +1627,19 @@ public:
     switch (getTag()) {
     case PA_GF2_tag: {
       const EncryptedArrayDerived<PA_GF2>* p =
-          static_cast<const EncryptedArrayDerived<PA_GF2>*>(rep.get_ptr());
+          static_cast<const EncryptedArrayDerived<PA_GF2>*>(rep.get());
       p->dispatch<T>(std::forward<Args>(args)...);
       break;
     }
     case PA_zz_p_tag: {
       const EncryptedArrayDerived<PA_zz_p>* p =
-          static_cast<const EncryptedArrayDerived<PA_zz_p>*>(rep.get_ptr());
+          static_cast<const EncryptedArrayDerived<PA_zz_p>*>(rep.get());
       p->dispatch<T>(std::forward<Args>(args)...);
       break;
     }
     case PA_cx_tag: {
       const EncryptedArrayDerived<PA_cx>* p =
-          static_cast<const EncryptedArrayDerived<PA_cx>*>(rep.get_ptr());
+          static_cast<const EncryptedArrayDerived<PA_cx>*>(rep.get());
       p->dispatch<T>(std::forward<Args>(args)...);
       break;
     }

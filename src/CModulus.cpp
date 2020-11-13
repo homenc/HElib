@@ -84,8 +84,8 @@ Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
 
     context.restore();
 
-    powers.set_ptr(new NTL::zz_pX);
-    ipowers.set_ptr(new NTL::zz_pX);
+    powers.reset(new NTL::zz_pX);
+    ipowers.reset(new NTL::zz_pX);
 
     long k = zms.getPow2();
     long phim = 1L << (k - 1);
@@ -155,11 +155,11 @@ Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
   NTL::zz_pX phimx_poly;
   conv(phimx_poly, zms.getPhimX());
 
-  powers.set_ptr(new NTL::zz_pX);
-  Rb.set_ptr(new NTL::fftRep);
-  ipowers.set_ptr(new NTL::zz_pX);
-  iRb.set_ptr(new NTL::fftRep);
-  phimx.set_ptr(new zz_pXModulus1(zms.getM(), phimx_poly));
+  powers.reset(new NTL::zz_pX);
+  Rb.reset(new NTL::fftRep);
+  ipowers.reset(new NTL::zz_pX);
+  iRb.reset(new NTL::fftRep);
+  phimx.reset(new zz_pXModulus1(zms.getM(), phimx_poly));
 
   BluesteinInit(mm, NTL::conv<NTL::zz_p>(root), *powers, powers_aux, *Rb);
   BluesteinInit(mm, NTL::conv<NTL::zz_p>(rInv), *ipowers, ipowers_aux, *iRb);
