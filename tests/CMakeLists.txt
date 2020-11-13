@@ -24,6 +24,7 @@ if (NOT ONLY_ADD_TEST)
     set(GTEST_SRC
         "test_common.cpp"
         "TestArgMap.cpp"
+        "TestBGV.cpp"
         "TestBootstrappingWithMultiplications.cpp"
         "TestCKKS.cpp"
         "TestContext.cpp"
@@ -135,6 +136,7 @@ set(TEST_NAMES
     "GTestThinBootstrapping"
     "GTestThinEvalMap"
     "TestArgMap"
+    "TestBGV"
     "TestCKKS"
     "TestContext"
     "TestCtxt"
