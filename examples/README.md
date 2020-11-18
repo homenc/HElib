@@ -33,6 +33,9 @@ make [-j<number-of-threads>]
 The executables for each of the example programs can be found in the `bin`
 directory.
 
+All tests for the examples are written in bats (a test framework for bash) and 
+require [bats-core](https://github.com/bats-core/bats-core/releases/tag/v1.2.1).
+
 ## Running the examples
 
 All examples have a help method by passing the `-h` flag, for example
@@ -55,7 +58,7 @@ lookup on countries and their capitals, more information on this can be found
 ## Running the tests
 
 All tests for the examples are written in bats (a test framework for bash)
-and requires [bats-core](https://github.com/bats-core/bats-core).
+and require [bats-core](https://github.com/bats-core/bats-core/releases/tag/v1.2.1).
 
 Note that the tests require that the examples have been successfully compiled
 in the `build` directory and available in `build/bin`. To run the tests, one

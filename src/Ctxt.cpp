@@ -1598,7 +1598,7 @@ IndexSet Ctxt::naturalPrimeSet() const
   return retval;
 }
 
-// This is essentially operator*=, but with an extra parameter
+// Low-level multiply routine. It does not include re-linearization.
 void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 {
   HELIB_TIMER_START;
