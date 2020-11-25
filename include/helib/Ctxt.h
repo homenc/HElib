@@ -1184,12 +1184,22 @@ public:
     return true;
   }
 
+#if 0
+// VJS-NOTE: this is incorrectly defined, so I took it out
+// for now.  It is currently only used in a nonessential
+// way in Test_extractDigits.cpp and GTestExtractDigits.cpp,
+// and I commented out those usages.
+// For a correct implementation that takes into account
+// both the total noise bound and the relation between
+// relevant norms, see the code in SecKey::Decrypt.
+
   //! @brief Would this ciphertext be decrypted without errors?
   bool isCorrect() const
   {
     NTL::ZZ q = context.productOfPrimes(primeSet);
     return NTL::to_xdouble(q) > noiseBound * 2;
   }
+#endif
 
   const Context& getContext() const { return context; }
   const PubKey& getPubKey() const { return pubKey; }
@@ -1237,6 +1247,12 @@ public:
 
   // scale up c1, c2 so they have the same ratFactor
   static void equalizeRationalFactors(Ctxt& c1, Ctxt& c2);
+
+  // adds noise for CKKS deryption to mitigate against
+  // plaintext leakage attacks, as in the paper
+  // "On the Security of Homomorphic Encryption on Approximate Numbers",
+  // by Li and Micciancio.
+  void addNoiseForCKKSDecryption(const SecKey& sk, double eps);
 };
 
 // set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products

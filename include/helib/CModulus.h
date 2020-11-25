@@ -20,7 +20,7 @@
 #include <helib/NumbTh.h>
 #include <helib/PAlgebra.h>
 #include <helib/bluestein.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 
 namespace helib {
 
@@ -61,17 +61,17 @@ class Cmodulus
   long rInv;
 
   // tables for forward FFT
-  copied_ptr<NTL::zz_pX> powers;
+  CopiedPtr<NTL::zz_pX> powers;
   NTL::Vec<NTL::mulmod_precon_t> powers_aux;
-  copied_ptr<NTL::fftRep> Rb;
+  CopiedPtr<NTL::fftRep> Rb;
 
   // tables for backward FFT
-  copied_ptr<NTL::zz_pX> ipowers;
+  CopiedPtr<NTL::zz_pX> ipowers;
   NTL::Vec<NTL::mulmod_precon_t> ipowers_aux;
-  copied_ptr<NTL::fftRep> iRb;
+  CopiedPtr<NTL::fftRep> iRb;
 
   // PhimX modulo q, for faster division w/ remainder
-  copied_ptr<zz_pXModulus1> phimx;
+  CopiedPtr<zz_pXModulus1> phimx;
 
   // Allocate memory and compute roots
   void privateInit(const PAlgebra&, long rt);

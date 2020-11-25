@@ -12,7 +12,7 @@
 
 #include <helib/replicate.h>
 #include <helib/timing.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 
 namespace helib {
 
@@ -155,11 +155,11 @@ static void recursiveReplicate(const EncryptedArray& ea,
     }
 
     // need to replicate to fill positions [ (1L << n) .. nSlots )
-    if (repAux.tab(0).null()) {
+    if (!repAux.tab(0)) {
       // need to generate mask
       EncodedPtxt mask;
       SelectRange(ea, mask, 0, nSlots - (1L << n));
-      repAux.tab(0).set_ptr(
+      repAux.tab(0).reset(
           new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
     }
 
@@ -183,7 +183,7 @@ static void recursiveReplicate(const EncryptedArray& ea,
 
       // mask should be at index k+1
 
-      if (repAux.tab(k + 1).null()) {
+      if (!repAux.tab(k + 1)) {
         // need to generate mask
 
         std::vector<bool> maskArray;
@@ -195,7 +195,7 @@ static void recursiveReplicate(const EncryptedArray& ea,
 
         EncodedPtxt mask;
         ea.encode(mask, maskArray);
-        repAux.tab(k + 1).set_ptr(
+        repAux.tab(k + 1).reset(
             new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
       }
 
@@ -401,10 +401,10 @@ static void recursiveReplicateDim(const EncryptedArray& ea,
 
     // need to replicate to fill positions [ (1L << n) .. dSize-1 ]
 
-    if (repAux.tab(d, 0).null()) { // generate mask if not there already
+    if (!repAux.tab(d, 0)) { // generate mask if not there already
       EncodedPtxt mask;
       SelectRangeDim(ea, mask, 0, dSize - extent, d);
-      repAux.tab(d, 0).set_ptr(
+      repAux.tab(d, 0).reset(
           new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
     }
 
@@ -437,7 +437,7 @@ static void recursiveReplicateDim(const EncryptedArray& ea,
 
       // generate mask at index k+1, if not there yet
 
-      if (repAux.tab(d, k + 1).null()) { // need to generate
+      if (!repAux.tab(d, k + 1)) { // need to generate
         std::vector<bool> maskArray(nSlots, false);
         for (long i = 0; i < nSlots; i++) {
           long c = ea.coordinate(d, i);
@@ -447,7 +447,7 @@ static void recursiveReplicateDim(const EncryptedArray& ea,
         // store this mask in the repAux table
         EncodedPtxt mask;
         ea.encode(mask, maskArray);
-        repAux.tab(d, k + 1).set_ptr(
+        repAux.tab(d, k + 1).reset(
             new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
       }
 
@@ -577,10 +577,10 @@ void replicateAllNextDim(const EncryptedArray& ea,
   Ctxt ctxt1 = ctxt;
 
   if (extent < dSize) { // select only the slots 0..extent-1 in this dimension
-    if (repAux.tab1(d, 0).null()) { // generate mask if not already there
+    if (!repAux.tab1(d, 0)) { // generate mask if not already there
       EncodedPtxt mask;
       SelectRangeDim(ea, mask, 0, extent, d);
-      repAux.tab1(d, 0).set_ptr(
+      repAux.tab1(d, 0).reset(
           new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
       // store mask in 2nd table (tab1)
     }
@@ -629,10 +629,10 @@ void replicateAllNextDim(const EncryptedArray& ea,
   if (extent < dSize) {
     // zero-out the slots from before, leaving only the leftover slots
     ctxt1 = ctxt;
-    if (repAux.tab1(d, 1).null()) { // generate mask if not already there
+    if (!repAux.tab1(d, 1)) { // generate mask if not already there
       EncodedPtxt mask;
       SelectRangeDim(ea, mask, extent, dSize, d);
-      repAux.tab1(d, 1).set_ptr(
+      repAux.tab1(d, 1).reset(
           new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
     }
     ctxt1.multByConstant(*repAux.tab1(d, 1)); // mult by mask to zero out slots

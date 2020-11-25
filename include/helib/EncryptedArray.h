@@ -122,7 +122,7 @@ public:
   virtual ~EncryptedArrayBase() {}
 
   virtual EncryptedArrayBase* clone() const = 0;
-  // makes this usable with cloned_ptr
+  // makes this usable with ClonedPtr
 
   virtual PA_tag getTag() const = 0;
 
@@ -174,38 +174,49 @@ public:
                       const std::vector<long>& array) const = 0;
 
   // CKKS only
-  // mag: default sets mag to maximum magnitude of array
-  // scale: default sets scale to defaultScale(err)
-  // err: default sets err to defaultErr()
+  // mag: defaults to Norm(array).
+  // prec: defaults to r=getAlMod().getR(), which
+  // is usually the same as context.getDefaultPrecision().
+
+  // mag should be an upper bound on Norm(array).
+  // If an encoding will be encrypted, the user may wish
+  // to hide Norm(array) by setting mag to some data-independent
+  // upper bound. A warning is issued if Norm(array) > mag.
+
+  // The encoding will normally have an accuracy of 2^{-prec}, meaning that
+  // Norm(array - decode(encode(array))) <= 2^{-prec}.
+  // Note that prec may be positive, negative, or zero.
+  // The exact logic is a bit heuristic, and a warning is
+  // issued if the the accuracy exceeds 2^{-prec}.
+
+  // NOTE: Norm above is the infinity (i.e., max) norm.
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<cx_double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const = 0;
+                      OptLong prec = OptLong()) const = 0;
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const = 0;
+                      OptLong prec = OptLong()) const = 0;
 
   // BGV and CKKS
   virtual void encode(EncodedPtxt& eptxt,
                       const PlaintextArray& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const = 0;
-  // NOTE: for BGV, mag,scale,err must be defaulted
+                      OptLong prec = OptLong()) const = 0;
+  // NOTE: for BGV, mag,prec must be defaulted
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<bool>& array) const = 0;
-  // NOTE: for CKKS, mag,scale,err are default
+  // NOTE: for CKKS, mag,prec are default
 
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const = 0;
-  // NOTE: for CKKS, mag,scale,err are defaulted
+  // NOTE: for CKKS, mag,prec are default
 
-  virtual double defaultScale(UNUSED double err) const
+  virtual double defaultScale(UNUSED double err,
+                              UNUSED OptLong prec = OptLong()) const
   {
     throw LogicError("function not implemented");
   }
@@ -262,11 +273,13 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<double>& ptxt) const = 0;
+                       std::vector<double>& ptxt,
+                       OptLong prec = OptLong()) const = 0;
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<cx_double>& ptxt) const = 0;
+                       std::vector<cx_double>& ptxt,
+                       OptLong prec = OptLong()) const = 0;
 
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
@@ -278,15 +291,18 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       PlaintextArray& ptxt) const = 0;
+                       PlaintextArray& ptxt,
+                       OptLong prec = OptLong()) const = 0;
 
   virtual void decryptComplex(const Ctxt& ctxt,
                               const SecKey& sKey,
-                              PlaintextArray& ptxt) const = 0;
+                              PlaintextArray& ptxt,
+                              OptLong prec = OptLong()) const = 0;
 
   virtual void decryptReal(const Ctxt& ctxt,
                            const SecKey& sKey,
-                           PlaintextArray& ptxt) const = 0;
+                           PlaintextArray& ptxt,
+                           OptLong prec = OptLong()) const = 0;
 
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
@@ -500,10 +516,13 @@ public:
    * @param ctxt Unused.
    * @param sKey Unused.
    * @param ptxt Unused.
+   * @param prec Unused.
    */
+  // TODO: document this better (especially the prec parameter)
   void decrypt(UNUSED const Ctxt& ctxt,
                UNUSED const SecKey& sKey,
-               UNUSED std::vector<double>& ptxt) const override
+               UNUSED std::vector<double>& ptxt,
+               UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("Unimplemented: "
                      "EncryptedArrayDerived::decrypt for CKKS type");
@@ -514,10 +533,13 @@ public:
    * @param ctxt Unused.
    * @param sKey Unused.
    * @param ptxt Unused.
+   * @param prec Unused.
    */
+  // TODO: document this better (especially the prec parameter)
   void decrypt(UNUSED const Ctxt& ctxt,
                UNUSED const SecKey& sKey,
-               UNUSED std::vector<cx_double>& ptxt) const override
+               UNUSED std::vector<cx_double>& ptxt,
+               UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("Unimplemented: "
                      "EncryptedArrayDerived::decrypt for CKKS type");
@@ -546,7 +568,8 @@ public:
 
   void decryptComplex(UNUSED const Ctxt& ctxt,
                       UNUSED const SecKey& sKey,
-                      UNUSED PlaintextArray& ptxt) const override
+                      UNUSED PlaintextArray& ptxt,
+                      UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented");
   }
@@ -560,7 +583,8 @@ public:
 
   void decryptReal(UNUSED const Ctxt& ctxt,
                    UNUSED const SecKey& sKey,
-                   UNUSED PlaintextArray& ptxt) const override
+                   UNUSED PlaintextArray& ptxt,
+                   UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented");
   }
@@ -630,8 +654,7 @@ public:
   virtual void encode(UNUSED EncodedPtxt& eptxt,
                       UNUSED const std::vector<cx_double>& array,
                       UNUSED double mag = -1,
-                      UNUSED double scale = -1,
-                      UNUSED double err = -1) const override
+                      UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented for BGV");
   }
@@ -639,8 +662,7 @@ public:
   virtual void encode(UNUSED EncodedPtxt& eptxt,
                       UNUSED const std::vector<double>& array,
                       UNUSED double mag = -1,
-                      UNUSED double scale = -1,
-                      UNUSED double err = -1) const override
+                      UNUSED OptLong prec = OptLong()) const override
   {
     throw LogicError("function not implemented for BGV");
   }
@@ -648,11 +670,10 @@ public:
   virtual void encode(EncodedPtxt& eptxt,
                       const PlaintextArray& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override
+                      OptLong prec = OptLong()) const override
   {
-    assertTrue(mag < 0 && scale < 0 && err < 0,
-               "BGV encoding: mag,scale,err set must be defaulted");
+    assertTrue(mag < 0 && !prec.isDefined(),
+               "BGV encoding: mag,prec set must be defaulted");
     zzX poly;
     encode(poly, array);
     eptxt.resetBGV(poly, getP2R(), getContext());
@@ -729,8 +750,13 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       PlaintextArray& ptxt) const override
+                       PlaintextArray& ptxt,
+                       OptLong prec = OptLong()) const override
   {
+    if (prec.isDefined())
+      throw LogicError("EncryptedArray::decrypt: the precision parameter "
+                       "(prec) must be defaulted");
+
     genericDecrypt(ctxt, sKey, ptxt);
     if (ctxt.getPtxtSpace() < getP2R()) {
       throw LogicError("EncryptedArray::decrypt: bad plaintext modulus");
@@ -1156,26 +1182,23 @@ public:
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<cx_double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override;
+                      OptLong prec = OptLong()) const override;
   // implemented in EaCx.cpp
 
   virtual void encode(EncodedPtxt& eptxt,
                       const std::vector<double>& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override
+                      OptLong prec = OptLong()) const override
   {
     std::vector<cx_double> array1;
     convert(array1, array);
-    encode(eptxt, array1, mag, scale, err);
+    encode(eptxt, array1, mag, prec);
   }
 
   virtual void encode(EncodedPtxt& eptxt,
                       const PlaintextArray& array,
                       double mag = -1,
-                      double scale = -1,
-                      double err = -1) const override;
+                      OptLong prec = OptLong()) const override;
   // implemented in EaCx.cpp
 
   virtual void encode(EncodedPtxt& eptxt,
@@ -1293,11 +1316,15 @@ public:
     return context.noiseBoundForUniform(0.5, phim);
   }
 
-  virtual double defaultScale(double err) const override
+  virtual double defaultScale(double err,
+                              OptLong prec = OptLong()) const override
   {
     if (err < 1.0)
       err = 1.0;
-    long r = alMod.getR();
+    long r = alMod.getR(); // default r-value
+    if (prec.isDefined())
+      r = prec; // override if necessary
+
     // we want to compute
     //   2^(ceil(log2(err*2^r))) = 2^(ceil(log2(err) + r))
     //                           = 2^(r + ceil(log2(err)))
@@ -1354,10 +1381,13 @@ public:
 
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               std::vector<cx_double>& ptxt) const override;
+               std::vector<cx_double>& ptxt,
+               OptLong prec = OptLong()) const override;
+
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               std::vector<double>& ptxt) const override;
+               std::vector<double>& ptxt,
+               OptLong prec = OptLong()) const override;
 
   void rawDecrypt(const Ctxt& ctxt,
                   const SecKey& sKey,
@@ -1369,9 +1399,10 @@ public:
 
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               PlaintextArray& ptxt) const override
+               PlaintextArray& ptxt,
+               OptLong prec = OptLong()) const override
   {
-    decryptReal(ctxt, sKey, ptxt);
+    decryptReal(ctxt, sKey, ptxt, prec);
   }
 
   void rawDecrypt(const Ctxt& ctxt,
@@ -1383,7 +1414,8 @@ public:
 
   void decryptComplex(const Ctxt& ctxt,
                       const SecKey& sKey,
-                      PlaintextArray& ptxt) const override;
+                      PlaintextArray& ptxt,
+                      OptLong prec = OptLong()) const override;
 
   void rawDecryptComplex(const Ctxt& ctxt,
                          const SecKey& sKey,
@@ -1391,7 +1423,8 @@ public:
 
   void decryptReal(const Ctxt& ctxt,
                    const SecKey& sKey,
-                   PlaintextArray& ptxt) const override;
+                   PlaintextArray& ptxt,
+                   OptLong prec = OptLong()) const override;
 
   void rawDecryptReal(const Ctxt& ctxt,
                       const SecKey& sKey,
@@ -1403,14 +1436,24 @@ public:
    * @param ctxt Ciphertext to decrypt.
    * @param sKey Secret key to be used for decryption.
    * @param ptxt Plaintext into which to decrypt.
-   * Decrypt a `Ctxt` ciphertext object to a `Ptxt` plaintext one relative to
-   * a specific scheme.
+   * @param prec `CKKS` precision to be used (must be defaulted if Scheme is
+   *`BGV`). Decrypt a `Ctxt` ciphertext object to a `Ptxt` plaintext one
+   *relative to a specific scheme.
    **/
+
+  // VJS-FIXME: something seems odd here. This code clearly only
+  // works for CKKS because ptxtArray has type vector<cx_double>.
+  // However, Scheme could be CKKS or BGV.  Is there a specialized
+  // version of this somewhere?
+  // TODO: document this better (especially the prec parameter)
   template <typename Scheme>
-  void decrypt(const Ctxt& ctxt, const SecKey& sKey, Ptxt<Scheme>& ptxt) const
+  void decrypt(const Ctxt& ctxt,
+               const SecKey& sKey,
+               Ptxt<Scheme>& ptxt,
+               OptLong prec = OptLong()) const
   {
     std::vector<cx_double> ptxtArray;
-    decrypt(ctxt, sKey, ptxtArray);
+    decrypt(ctxt, sKey, ptxtArray, prec);
     ptxt.setData(std::move(ptxtArray));
   }
 
@@ -1524,7 +1567,7 @@ class EncryptedArray
 {
 private:
   const PAlgebraMod& alMod;
-  cloned_ptr<EncryptedArrayBase> rep;
+  ClonedPtr<EncryptedArrayBase> rep;
 
 public:
   //! constructor: G defaults to the monomial X, PAlgebraMod from context
@@ -1584,19 +1627,19 @@ public:
     switch (getTag()) {
     case PA_GF2_tag: {
       const EncryptedArrayDerived<PA_GF2>* p =
-          static_cast<const EncryptedArrayDerived<PA_GF2>*>(rep.get_ptr());
+          static_cast<const EncryptedArrayDerived<PA_GF2>*>(rep.get());
       p->dispatch<T>(std::forward<Args>(args)...);
       break;
     }
     case PA_zz_p_tag: {
       const EncryptedArrayDerived<PA_zz_p>* p =
-          static_cast<const EncryptedArrayDerived<PA_zz_p>*>(rep.get_ptr());
+          static_cast<const EncryptedArrayDerived<PA_zz_p>*>(rep.get());
       p->dispatch<T>(std::forward<Args>(args)...);
       break;
     }
     case PA_cx_tag: {
       const EncryptedArrayDerived<PA_cx>* p =
-          static_cast<const EncryptedArrayDerived<PA_cx>*>(rep.get_ptr());
+          static_cast<const EncryptedArrayDerived<PA_cx>*>(rep.get());
       p->dispatch<T>(std::forward<Args>(args)...);
       break;
     }
@@ -1667,28 +1710,25 @@ public:
   void encode(EncodedPtxt& eptxt,
               const std::vector<cx_double>& array,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
-    rep->encode(eptxt, array, mag, scale, err);
+    rep->encode(eptxt, array, mag, prec);
   }
 
   void encode(EncodedPtxt& eptxt,
               const std::vector<double>& array,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
-    rep->encode(eptxt, array, mag, scale, err);
+    rep->encode(eptxt, array, mag, prec);
   }
 
   void encode(EncodedPtxt& eptxt,
               const PlaintextArray& array,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
-    rep->encode(eptxt, array, mag, scale, err);
+    rep->encode(eptxt, array, mag, prec);
   }
 
   void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
@@ -1759,46 +1799,42 @@ public:
                const PubKey& key,
                const std::vector<cx_double>& array,
                double mag,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
     if (mag < 0)
       throw LogicError("CKKS encryption: mag must be set to non-default");
     EncodedPtxt eptxt;
-    encode(eptxt, array, mag, scale, err);
+    encode(eptxt, array, mag, prec);
     key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt,
                const std::vector<cx_double>& array,
-               double mag,
-               double scale = -1,
-               double err = -1) const
+               UNUSED double mag,
+               OptLong prec = OptLong()) const
   {
-    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+    encrypt(ctxt, ctxt.getPubKey(), array, prec);
   }
 
   void encrypt(Ctxt& ctxt,
                const PubKey& key,
                const std::vector<double>& array,
                double mag,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
     if (mag < 0)
       throw LogicError("CKKS encryption: mag must be set to non-default");
     EncodedPtxt eptxt;
-    encode(eptxt, array, mag, scale, err);
+    encode(eptxt, array, mag, prec);
     key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt,
                const std::vector<double>& array,
                double mag,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
-    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+    encrypt(ctxt, ctxt.getPubKey(), array, mag, prec);
   }
 
   // BGV and CKKS
@@ -1806,25 +1842,23 @@ public:
                const PubKey& key,
                const PlaintextArray& array,
                double mag = -1,
-               double scale = -1,
-               double err = -1) const
-  // NOTES: (1) for BGV, mag,scale,err must be defaulted;
+               OptLong prec = OptLong()) const
+  // NOTES: (1) for BGV, mag,prec must be defaulted;
   // (2) for CKKS, mag must be set to non-default value
   {
     if (getTag() == PA_cx_tag && mag < 0)
       throw LogicError("CKKS encryption: mag must be set to non-default");
     EncodedPtxt eptxt;
-    encode(eptxt, array, mag, scale, err);
+    encode(eptxt, array, mag, prec);
     key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt,
                const PlaintextArray& array,
                double mag = -1,
-               double scale = -1,
-               double err = -1) const
+               OptLong prec = OptLong()) const
   {
-    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+    encrypt(ctxt, ctxt.getPubKey(), array, mag, prec);
   }
 
   //=========================
@@ -1836,6 +1870,15 @@ public:
   }
 
   template <typename T>
+  void decrypt(const Ctxt& ctxt,
+               const SecKey& sKey,
+               T& ptxt,
+               OptLong prec) const
+  {
+    rep->decrypt(ctxt, sKey, ptxt, prec);
+  }
+
+  template <typename T>
   void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt) const
   {
     rep->rawDecrypt(ctxt, sKey, ptxt);
@@ -1843,9 +1886,10 @@ public:
 
   void decryptComplex(const Ctxt& ctxt,
                       const SecKey& sKey,
-                      PlaintextArray& ptxt) const
+                      PlaintextArray& ptxt,
+                      OptLong prec = OptLong()) const
   {
-    rep->decryptComplex(ctxt, sKey, ptxt);
+    rep->decryptComplex(ctxt, sKey, ptxt, prec);
   }
 
   void rawDecryptComplex(const Ctxt& ctxt,
@@ -1857,9 +1901,10 @@ public:
 
   void decryptReal(const Ctxt& ctxt,
                    const SecKey& sKey,
-                   PlaintextArray& ptxt) const
+                   PlaintextArray& ptxt,
+                   OptLong prec = OptLong()) const
   {
-    rep->decryptReal(ctxt, sKey, ptxt);
+    rep->decryptReal(ctxt, sKey, ptxt, prec);
   }
 
   void rawDecryptReal(const Ctxt& ctxt,
@@ -2142,33 +2187,32 @@ public:
   // direct encode, encrypt, and decrypt methods
   void encode(EncodedPtxt& eptxt,
               double mag = -1,
-              double scale = -1,
-              double err = -1) const
+              OptLong prec = OptLong()) const
   {
     if (ea.isCKKS())
-      ea.encode(eptxt, pa, mag, scale, err);
+      ea.encode(eptxt, pa, mag, prec);
     else
-      ea.encode(eptxt, pa); // ignore mag,scale,err for BGV
+      ea.encode(eptxt, pa); // ignore mag,prec for BGV
   }
 
-  void encrypt(Ctxt& ctxt,
-               double mag = -1,
-               double scale = -1,
-               double err = -1) const
+  void encrypt(Ctxt& ctxt, double mag = -1, OptLong prec = OptLong()) const
   {
     if (ea.isCKKS()) {
       if (mag < 0)
         mag = NextPow2(Norm(pa.getData<PA_cx>()));
       // if mag is defaulted, set it to 2^(ceil(log2(max(Norm(pa),1))))
-      ea.encrypt(ctxt, pa, mag, scale, err);
+      ea.encrypt(ctxt, pa, mag, prec);
     } else {
-      ea.encrypt(ctxt, pa); // ignore mag,scale,err for BGV
+      ea.encrypt(ctxt, pa); // ignore mag,prec for BGV
     }
   }
 
-  void decrypt(const Ctxt& ctxt, const SecKey& sKey)
+  void decrypt(const Ctxt& ctxt, const SecKey& sKey, OptLong prec = OptLong())
   {
-    ea.decrypt(ctxt, sKey, pa);
+    if (ea.isCKKS())
+      ea.decrypt(ctxt, sKey, pa, prec);
+    else
+      ea.decrypt(ctxt, sKey, pa);
   }
 
   void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey)
@@ -2176,9 +2220,11 @@ public:
     ea.rawDecrypt(ctxt, sKey, pa);
   }
 
-  void decryptComplex(const Ctxt& ctxt, const SecKey& sKey)
+  void decryptComplex(const Ctxt& ctxt,
+                      const SecKey& sKey,
+                      OptLong prec = OptLong())
   {
-    ea.decryptComplex(ctxt, sKey, pa);
+    ea.decryptComplex(ctxt, sKey, pa, prec);
   }
 
   void rawDecryptComplex(const Ctxt& ctxt, const SecKey& sKey)
@@ -2186,9 +2232,11 @@ public:
     ea.rawDecryptComplex(ctxt, sKey, pa);
   }
 
-  void decryptReal(const Ctxt& ctxt, const SecKey& sKey)
+  void decryptReal(const Ctxt& ctxt,
+                   const SecKey& sKey,
+                   OptLong prec = OptLong())
   {
-    ea.decryptReal(ctxt, sKey, pa);
+    ea.decryptReal(ctxt, sKey, pa, prec);
   }
 
   void rawDecryptReal(const Ctxt& ctxt, const SecKey& sKey)

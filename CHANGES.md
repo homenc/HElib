@@ -1,3 +1,16 @@
+HElib 1.2.0, November 2020
+=========================
+(tagged as v1.2.0)
+
+October-November 2020
+---------------------
+* Mitigation for potential CKKS vulnerability.
+* Additional API changes for parameters to the CKKS encoding functions.
+* New infrastructure for benchmarks
+* Updated ClonedPtr
+* Additional Ctxt tests
+* Bug Fixes
+
 HElib 1.1.0, October 2020
 =========================
 (tagged as v1.1.0)

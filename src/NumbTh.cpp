@@ -707,11 +707,10 @@ long ord(long N, long p)
 double RandomReal()
 {
   NTL::ZZ num;
-  NTL::RandomBits(num, 53);
-  // assumes 53 bits of mantissa
-  // we could also write this as std::numeric_limits<double>::digits
+  NTL::RandomBits(num, NTL_DOUBLE_PRECISION);
 
-  double denom = std::ldexp(1.0, 53); // 2^53
+  double denom = std::ldexp(1.0, NTL_DOUBLE_PRECISION);
+  // 2^NTL_DOUBLE_PRECISION
 
   return NTL::conv<double>(num) / denom;
 }

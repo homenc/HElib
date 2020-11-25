@@ -31,6 +31,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 
+# Will be compiled into single executable
+option(SINGLE_EXEC "Compile into single excutable (ON/OFF)" OFF)
+if(SINGLE_EXEC)
+  message(STATUS "Single executable activated.")
+endif()
 
 # Setting up RelWithDebInfo as default CMAKE_BUILD_TYPE
 if (NOT CMAKE_BUILD_TYPE)
@@ -42,9 +47,31 @@ endif (NOT CMAKE_BUILD_TYPE)
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
-find_package(helib 1.0.0 EXACT REQUIRED)
+find_package(helib 1.1.0 EXACT REQUIRED)
 find_package(benchmark REQUIRED)
 
-# Add each benchmark source file to the executable list
-add_executable(helib_benchmark bench_thinboot.cpp bench_fatboot.cpp)
-target_link_libraries(helib_benchmark benchmark::benchmark_main helib)
+# Targets are simply associated with their source files.
+set(TRGTS bgv_basic
+          bgv_thinboot
+          bgv_fatboot
+          ckks_basic)
+
+# Sources derived from their targets.
+set(SRCS "")
+foreach(TRGT ${TRGTS})
+  list(APPEND SRCS "${TRGT}.cpp")
+endforeach()
+
+if(SINGLE_EXEC)
+  # Add each benchmark source file to the executable list
+  add_executable(helib_benchmark ${SRCS})
+  # Specify the libraries each target is dependent upon
+  target_link_libraries(helib_benchmark benchmark::benchmark_main helib)
+else(SINGLE_EXEC)
+  foreach(TRGT ${TRGTS})
+    # Add each benchmark source file to the executable list
+    add_executable(${TRGT} ${TRGT}.cpp)
+    # Specify the libraries each target is dependent upon
+    target_link_libraries(${TRGT} benchmark::benchmark_main helib)
+  endforeach()
+endif(SINGLE_EXEC)

@@ -463,7 +463,12 @@ long PubKey::Encrypt(Ctxt& ctxt,
       NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
 
   if (ptxt_sz > ptxt_bound) {
+    // TODO: Turn the following preprocessor logics into a warnOrThrow function
+#ifdef HELIB_DEBUG
     Warning("noise bound exceeded in encryption");
+#else
+    throw LogicError("noise bound exceeded in encryption");
+#endif
   }
 
   double ptxt_rat = ptxt_sz / ptxt_bound;
@@ -617,6 +622,10 @@ void PubKey::Encrypt(Ctxt& ciphertxt, const Ptxt<CKKS>& plaintxt) const
   // Note that Encrypt(Ctxt,EncodedPtxt) does not attempt
   // any hiding: this left up to the caller.
   // This logic mimics the logic in the original CKKSencrypt function.
+
+  // Note also that this API does not allow the user to set precision
+  // parameter in encode.
+
   Encrypt(ciphertxt, eptxt);
 }
 
@@ -1224,7 +1233,9 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt& ciphertxt) const
 // These two specialisations are here to avoid a circular dependency on
 // EncryptedArray
 template <>
-void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt) const
+void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt,
+                          const Ctxt& ciphertxt,
+                          UNUSED OptLong prec) const
 {
   NTL::ZZX pp;
   Decrypt(pp, ciphertxt);
@@ -1232,7 +1243,9 @@ void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt) const
 }
 
 template <>
-void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
+void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt,
+                           const Ctxt& ciphertxt,
+                           OptLong prec) const
 {
   const Context& context = ciphertxt.getContext();
   assertTrue(&context == &plaintxt.getContext(),
@@ -1240,12 +1253,12 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
 
   const View& view = context.getDefaultView();
   std::vector<std::complex<double>> ptxt;
-  view.decrypt(ciphertxt, *this, ptxt);
+  view.decrypt(ciphertxt, *this, ptxt, prec);
   plaintxt.setData(ptxt);
 }
 
-// VJS-NOTE: this is duplicated code...moroever, we
-// eventually need to modify to mitigate against CKKS vulnerability.
+// VJS-NOTE: this is duplicated code...moreover, it does
+// not implement the mitigation against CKKS vulnerability.
 #if 0
 {
   std::vector<std::complex<double>> ptxt;
@@ -1288,7 +1301,12 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
 {
   HELIB_TIMER_START;
 
-  assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
+  // VJS-NOTE: why are we comapring contexts, rather
+  // than addresses, which is what we do everywhere else?
+  // I'm changing this for now...
+  // assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
+  // To be addressed later
+  assertEq(&getContext(), &ciphertxt.getContext(), "Context mismatch");
 
   // this will trigger a warning if any operations that were
   // previously performed on the polynomial basis were invalid
@@ -1672,6 +1690,14 @@ std::ostream& operator<<(std::ostream& str, const SecKey& sk)
       << sk.sKeys.size() << std::endl;
   for (long i = 0; i < (long)sk.sKeys.size(); i++)
     str << sk.sKeys[i] << std::endl;
+  return str << "]";
+}
+
+std::ostream& SecKey::writeSecKeyDerivedASCII(std::ostream& str) const
+{
+  str << "[" << sKeys.size() << std::endl;
+  for (long i = 0; i < (long)sKeys.size(); i++)
+    str << sKeys[i] << std::endl;
   return str << "]";
 }
 

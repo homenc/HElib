@@ -113,29 +113,61 @@ void sampleSmall(NTL::ZZX& poly, long n, double prob)
 // Choose a vector of continuous Gaussians
 void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
 {
-  static double const bignum = static_cast<double>(LONG_MAX);
-  // THREADS: C++11 guarantees these are initialized only once
-
   if (n <= 0)
     n = lsize(dvec);
   if (n <= 0)
     return;
-  dvec.resize(n, 0.0); // allocate space for n variables
+
+  dvec.resize(n); // allocate space for n variables
 
   // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
   for (long i = 0; i < n; i += 2) {
     // r1, r2 are "uniform in (0,1)"
-    double r1 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
-    double r2 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
-    double theta = 2.0L * PI * r1;
-    double rr = sqrt(-2.0 * log(r2)) * stdev;
-    if (rr > 8 * stdev) // sanity-check, truncate at 8 standard deviations
-      rr = 8 * stdev;
+    double r1 = RandomReal();
+    double r2 = RandomReal();
+    while (r2 == 0)
+      r2 = RandomReal();
+    double theta = 2.0 * PI * r1;
+    double rr = std::sqrt(-2.0 * log(r2));
+    if (rr > HELIB_GAUSS_TRUNC) {
+      // sanity-check, truncate at HELIB_GAUSS_TRUNC standard deviations
+      rr = HELIB_GAUSS_TRUNC;
+    }
 
     // Generate two Gaussians RV's
-    dvec[i] = rr * cos(theta);
+    dvec[i] = stdev * rr * std::cos(theta);
     if (i + 1 < n)
-      dvec[i + 1] = rr * sin(theta);
+      dvec[i + 1] = stdev * rr * std::sin(theta);
+  }
+}
+
+void sampleGaussian(std::vector<NTL::xdouble>& dvec, long n, NTL::xdouble stdev)
+{
+  if (n <= 0)
+    n = lsize(dvec);
+  if (n <= 0)
+    return;
+
+  dvec.resize(n); // allocate space for n variables
+
+  // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
+  for (long i = 0; i < n; i += 2) {
+    // r1, r2 are "uniform in (0,1)"
+    double r1 = RandomReal();
+    double r2 = RandomReal();
+    while (r2 == 0)
+      r2 = RandomReal();
+    double theta = 2.0 * PI * r1;
+    double rr = std::sqrt(-2.0 * log(r2));
+    if (rr > HELIB_GAUSS_TRUNC) {
+      // sanity-check, truncate at HELIB_GAUSS_TRUNC standard deviations
+      rr = HELIB_GAUSS_TRUNC;
+    }
+
+    // Generate two Gaussians RV's
+    dvec[i] = stdev * rr * std::cos(theta);
+    if (i + 1 < n)
+      dvec[i + 1] = stdev * rr * std::sin(theta);
   }
 }
 
@@ -143,57 +175,30 @@ void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
 void sampleGaussian(zzX& poly, long n, double stdev)
 {
   if (n <= 0)
-    n = lsize(poly);
-  if (n <= 0)
     return;
   std::vector<double> dvec;
   sampleGaussian(dvec, n, stdev); // sample continuous Gaussians
 
   // round and copy to coefficients of poly
-  clear(poly);
   poly.SetLength(n); // allocate space for degree-(n-1) polynomial
   for (long i = 0; i < n; i++)
     poly[i] = long(round(dvec[i])); // round to nearest integer
+  normalize(poly);
 }
-// Sample a degree-(n-1) NTL::ZZX, with rounded Gaussian coefficients
-void sampleGaussian(NTL::ZZX& poly, long n, double stdev)
+
+void sampleGaussian(NTL::ZZX& poly, long n, NTL::xdouble stdev)
 {
-  zzX pp;
-  sampleGaussian(pp, n, stdev);
-  convert(poly.rep, pp);
+  if (n <= 0)
+    return;
+  std::vector<NTL::xdouble> dvec;
+  sampleGaussian(dvec, n, stdev); // sample continuous Gaussians
+
+  // round and copy to coefficients of poly
+  poly.SetLength(n); // allocate space for degree-(n-1) polynomial
+  for (long i = 0; i < n; i++)
+    NTL::conv(poly[i], dvec[i] + 0.5); // round to nearest integer
   poly.normalize();
 }
-#if 0
-void sampleGaussian(NTL::ZZX &poly, long n, double stdev)
-{
-  static long const bignum = 0xfffffff;
-  // THREADS: C++11 guarantees these are initialized only once
-
-  if (n<=0) n=deg(poly)+1; if (n<=0) return;
-  poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
-  for (long i=0; i<n; i++) SetCoeff(poly, i, NTL::ZZ::zero());
-
-  // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
-  for (long i=0; i<n; i+=2) {
-    double r1 = (1+RandomBnd(bignum))/((double)bignum+1);
-    double r2 = (1+RandomBnd(bignum))/((double)bignum+1);
-    double theta = 2.0L * PI * r1;
-    double rr= sqrt(-2.0*log(r2))*stdev;
-
-    // sanity-check, no more than 8 standard deviations
-    assertTrue(rr < 8*stdev, "no more than 8 standard deviations");
-
-    // Generate two Gaussians RV's, rounded to integers
-    long x = (long) floor(rr*cos(theta) +0.5);
-    SetCoeff(poly, i, x);
-    if (i+1 < n) {
-      x = (long) floor(rr*sin(theta) +0.5);
-      SetCoeff(poly, i+1, x);
-    }
-  }
-  poly.normalize(); // need to call this after we work on the coeffs
-}
-#endif
 
 // Sample a degree-(n-1) zzX, with coefficients uniform in [-B,B]
 void sampleUniform(zzX& poly, long n, long B)
@@ -404,6 +409,9 @@ double sampleGaussian(zzX& poly, const Context& context, double stdev)
     long m = palg.getM();
     sampleGaussian(poly, m, stdev);
     reduceModPhimX(poly, palg);
+    // VJS-FIXME: in most (all?) uses of this routine,
+    // we eventually convert to DoubleCRT, so do we really need
+    // to redice mod PhimX?
     retval = context.noiseBoundForGaussian(stdev, m);
   } else { // power of two
     long phim = palg.getPhiM();
@@ -413,19 +421,51 @@ double sampleGaussian(zzX& poly, const Context& context, double stdev)
 
   return retval;
 }
-// Same as above, but ensure the result is not too much larger than typical
-double sampleGaussianBounded(zzX& poly, const Context& context, double stdev)
+
+NTL::xdouble sampleGaussian(NTL::ZZX& poly,
+                            const Context& context,
+                            NTL::xdouble stdev)
+{
+  const PAlgebra& palg = context.zMStar;
+  NTL::xdouble retval;
+
+  if (palg.getPow2() == 0) { // not power of two
+    // NOTE: this branch is currently not used anywhere
+    long m = palg.getM();
+    sampleGaussian(poly, m, stdev);
+    NTL::rem(poly, poly, palg.getPhimX());
+    // VJS-FIXME: in most (all?) uses of this routine,
+    // we eventually convert to DoubleCRT, so do we really need
+    // to redice mod PhimX?
+    retval = context.noiseBoundForGaussian(stdev, m);
+  } else { // power of two
+    long phim = palg.getPhiM();
+    sampleGaussian(poly, phim, stdev);
+    retval = context.noiseBoundForGaussian(stdev, phim);
+  }
+
+  return retval;
+}
+
+double sampleGaussianBoundedEffectiveBound(const Context& context)
 {
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();
 
-  double bound = stdev * (((palg.getPow2() == 0) ? sqrt(m * log(phim))
-                                                 : sqrt(phim * log(phim))));
+  return (palg.getPow2() == 0) ? sqrt(m * log(phim)) : sqrt(phim * log(phim));
   // should be good with probability at least 1/2
   // NOTE: the general formula is sigma*sqrt(log(phim)),
   // assuming we are sampling from a zero mean complex Gaussian
   // with std deviation sigma
+}
+
+// Same as above, but ensure the result is not too much larger than typical
+double sampleGaussianBounded(zzX& poly, const Context& context, double stdev)
+{
+  const PAlgebra& palg = context.zMStar;
+
+  double bound = stdev * sampleGaussianBoundedEffectiveBound(context);
 
 #if 1
   double val;
@@ -463,6 +503,30 @@ double sampleGaussianBounded(zzX& poly, const Context& context, double stdev)
   std::cout << "val=" << val << "\n";
 
 #endif
+
+  if (val > bound) {
+    std::stringstream ss;
+    ss << "Error: sampleGaussianBounded, after " << count
+       << " trials, still val=" << val << '>' << "bound=" << bound;
+    throw RuntimeError(ss.str());
+  }
+  return bound;
+}
+
+NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly,
+                                   const Context& context,
+                                   NTL::xdouble stdev)
+{
+  const PAlgebra& palg = context.zMStar;
+
+  NTL::xdouble bound = stdev * sampleGaussianBoundedEffectiveBound(context);
+
+  NTL::xdouble val;
+  long count = 0;
+  do {
+    sampleGaussian(poly, context, stdev);
+    val = embeddingLargestCoeff(poly, palg);
+  } while (++count < 1000 && val > bound); // repeat until <=bound
 
   if (val > bound) {
     std::stringstream ss;

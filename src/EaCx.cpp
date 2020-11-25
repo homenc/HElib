@@ -18,7 +18,7 @@
 #include <helib/EncryptedArray.h>
 
 #include <helib/timing.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 #include <helib/norms.h>
 #include <helib/debugging.h>
 #include <helib/apiAttributes.h>
@@ -100,79 +100,46 @@ void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
 
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
                                const SecKey& sKey,
-                               std::vector<cx_double>& ptxt) const
+                               std::vector<cx_double>& ptxt,
+                               OptLong prec) const
 {
   // This mitigates against the attack in
   // "On the Security of Homomorphic Encryption on Approximate Numbers",
   // by Baiyu Li and Daniele Micciancio.
 
-  rawDecrypt(ctxt, sKey, ptxt);
+  // As a preprocessing step, we add noise so that
+  // the scaled error increases by at most eps (with some
+  // futher adjustments made in addNoiseForCKKSDecryption
+  // to maintain a certain level of security as the cost
+  // of accuracy.
 
-#if 0
+  long r = alMod.getR(); // default r-value
+  if (prec.isDefined())
+    r = prec; // override if necessary
 
-  constexpr double fudge_factor = 4.0;
-  double B = ctxt.errorBound() * fudge_factor;
+  double eps = std::ldexp(1.0, -r);
 
-  // Idea: we round real and imaginary parts to the
-  // nearest integer multiple of B.
+  // now add noise to a copy of ctxt
+  Ctxt ctxt1 = ctxt;
 
-  for (cx_double& c : ptxt) {
-    double re = c.real();
-    re = B * std::round(re / B);
-    double im = c.imag();
-    im = B * std::round(im / B);
-    c = cx_double(re, im);
-  }
-#endif
+  // This will help protect accuracy while allowing us to add a lot of noise
+  ctxt1.bringToSet(ctxt1.getContext().fullPrimes());
+
+  ctxt1.addNoiseForCKKSDecryption(sKey, eps);
+
+  // finally, perform the decryption
+  rawDecrypt(ctxt1, sKey, ptxt);
 }
 
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
                                const SecKey& sKey,
-                               std::vector<double>& ptxt) const
-#if 1
+                               std::vector<double>& ptxt,
+                               OptLong prec) const
 {
-  // NOTE: we may wish to consider an alternative implementation,
-  // where we (a) assume the imaginary parts are supposd to be zero,
-  // and (b) use the noise in the imaginary parts as a tighter
-  // error bound.  This is what Yuriy implemented in PALISADE,
-  // but I'm not sure how much sense it makes. --VJS
   std::vector<cx_double> v;
-  decrypt(ctxt, sKey, v);
+  decrypt(ctxt, sKey, v, prec);
   project(ptxt, v);
 }
-#else
-{
-  // NOTE: this version implements Yuriy's proposed strategy
-
-  std::vector<cx_double> v;
-
-  rawDecrypt(ctxt, sKey, v);
-  long n = v.size();
-
-  double max_mag = 0;
-  for (long i : range(n))
-    max_mag = std::max(max_mag, std::fabs(v[i].imag()));
-
-  constexpr double fudge_factor = 8.0;
-
-  double B = max_mag * fudge_factor;
-
-  // round B up to the next power of 2
-  B = pow(2.0, std::ceil(std::log2(B)));
-
-  // Idea: we round real part to the
-  // nearest integer multiple of B.
-
-  ptxt.resize(n);
-
-  for (long i : range(n)) {
-    double re = v[i].real();
-    re = B * std::round(re / B);
-    ptxt[i] = re;
-  }
-}
-
-#endif
 
 // rotate ciphertext in dimension 0 by amt
 void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
@@ -274,8 +241,7 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
                               const std::vector<cx_double>& array,
                               double mag,
-                              double scale,
-                              double err) const
+                              OptLong prec) const
 {
   double actual_mag = Norm(array);
   if (mag < 0)
@@ -286,17 +252,15 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
           "EncryptedArrayCx::encode: actual magnitude exceeds mag parameter");
   }
 
-  if (err < 0)
-    err = defaultErr(); // default err
+  double err = defaultErr();
+  // For now, we use defaultErr().  We may want to eventually
+  // allow APIs that use a different err value (such as the *actual*
+  // err value).  However, if we encrypt this encoding, we
+  // should not use a data-dependent err value. Moreover, I did
+  // not want to have yet another esteric parameter for the user
+  // to worry about.  We can revisit this later.
 
-  if (err < 1.0)
-    err = 1.0; // enforce some sanity
-
-  if (scale < 0)
-    scale = defaultScale(err); // default scale
-
-  if (scale < 1.0)
-    scale = 1.0; // enforce some sanity
+  double scale = defaultScale(err, prec); // default scale
 
   zzX poly;
   CKKS_embedInSlots(poly, array, getPAlgebra(), scale);
@@ -319,17 +283,17 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
                               const PlaintextArray& array,
                               double mag,
-                              double scale,
-                              double err) const
+                              OptLong prec) const
 {
-  encode(eptxt, array.getData<PA_cx>(), mag, scale, err);
+  encode(eptxt, array.getData<PA_cx>(), mag, prec);
 }
 
 void EncryptedArrayCx::decryptComplex(const Ctxt& ctxt,
                                       const SecKey& sKey,
-                                      PlaintextArray& ptxt) const
+                                      PlaintextArray& ptxt,
+                                      OptLong prec) const
 {
-  decrypt(ctxt, sKey, ptxt.getData<PA_cx>());
+  decrypt(ctxt, sKey, ptxt.getData<PA_cx>(), prec);
 }
 
 void EncryptedArrayCx::rawDecryptComplex(const Ctxt& ctxt,
@@ -341,10 +305,11 @@ void EncryptedArrayCx::rawDecryptComplex(const Ctxt& ctxt,
 
 void EncryptedArrayCx::decryptReal(const Ctxt& ctxt,
                                    const SecKey& sKey,
-                                   PlaintextArray& ptxt) const
+                                   PlaintextArray& ptxt,
+                                   OptLong prec) const
 {
   std::vector<double> v;
-  decrypt(ctxt, sKey, v);
+  decrypt(ctxt, sKey, v, prec);
   convert(ptxt.getData<PA_cx>(), v);
 }
 

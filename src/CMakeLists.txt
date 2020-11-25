@@ -141,7 +141,7 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/binaryCompare.h"
     "${HELIB_HEADER_DIR}/binio.h"
     "${HELIB_HEADER_DIR}/bluestein.h"
-    "${HELIB_HEADER_DIR}/clonedPtr.h"
+    "${HELIB_HEADER_DIR}/ClonedPtr.h"
     "${HELIB_HEADER_DIR}/CModulus.h"
     "${HELIB_HEADER_DIR}/CtPtrs.h"
     "${HELIB_HEADER_DIR}/Ctxt.h"

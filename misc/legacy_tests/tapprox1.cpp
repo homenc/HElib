@@ -233,7 +233,6 @@ void testGeneralOps(const PubKey& publicKey,
 
   if (verbose) {
     std::cout << "===============\n";
-
     DEBUG_COMPARE(c0, p0, "c0");
     DEBUG_COMPARE(c1, p1, "c1");
     DEBUG_COMPARE(c2, p2, "c2");
@@ -316,8 +315,6 @@ int main(int argc, char* argv[])
   if (seed)
     NTL::SetSeed(ZZ(seed));
 
-  if (R <= 0)
-    R = 1;
   if (L == 0) {
     if (R <= 2)
       L = 100 * R;

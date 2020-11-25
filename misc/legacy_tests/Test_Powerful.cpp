@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
   zz_p base = conv<zz_p>(lbase);
 
   // Vec< Vec<zz_p> > multiEvalPoints;
-  Vec< copied_ptr<FFTHelper> > multiEvalPoints;
+  Vec< CopiedPtr<FFTHelper> > multiEvalPoints;
 
   computeMultiEvalPoints(multiEvalPoints, base, m, powVec, phiVec);
 

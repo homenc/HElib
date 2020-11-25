@@ -338,7 +338,7 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
   ea.decrypt(c1, secretKey, vd2);
 
   mul(vd1, vd[0]);
-  rf /= std::abs(vd[0]); // VJS-NOTE: I fixed this with an abs
+  rf /= std::abs(vd[0]);
   pm *= std::abs(vd[0]);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
@@ -347,10 +347,9 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
       << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
       << ", ptxtMag=" << c1.getPtxtMag() << std::endl
       << ", vd[0]=" << vd[0] << std::endl;
+  // These numbers should be exact despite being xdouble
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
-  // VJS-FIXME: What does EXPECT_EQ do? Is it a test for *exact*
-  // equality? If so, is this reasonable to expect?
 }
 
 TEST_P(TestCKKS, gettingTheComplexConjugateWorks)
@@ -446,7 +445,7 @@ TEST_P(TestCKKS, subtractingCiphertextsWorks)
       << std::endl;
 }
 
-TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
+TEST_P(TestCKKS, timesEqualsOfCiphertextsWorks)
 {
   helib::Ctxt c1(publicKey), c2(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -456,7 +455,7 @@ TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
   ea.encrypt(c1, publicKey, vd1);
   ea.encrypt(c2, publicKey, vd2);
   NTL::xdouble expectedPtxtMag = c1.getPtxtMag() * c2.getPtxtMag();
-  c1.multiplyBy(c2);
+  c1 *= c2;
   ea.decrypt(c1, secretKey, vd3);
 
   mul(vd1, vd2);
@@ -467,6 +466,33 @@ TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
       << std::endl;
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
+  // Check that relinearization has occurred
+  EXPECT_TRUE(c1.inCanonicalForm());
+}
+
+TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
+{
+  helib::Ctxt c1(publicKey), c2(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
+
+  ea.random(vd1);
+  ea.random(vd2);
+  ea.encrypt(c1, publicKey, vd1);
+  ea.encrypt(c2, publicKey, vd2);
+  NTL::xdouble expectedPtxtMag = c1.getPtxtMag() * c2.getPtxtMag();
+  c1.multLowLvl(c2);
+  ea.decrypt(c1, secretKey, vd3);
+
+  mul(vd1, vd2);
+
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
+      << std::endl;
+  EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
+  // Check that relinearization has not occurred
+  EXPECT_FALSE(c1.inCanonicalForm());
 }
 
 TEST_P(TestCKKS, highLevelMultiplicationOfCiphertextsWorks)
@@ -490,6 +516,31 @@ TEST_P(TestCKKS, highLevelMultiplicationOfCiphertextsWorks)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
       << std::endl;
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
+  // Check that relinearization has occurred
+  EXPECT_TRUE(c1.inCanonicalForm());
+}
+
+TEST_P(TestCKKS, squaringCiphertextWorks)
+{
+  helib::Ctxt ctxt(publicKey);
+  std::vector<std::complex<double>> vd1, vd2;
+
+  ea.random(vd1);
+  ea.encrypt(ctxt, publicKey, vd1);
+  NTL::xdouble expectedPtxtMag = ctxt.getPtxtMag() * ctxt.getPtxtMag();
+  ctxt.square();
+  ea.decrypt(ctxt, secretKey, vd2);
+
+  mul(vd1, vd1);
+
+  EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd2)=" << helib::largestCoeff(vd2)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
+      << std::endl;
+  EXPECT_EQ(expectedPtxtMag, ctxt.getPtxtMag());
+  // Check that relinearization has occurred
+  EXPECT_TRUE(ctxt.inCanonicalForm());
 }
 
 TEST_P(

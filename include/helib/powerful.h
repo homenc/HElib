@@ -16,7 +16,7 @@
  * @brief The "powerful basis" of a cyclotomic ring
  **/
 #include <helib/NumbTh.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 #include <helib/bluestein.h>
 #include <helib/hypercube.h>
 #include <helib/DoubleCRT.h>
@@ -380,20 +380,20 @@ public:
 
 //! powVec[d] = m_d = p_d^{e_d}
 //! computes multiEvalPoints[d] as an FFTHelper for base^{m/m_d}
-void computeMultiEvalPoints(Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+void computeMultiEvalPoints(Vec< CopiedPtr<FFTHelper> >& multiEvalPoints,
                             const zz_p& base,
                             long m,
                             const Vec<long>& powVec,
                             const Vec<long>& phiVec);
 
 void recursiveEval(const CubeSlice<zz_p>& s,
-                   const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+                   const Vec< CopiedPtr<FFTHelper> >& multiEvalPoints,
                    long d,
                    zz_pX& tmp1,
                    Vec<zz_p>& tmp2);
 
 inline void eval(HyperCube<zz_p>& cube,
-          const Vec< copied_ptr<FFTHelper> >& multiEvalPoints)
+          const Vec< CopiedPtr<FFTHelper> >& multiEvalPoints)
 {
    zz_pX tmp1;
    Vec<zz_p> tmp2;
@@ -402,13 +402,13 @@ inline void eval(HyperCube<zz_p>& cube,
 }
 
 void recursiveInterp(const CubeSlice<zz_p>& s,
-                     const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+                     const Vec< CopiedPtr<FFTHelper> >& multiEvalPoints,
                      long d,
                      zz_pX& tmp1,
                      Vec<zz_p>& tmp2);
 
 void interp(HyperCube<zz_p>& cube,
-	    const Vec< copied_ptr<FFTHelper> >& multiEvalPoints);
+	    const Vec< CopiedPtr<FFTHelper> >& multiEvalPoints);
 #endif
 
 } // namespace helib

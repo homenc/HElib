@@ -49,6 +49,9 @@ The create-context, encrypt and decrypt utility executables can be found in the
 `bin` directory. The example encoder and decoder are found in a separate
 directory in `<directory-to-utils>/coders`.
 
+All tests for the utilities are written in bats (a test framework for bash)
+and require [bats-core](https://github.com/bats-core/bats-core/releases/tag/v1.2.1).
+
 ## Running the utilities
 
 All utilities have a help method by passing the `-h` flag, for example
@@ -172,7 +175,7 @@ The example decoder outputs the decoded data to the standard output by default.
 ## Running the tests
 
 All tests for the utilities are written in bats (a test framework for bash)
-and requires [bats-core](https://github.com/bats-core/bats-core).
+and require [bats-core](https://github.com/bats-core/bats-core).
 
 Note that the tests require that the utilities have been successfully compiled
 in the `build` directory and available in `build/bin`. To run the tests, one

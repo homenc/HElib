@@ -18,7 +18,7 @@
 
 #include <unordered_map>
 #include <helib/IndexSet.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 
 namespace helib {
 
@@ -46,7 +46,7 @@ class IndexMap
   std::unordered_map<long, T> map;
 
   IndexSet indexSet;
-  cloned_ptr<IndexMapInit<T>> init;
+  ClonedPtr<IndexMapInit<T>> init;
 
 public:
   //! @brief The empty map
@@ -89,7 +89,7 @@ public:
   {
     if (!indexSet.contains(j)) {
       indexSet.insert(j);
-      if (!init.null())
+      if (init)
         init->init(map[j]);
     }
   }

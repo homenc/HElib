@@ -24,7 +24,7 @@
 #include <helib/zzX.h>
 #include <helib/hypercube.h>
 #include <helib/PGFFT.h>
-#include <helib/clonedPtr.h>
+#include <helib/ClonedPtr.h>
 #include <helib/apiAttributes.h>
 
 namespace helib {
@@ -816,13 +816,13 @@ class PAlgebraMod
 {
 
 private:
-  cloned_ptr<PAlgebraModBase> rep;
+  ClonedPtr<PAlgebraModBase> rep;
 
 public:
   // copy constructor: default
   // assignment: deleted
   // destructor: default
-  // NOTE: the use of cloned_ptr ensures that the default copy constructor
+  // NOTE: the use of ClonedPtr ensures that the default copy constructor
   // and destructor will work correctly.
 
   PAlgebraMod& operator=(const PAlgebraMod&) = delete;

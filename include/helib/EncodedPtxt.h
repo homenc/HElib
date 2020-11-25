@@ -98,7 +98,7 @@ public:
   virtual ~EncodedPtxt_base() {}
 
   virtual EncodedPtxt_base* clone() const = 0;
-  // makes this usable with cloned_ptr
+  // makes this usable with ClonedPtr
 
   virtual bool isBGV() const { return false; }
   virtual bool isCKKS() const { return false; }
@@ -141,29 +141,29 @@ public:
 
 class EncodedPtxt
 {
-  cloned_ptr<EncodedPtxt_base> rep;
+  ClonedPtr<EncodedPtxt_base> rep;
 
 public:
-  bool isBGV() const { return !rep.null() && rep->isBGV(); }
-  bool isCKKS() const { return !rep.null() && rep->isCKKS(); }
+  bool isBGV() const { return rep && rep->isBGV(); }
+  bool isCKKS() const { return rep && rep->isCKKS(); }
 
   const EncodedPtxt_BGV& getBGV() const
   {
-    if (rep.null())
+    if (!rep)
       throw std::bad_cast();
     return rep->getBGV();
   }
 
   const EncodedPtxt_CKKS& getCKKS() const
   {
-    if (rep.null())
+    if (!rep)
       throw std::bad_cast();
     return rep->getCKKS();
   }
 
   void resetBGV(const zzX& poly, long ptxtSpace, const Context& context)
   {
-    rep.set_ptr(new EncodedPtxt_derived_BGV(poly, ptxtSpace, context));
+    rep.reset(new EncodedPtxt_derived_BGV(poly, ptxtSpace, context));
   }
 
   void resetCKKS(const zzX& poly,
@@ -172,10 +172,10 @@ public:
                  double err,
                  const Context& context)
   {
-    rep.set_ptr(new EncodedPtxt_derived_CKKS(poly, mag, scale, err, context));
+    rep.reset(new EncodedPtxt_derived_CKKS(poly, mag, scale, err, context));
   }
 
-  void reset() { rep.set_ptr(0); }
+  void reset() { rep.reset(); }
 };
 
 //=========================================================
@@ -241,7 +241,7 @@ class FatEncodedPtxt_base
 public:
   virtual ~FatEncodedPtxt_base() {}
 
-  // TODO make this usable with cloned_ptr
+  // TODO make this usable with ClonedPtr
   virtual FatEncodedPtxt_base* clone() const = 0;
 
   virtual bool isBGV() const { return false; }
@@ -310,7 +310,7 @@ Usage:
 
 class FatEncodedPtxt
 {
-  cloned_ptr<FatEncodedPtxt_base> rep;
+  ClonedPtr<FatEncodedPtxt_base> rep;
 
 public:
   FatEncodedPtxt() {}
@@ -319,19 +319,19 @@ public:
     expand(eptxt, s);
   }
 
-  bool isBGV() const { return !rep.null() && rep->isBGV(); }
-  bool isCKKS() const { return !rep.null() && rep->isCKKS(); }
+  bool isBGV() const { return rep && rep->isBGV(); }
+  bool isCKKS() const { return rep && rep->isCKKS(); }
 
   const FatEncodedPtxt_BGV& getBGV() const
   {
-    if (rep.null())
+    if (!rep)
       throw std::bad_cast();
     return rep->getBGV();
   }
 
   const FatEncodedPtxt_CKKS& getCKKS() const
   {
-    if (rep.null())
+    if (!rep)
       throw std::bad_cast();
     return rep->getCKKS();
   }
@@ -339,14 +339,14 @@ public:
   void expand(const EncodedPtxt& eptxt, const IndexSet& s)
   {
     if (eptxt.isBGV())
-      rep.set_ptr(new FatEncodedPtxt_derived_BGV(eptxt.getBGV(), s));
+      rep.reset(new FatEncodedPtxt_derived_BGV(eptxt.getBGV(), s));
     else if (eptxt.isCKKS())
-      rep.set_ptr(new FatEncodedPtxt_derived_CKKS(eptxt.getCKKS(), s));
+      rep.reset(new FatEncodedPtxt_derived_CKKS(eptxt.getCKKS(), s));
     else
-      rep.set_ptr(0);
+      rep.reset();
   }
 
-  void reset() { rep.set_ptr(0); }
+  void reset() { rep.reset(); }
 };
 
 } // namespace helib

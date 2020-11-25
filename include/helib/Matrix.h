@@ -206,6 +206,19 @@ public:
 
   ~Tensor() = default;
 
+  // This returns a deep copy as the default copy constructor returns a shallow
+  // copy
+  Tensor<T, N> deepCopy() const
+  {
+    // Shallow copy
+    auto copy = *this;
+
+    // Now we do a deep copy of the data
+    copy.elements_ptr = std::make_shared<std::vector<T>>(*elements_ptr);
+
+    return copy;
+  }
+
   std::size_t order() const { return N; }
 
   template <typename... Args>
@@ -266,6 +279,34 @@ public:
                           this->subscripts.strides.end() - 1,
                           /*col*/ j);
     return Tensor<T, N - 1>(ts, this->elements_ptr);
+  }
+
+  Tensor<T, 2> getRow(std::size_t i) const
+  {
+    if (i >= this->dims(0)) {
+      throw OutOfRangeError("Index given: " + std::to_string(i) +
+                            ". Max value is: " + std::to_string(this->dims(0)));
+    }
+    TensorSlice<2> ts(this->subscripts);
+    ts.lengths.front() = 1;
+    ts.start = {/*row X strides*/ static_cast<long>(i * ts.strides.at(0))};
+    ts.size = ts.lengths[1];
+
+    return Tensor<T, 2>(ts, this->elements_ptr);
+  }
+
+  Tensor<T, 2> getColumn(std::size_t j) const
+  {
+    if (j >= this->dims(1)) {
+      throw OutOfRangeError("Index given: " + std::to_string(j) +
+                            ". Max value is: " + std::to_string(this->dims(1)));
+    }
+    TensorSlice<2> ts(this->subscripts);
+    ts.lengths.back() = 1;
+    ts.start = {static_cast<long>(j)};
+    ts.size = ts.lengths[0];
+
+    return Tensor<T, 2>(ts, this->elements_ptr);
   }
 
   // FIXME - returns several columns, same order as this. Only Matrices.
@@ -390,7 +431,15 @@ public:
   }
 
   // Matrix special
-  Tensor<T, 2>& transpose()
+  Tensor<T, 2> transpose() const
+  {
+    auto ret = this->deepCopy();
+    ret.inPlaceTranspose();
+    return ret;
+  }
+
+  // Matrix special
+  Tensor<T, 2>& inPlaceTranspose()
   {
     if (fullView()) {
       // In this case we can perform a transpose copy-free using swaps
@@ -532,6 +581,22 @@ inline Tensor<T, 2> operator*(const Tensor<T, 2>& M1, const Tensor<T2, 2>& M2)
 
   HELIB_NTIMER_STOP(MatrixMultiplicationNotConv);
   return R;
+}
+
+template <typename T, typename T2>
+inline Tensor<T, 2> operator-(const Tensor<T, 2>& M1, const Tensor<T2, 2>& M2)
+{
+  auto M1_copy = M1.deepCopy();
+  M1_copy -= M2;
+  return M1_copy;
+}
+
+template <typename T, typename T2>
+inline Tensor<T, 2> operator+(const Tensor<T, 2>& M1, const Tensor<T2, 2>& M2)
+{
+  auto M1_copy = M1.deepCopy();
+  M1_copy += M2;
+  return M1_copy;
 }
 
 // These are the alias we will actually use.

@@ -1,8 +1,8 @@
 # Building and installing HElib
 
 The HElib build, install, and regression tests suite have been built and tested
-on Ubuntu 18.04, Ubuntu 20.04, Fedora 31, Fedora 32, CentOS 7.7, CentOS 8.1,
-and macOS Mojave 10.14.
+on Ubuntu 18.04, Ubuntu 20.04, Fedora 32, Fedora 33, CentOS 7.8, CentOS 8.2,
+macOS Mojave >=10.14.6, and macOS Catalina >=10.15.7.
 
 There are two different ways to build and install HElib. The first one will 
 automatically download and build the GMP and NTL dependencies and pack the 
@@ -23,7 +23,7 @@ dependencies to be installed by you and available in the system.
 - cmake >= 3.10.2
 
 **macOS environment:**
-- Apple clang >= 11.0.0 (available with Xcode >= 11.0)
+- Apple clang >= 11.0.0 (available with the latest Xcode for the tested versions of macOS)
 - Xcode Command Line Tools (can be installed with the command `xcode-select
   --install` in a teminal)
 - cmake >= 3.17.3 (available from [CMake](https://cmake.org/) or [MacPorts

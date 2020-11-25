@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,27 +16,29 @@
 #include <helib/helib.h>
 #include <helib/debugging.h>
 
-void squareWithFatBoot(FHEPubKey& pk, Ctxt& c)
+namespace {
+
+void squareWithThinBoot(helib::PubKey& pk, helib::Ctxt& c)
 {
   if (c.bitCapacity() <= 50) {
-    pk.reCrypt(c);
+    pk.thinReCrypt(c);
   }
   c.square();
 }
 
-static void BM_fatboot(benchmark::State& state,
-                       long m,
-                       long p,
-                       long r,
-                       long c,
-                       long bits,
-                       long t,
-                       int c_m,
-                       std::vector<long> mvector,
-                       std::vector<long> gens,
-                       std::vector<long> ords)
+static void BM_thinboot(benchmark::State& state,
+                        long m,
+                        long p,
+                        long r,
+                        long c,
+                        long bits,
+                        long t,
+                        int c_m,
+                        std::vector<long> mvector,
+                        std::vector<long> gens,
+                        std::vector<long> ords)
 {
-  NTL::Vec<long> mvec = convert<NTL::Vec<long>>(mvector);
+  NTL::Vec<long> mvec = helib::convert<NTL::Vec<long>>(mvector);
   // clang-format off
   std::cout << "m=" << m
             << ", p=" << p
@@ -46,19 +48,19 @@ static void BM_fatboot(benchmark::State& state,
             << ", skHwt=" << t
             << ", c_m=" << c_m
             << ", mvec=" << mvec
-            << ", gens=" << gens
-            << ", ords=" << ords
+            << ", gens=" << helib::vecToStr(gens)
+            << ", ords=" << helib::vecToStr(ords)
             << std::endl;
   // clang-format on
   std::cout << "Initialising context object..." << std::endl;
-  FHEcontext context(m, p, r, gens, ords);
+  helib::Context context(m, p, r, gens, ords);
   context.zMStar.set_cM(c_m / 100.0);
 
   std::cout << "Building modulus chain..." << std::endl;
   buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*skHwt*/ t);
 
-  // Make bootstrappable
-  context.makeBootstrappable(mvec, t, /*build_cache=*/0, /*alsoThick=*/true);
+  // Make bootstrappable (saves time by disabling some fat boot precomputation)
+  context.enableBootStrapping(mvec, /*build_cache=*/0, /*alsoThick=*/false);
 
   // Print the context
   context.zMStar.printout();
@@ -66,7 +68,7 @@ static void BM_fatboot(benchmark::State& state,
   std::cout << "Security: " << context.securityLevel() << std::endl;
 
   std::cout << "Creating secret key..." << std::endl;
-  FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   std::cout << "Generating key-switching matrices..." << std::endl;
   addSome1DMatrices(secret_key);
@@ -77,8 +79,8 @@ static void BM_fatboot(benchmark::State& state,
 
   // NOTE: For some reason the reCrypt method is not marked const so
   //       I had to remove the const from the public key
-  FHEPubKey& public_key = secret_key;
-  const EncryptedArray& ea = *(context.ea);
+  helib::PubKey& public_key = secret_key;
+  const helib::EncryptedArray& ea = *(context.ea);
 
   long nslots = ea.size();
   std::cout << "Number of slots: " << nslots << std::endl;
@@ -88,15 +90,15 @@ static void BM_fatboot(benchmark::State& state,
     ptxt[i] = std::rand() % 2; // Random 0s and 1s
   }
 
-  Ctxt ctxt(public_key);
+  helib::Ctxt ctxt(public_key);
   ea.encrypt(ctxt, public_key, ptxt);
   for (auto _ : state)
-    squareWithFatBoot(public_key, ctxt);
+    squareWithThinBoot(public_key, ctxt);
   std::cout << "Multiplications performed = " << state.iterations()
             << std::endl;
 }
 
-BENCHMARK_CAPTURE(BM_fatboot,
+BENCHMARK_CAPTURE(BM_thinboot,
                   tiny_params,
                   /*m =*/31 * 41,
                   /*p =*/2,
@@ -111,7 +113,7 @@ BENCHMARK_CAPTURE(BM_fatboot,
     ->Unit(benchmark::kMillisecond)
     ->Iterations(200);
 
-BENCHMARK_CAPTURE(BM_fatboot,
+BENCHMARK_CAPTURE(BM_thinboot,
                   small_params,
                   /*m =*/31775,
                   /*p =*/2,
@@ -126,7 +128,7 @@ BENCHMARK_CAPTURE(BM_fatboot,
     ->Unit(benchmark::kMillisecond)
     ->MinTime(200);
 
-BENCHMARK_CAPTURE(BM_fatboot,
+BENCHMARK_CAPTURE(BM_thinboot,
                   big_params,
                   /*m =*/35113,
                   /*p =*/2,
@@ -140,3 +142,5 @@ BENCHMARK_CAPTURE(BM_fatboot,
                   /*ords =*/std::vector<long>{36, 24})
     ->Unit(benchmark::kMillisecond)
     ->MinTime(200);
+
+} // namespace
