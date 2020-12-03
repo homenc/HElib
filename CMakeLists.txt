@@ -19,8 +19,8 @@ if (NOT (CMAKE_SIZEOF_VOID_P EQUAL 8))
   message(FATAL_ERROR "HElib requires a 64-bit architecture.")
 endif ()
 
-# Use -std=c++14 as default.
-set(CMAKE_CXX_STANDARD 14)
+# Use -std=c++17 as default.
+set(CMAKE_CXX_STANDARD 17)
 # Disable C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 # Require full C++ standard

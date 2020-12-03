@@ -8,17 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
-
-cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
-
-## Use -std=c++14 as default.
-set(CMAKE_CXX_STANDARD 14)
-## Disable C++ extensions
-set(CMAKE_CXX_EXTENSIONS OFF)
-## Require full C++ standard
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-project(test_bootstrap LANGUAGES CXX)
 				 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/test/${CMAKE_INSTALL_LIBDIR}")
@@ -26,8 +15,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/test/${CMAKE_INSTALL_LIBDIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/test/${CMAKE_INSTALL_BINDIR}")
-
-find_package(helib 1.1.0 EXACT REQUIRED)
 
 add_executable(test_bootstrap test_bootstrap.cpp)
 

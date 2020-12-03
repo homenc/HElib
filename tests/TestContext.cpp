@@ -234,7 +234,7 @@ TEST(TestContextBGV, securityHasLowerBoundOfZero)
 
 TEST(TestContextBGV, contextBuilderWithDefaultArguments)
 {
-  helib::Context context_built{helib::ContextBuilder<helib::BGV>().build()};
+  helib::Context context_built = helib::ContextBuilder<helib::BGV>().build();
 
   helib::Context expected_default_context(/*m=*/3, /*p=*/2, /*r=*/1);
   buildModChain(expected_default_context, /*bits=*/300, /*c=*/3);
@@ -250,11 +250,30 @@ TEST(TestContextBGV, contextBuilderWithDefaultArguments)
   EXPECT_EQ(context_built, expected_default_context);
 }
 
+TEST(TestContextBGV, contextBuilderBuildsPointer)
+{
+  std::unique_ptr<helib::Context> context_built {
+    helib::ContextBuilder<helib::BGV>().buildPtr() };
+
+  helib::Context expected_default_context(/*m=*/3, /*p=*/2, /*r=*/1);
+  buildModChain(expected_default_context, /*bits=*/300, /*c=*/3);
+
+  // Making sure the number of columns is not clipped.
+  EXPECT_GT(expected_default_context.ctxtPrimes.card(),
+            expected_default_context.digits.size());
+  EXPECT_GT(context_built->ctxtPrimes.card(), context_built->digits.size());
+  EXPECT_EQ(context_built->digits.size(), 3);
+
+  EXPECT_FALSE(context_built->isBootstrappable());
+  EXPECT_GT(context_built->numPrimes(), 0);
+  EXPECT_EQ(*context_built, expected_default_context);
+}
+
 TEST(TestContextBGV, contextBuilderClipsDigitsSizeWithSmallBits)
 {
   long c = 4; // Columns of SKMs
-  helib::Context context_built{
-      helib::ContextBuilder<helib::BGV>().bits(100).c(c).build()};
+  helib::Context context_built =
+      helib::ContextBuilder<helib::BGV>().bits(100).c(c).build();
 
   // Because bits is small, c gets clipped automatically.
   EXPECT_LT(context_built.digits.size(), c);
@@ -263,8 +282,8 @@ TEST(TestContextBGV, contextBuilderClipsDigitsSizeWithSmallBits)
 TEST(TestContextBGV, contextBuilderDoesNotClipDigitsSize)
 {
   long c = 5; // Columns of SKMs
-  helib::Context context_built{
-      helib::ContextBuilder<helib::BGV>().bits(500).c(c).build()};
+  helib::Context context_built =
+      helib::ContextBuilder<helib::BGV>().bits(500).c(c).build();
 
   // Should have sufficient number of bits to have c columns.
   EXPECT_EQ(context_built.digits.size(), c);
@@ -273,11 +292,11 @@ TEST(TestContextBGV, contextBuilderDoesNotClipDigitsSize)
 TEST_P(TestContextBGV, contextBuilderWithBasicParams)
 {
   // clang-format off
-  helib::Context context_built { helib::ContextBuilder<helib::BGV>()
+  helib::Context context_built = helib::ContextBuilder<helib::BGV>()
                                .m(m)
                                .p(p)
                                .r(r)
-                               .build() };   
+                               .build();   
   // clang-format off
 
   buildModChain(*context, /*bits*/300, /*c=*/3);
@@ -288,13 +307,13 @@ TEST_P(TestContextBGV, contextBuilderWithBasicParams)
 TEST_P(TestContextBGV, contextBuilderWithGensOrdsToo)
 { 
   // clang-format off
-  helib::Context context_built { helib::ContextBuilder<helib::BGV>()
-                               .m(m)
-                               .p(p)
-                               .r(r)
-                               .gens({3})
-                               .ords({-2})
-                               .build() };   
+  helib::Context context_built = helib::ContextBuilder<helib::BGV>()
+                                 .m(m)
+                                 .p(p)
+                                 .r(r)
+                                 .gens({3})
+                                 .ords({-2})
+                                 .build();   
   // clang-format off
 
   buildModChain(*context, /*bits*/300, /*c=*/3);
@@ -305,12 +324,12 @@ TEST_P(TestContextBGV, contextBuilderWithGensOrdsToo)
 TEST_P(TestContextBGV, contextBuilderNoModChain)
 {
   // clang-format off
-  helib::Context context_built { helib::ContextBuilder<helib::BGV>()
-                               .m(m)
-                               .p(p)
-                               .r(r)
-                               .buildModChain(false)
-                               .build() };   
+  helib::Context context_built = helib::ContextBuilder<helib::BGV>()
+                                 .m(m)
+                                 .p(p)
+                                 .r(r)
+                                 .buildModChain(false)
+                                 .build();   
   // clang-format off
   EXPECT_EQ(context_built.numPrimes(), 0);
 }
@@ -321,10 +340,10 @@ TEST_P(TestContextBGV, contextBuilderBootstrappableContext)
   mvec.SetLength(1);
   mvec[0] = 3;
   // clang-format off
-  helib::Context context_built { helib::ContextBuilder<helib::BGV>()
-                               .mvec(mvec)
-                               .bootstrappable(true)
-                               .build() };
+  helib::Context context_built = helib::ContextBuilder<helib::BGV>()
+                                 .mvec(mvec)
+                                 .bootstrappable(true)
+                                 .build();
   // clang-format on
 
   EXPECT_TRUE(context_built.isBootstrappable());
@@ -414,8 +433,8 @@ TEST(TestContextCKKS, contextBuilderWithDefaultArguments)
 TEST(TestContextCKKS, contextBuilderClipsDigitsSizeWithSmallBits)
 {
   long c = 4; // Columns of SKMs
-  helib::Context context_built {
-      helib::ContextBuilder<helib::CKKS>().bits(100).c(c).build() };
+  helib::Context context_built =
+      helib::ContextBuilder<helib::CKKS>().bits(100).c(c).build();
 
   // Because bits is small, c gets clipped automatically.
   EXPECT_LT(context_built.digits.size(), c);
@@ -424,8 +443,8 @@ TEST(TestContextCKKS, contextBuilderClipsDigitsSizeWithSmallBits)
 TEST(TestContextCKKS, contextBuilderDoesNotClipDigitsSize)
 {
   long c = 5; // Columns of SKMs
-  helib::Context context_built {
-      helib::ContextBuilder<helib::CKKS>().bits(500).c(c).build() };
+  helib::Context context_built =
+      helib::ContextBuilder<helib::CKKS>().bits(500).c(c).build();
 
   // Should have sufficient number of bits to have c columns.
   EXPECT_EQ(context_built.digits.size(), c);
@@ -434,10 +453,10 @@ TEST(TestContextCKKS, contextBuilderDoesNotClipDigitsSize)
 TEST_P(TestContextCKKS, contextBuilderWithBasicParams)
 {
   // clang-format off
-  helib::Context context_built { helib::ContextBuilder<helib::CKKS>()
+  helib::Context context_built = helib::ContextBuilder<helib::CKKS>()
                                .m(m)
                                .precision(r)
-                               .build() };   
+                               .build();   
   // clang-format off
 
   buildModChain(*context, /*bits*/300, /*c=*/3);
@@ -448,12 +467,12 @@ TEST_P(TestContextCKKS, contextBuilderWithBasicParams)
 TEST_P(TestContextCKKS, contextBuilderWithGensOrdsToo)
 { 
   // clang-format off
-  helib::Context context_built { helib::ContextBuilder<helib::CKKS>()
+  helib::Context context_built = helib::ContextBuilder<helib::CKKS>()
                                .m(m)
                                .precision(r)
                                .gens({3})
                                .ords({64})
-                               .build() };   
+                               .build();   
   // clang-format off
 
   buildModChain(*context, /*bits*/300, /*c=*/3);
@@ -464,11 +483,11 @@ TEST_P(TestContextCKKS, contextBuilderWithGensOrdsToo)
 TEST_P(TestContextCKKS, contextBuilderNoModChain)
 {
   // clang-format off
-  helib::Context context_built { helib::ContextBuilder<helib::CKKS>()
+  helib::Context context_built = helib::ContextBuilder<helib::CKKS>()
                                .m(m)
                                .precision(r)
                                .buildModChain(false)
-                               .build() };   
+                               .build();   
   // clang-format off
   EXPECT_EQ(context_built.numPrimes(), 0);
 }

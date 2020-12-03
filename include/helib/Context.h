@@ -27,8 +27,6 @@
 
 #include <NTL/Lazy.h>
 
-#define FHE_DISABLE_CONTEXT_CONSTRUCTOR
-
 namespace helib {
 
 constexpr int MIN_SK_HWT = 120;
@@ -137,15 +135,28 @@ class ContextBuilder;
  **/
 class Context
 {
+private:
+  template <typename SCHEME>
+  friend class ContextBuilder;
+
+  // Forward declarations of useful param structs for Context and
+  // ContextBuilder.
+  struct ModChainParams;
+  struct BootStrapParams;
+
   std::vector<Cmodulus> moduli; // Cmodulus objects for the different primes
   // This is private since the implementation assumes that the list of
   // primes only grows and no prime is ever modified or removed.
 
-public:
-  // Here are some "getter" methods that give direct
-  // access to important parameters.  These are for convenience,
-  // as well as allowing for future re-organization.
+  Context(long m,
+          long p,
+          long r,
+          const std::vector<long>& gens,
+          const std::vector<long>& ords,
+          const std::optional<ModChainParams>& mparams,
+          const std::optional<BootStrapParams>& bparams);
 
+public:
   // Parameters stored in zMStar.
   // These are invariant for any computations involving this Context
 
@@ -512,49 +523,33 @@ public:
           const std::vector<long>& gens = std::vector<long>(),
           const std::vector<long>& ords = std::vector<long>());
 
-  // FIXME: This is a temporary fix to allow proper copy of the context.
-  // Without the fixes there would be discrepancies between context's zMStar and
-  // alMod const reference one.
-  // TODO: Add doxygen comments to the following methods.
   /**
    * @brief Default destructor.
    **/
   ~Context() = default;
 
-#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
   /**
-   * @brief Default copy constructor.
+   * @brief Deleted copy constructor.
    * @param other `Context` to copy.
    **/
   Context(const Context& other) = delete;
 
   /**
-   * @brief Default move constructor.
-   * @param other `Context` to copy.
+   * @brief Deleted move constructor.
+   * @param other `Context` to move.
    **/
   Context(Context&& other) = delete;
 
-  template <typename SCHEME>
-  explicit Context(const ContextBuilder<SCHEME>&);
-  // Marked explicit to avoid dangerous implicit conversions.
-
-#else
-
   /**
-   * @brief Default copy constructor.
+   * @brief Deleted copy assignment.
    * @param other `Context` to copy.
    **/
-  Context(const Context& other);
-
-  /**
-   * @brief Default move constructor.
-   * @param other `Context` to copy.
-   **/
-  Context(Context&& other);
-#endif
-
-  // Deleted assignment operators.
   Context& operator=(const Context& other) = delete;
+
+  /**
+   * @brief Deleted move assignment.
+   * @param other `Context` to move.
+   **/
   Context& operator=(Context&& other) = delete;
 
   /**
@@ -967,6 +962,11 @@ class ContextBuilder
                 "scheme (CKKS or BGV)");
 
 private:
+  // Helper for building
+  const std::pair<std::optional<Context::ModChainParams>,
+                  std::optional<Context::BootStrapParams>>
+  makeParamsArgs() const;
+
   // Default values by scheme.
   struct default_values;
 
@@ -1158,6 +1158,20 @@ public:
   }
 
   /**
+   * @brief Sets `mvec` the unique primes which are factors of `m`.
+   * @param mvec A `std::vector` of primes factors.
+   * @return Reference to the `ContextBuilder` object.
+   * @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& mvec(const std::vector<long>& mvec)
+  {
+    mvec_ = convert<NTL::Vec<long>>(mvec);
+    return *this;
+  }
+
+  /**
    * @brief Sets boostrapping to be `thin`.
    * @return Reference to the `ContextBuilder` object.
    * @note Only exists when the `SCHEME` is `BGV`.
@@ -1219,15 +1233,14 @@ public:
    * `ContextBuilder` object.
    * @return A `Context` object.
    **/
-#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
-
-  // compatibility interface
-  ContextBuilder& build() { return *this; }
-
-  friend class Context;
-#else
   Context build() const;
-#endif
+
+  /**
+   * @brief Builds a `Context` object from the arguments stored in the
+   * `ContextBuilder` object.
+   * @return A raw pointer to a `Context` object.
+   **/
+  Context* buildPtr() const;
 
   friend std::ostream& operator<<<SCHEME>(std::ostream& os,
                                           const ContextBuilder& cb);

@@ -194,7 +194,8 @@ protected:
                   .r(r)
                   .gens(gens)
                   .ords(ords)
-                  .bits(L)),
+                  .bits(L)
+                  .build()),
       secretKey(context),
       publicKey(secretKey)
   {}
