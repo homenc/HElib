@@ -36,7 +36,7 @@ constexpr int BOOT_DFLT_SK_HWT = MIN_SK_HWT;
  * @brief An estimate for the security-level. This has a lower bound of 0.
  * @param n LWE dimension.
  * @param log2AlphaInv Variable containing the value of `log(1/alpha)` where
- * `alpha` is the noise.
+ * `alpha` is the noise/modulus ratio.
  * @param hwt The Hamming weight.
  * @return The estimated security level.
  * @note This function uses experimental affine approximations to the

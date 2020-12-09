@@ -111,19 +111,19 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   // the scaled error increases by at most eps (with some
   // futher adjustments made in addNoiseForCKKSDecryption
   // to maintain a certain level of security as the cost
-  // of accuracy.
+  // of accuracy).
 
-  long r = alMod.getR(); // default r-value
-  if (prec.isDefined())
-    r = prec; // override if necessary
 
-  double eps = std::ldexp(1.0, -r);
+  double eps = ctxt.errorBound();
+  if (prec.isDefined()) {
+    double eps1 = std::ldexp(1.0, -prec); // eps = 2^{-r}
+    if (eps1 < eps) Warning("CKKS decryption: 2^{-prec} < ctxt.errorBound(): "
+                            "potential security risk");
+    eps = eps1;
+  }
 
   // now add noise to a copy of ctxt
   Ctxt ctxt1 = ctxt;
-
-  // This will help protect accuracy while allowing us to add a lot of noise
-  ctxt1.bringToSet(ctxt1.getContext().fullPrimes());
 
   ctxt1.addNoiseForCKKSDecryption(sKey, eps);
 

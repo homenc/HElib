@@ -271,6 +271,7 @@ TEST_P(TestPermutationsCKKS, ciphertextPermutationsWithNewAPI)
   helib::PtxtArray w(context);
   w.decrypt(ctxt, secretKey);
 
+  //TODO-FB investigate the use of EXPECT_NEAR with an error threshold
   EXPECT_TRUE(w == helib::Approx(v));
 }
 
@@ -322,7 +323,7 @@ INSTANTIATE_TEST_SUITE_P(variousParameters,
 INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestPermutationsCKKS,
                          ::testing::Values(CKKSParameters(/*m=*/8192,
-                                                          /*r=*/20,
+                                                          /*r=*/50,
                                                           /*bits=*/1000,
                                                           /*depth=*/5)));
 

@@ -2883,15 +2883,6 @@ void Ctxt::addNoiseForCKKSDecryption(const SecKey& sk, double eps)
   } else
     sigma = sigma_target;
 
-#ifdef HELIB_DEBUG
-
-  if (sigma / sigma_min < 1000) {
-    Warning("CKKS decryption: sigma/sigma_min = " +
-            std::to_string(convert<double>(sigma / sigma_min)));
-  }
-
-#endif
-
   // std::cerr << "***** " << (sigma/sigma_min) << "\n";
 
   NTL::xdouble addedNoiseBound = sigma * B;

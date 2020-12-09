@@ -12,6 +12,9 @@ the [Smart-Vercauteren][2] ciphertext packing techniques and
 the [Gentry-Halevi-Smart][3] optimizations. See [this report][7] for a
 description of a few of the algorithms using in this library. 
 
+Please refer to [CKKS-security.md](CKKS-security.md) for the latest 
+discussion on the security of the the CKKS scheme implementation in HElib.
+
 Since mid-2018 HElib has been under extensive refactoring for *Reliability*, 
 *Robustness & Serviceability*, *Performance*, and most importantly *Usability* 
 for researchers and developers working on HE and its uses.

@@ -1321,8 +1321,14 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
   double bnd = getContext().zMStar.getPolyNormBnd();
 #endif
 
-  if (ciphertxt.totalNoiseBound() * bnd > 0.48 * xQ)
-    Warning("decrypting with too much noise");
+  if (ciphertxt.totalNoiseBound() * bnd > 0.48 * xQ) { 
+    std::string message = "Decrypting with too much noise";
+#ifdef HELIB_DEBUG
+    Warning(message);
+#else
+    throw LogicError(message);
+#endif
+  }
 
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
 
