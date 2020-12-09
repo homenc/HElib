@@ -740,12 +740,12 @@ INSTANTIATE_TEST_SUITE_P(typicalParameters,
                              // SLOW
                              Parameters(/*R=*/1,
                                         /*m=*/1024,
-                                        /*r=*/8,
+                                        /*r=*/10,
                                         /*L=*/150,
                                         /*epsilon=*/0.01,
                                         /*seed=*/0)
                              // FAST
-                             // Parameters(1, 128, 8, 150, 0.01, 0)
+                             // Parameters(1, 128,10, 150, 0.01, 0)
                              ));
 // if (R<=0) R=1;
 // if (R<=2)

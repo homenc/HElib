@@ -11,6 +11,7 @@
  */
 #include <cstring>
 #include <algorithm>
+#include <optional>
 #include <helib/Context.h>
 #include <helib/EvalMap.h>
 #include <helib/powerful.h>
@@ -20,6 +21,25 @@
 #include <helib/PolyModRing.h>
 
 namespace helib {
+
+// Useful params objects (POD) to simplify calls between ContextBuilder and
+// Context.
+struct Context::ModChainParams
+{
+  long bits;
+  long c;
+  bool bootstrappableFlag;
+  long skHwt;
+  long resolution;
+  long bitsInSpecialPrimes;
+};
+
+struct Context::BootStrapParams
+{
+  NTL::Vec<long> mvec;
+  bool buildCacheFlag;
+  bool thickFlag;
+};
 
 long FindM(long k,
            long nBits,
@@ -52,7 +72,7 @@ long FindM(long k,
   //          N > nBits*(1+1/c)(k+110) / 7.2
 
   // Compute a bound on m, and make sure that it is not too large
-  double cc = 1.0 + (1.0 / (double)c);
+  double cc = 1.0 + (1.0 / static_cast<double>(c));
 
   double dN = ceil(nBits * cc * (k + 110) / 7.2);
   // FIXME: the bound for dN is not conservative enough...
@@ -490,6 +510,7 @@ void readContextBase(std::istream& str,
 
   seekPastChar(str, ']');
 }
+
 std::unique_ptr<Context> buildContextFromAscii(std::istream& str)
 {
   unsigned long m, p, r;
@@ -593,13 +614,13 @@ Context::Context(unsigned long m,
 
     // VJS-FIXME: I'm not sure this makes sense.
     // This constrictor was provided mainly for bootstrapping.
-    // Most BGV applications wil *not* use fully packed slots
+    // Most BGV applications will *not* use fully packed slots
     ea(std::make_shared<EncryptedArray>(*this, alMod)),
 
     // ea(std::make_shared<EncryptedArray>(*this)),
     // This constructor uses the polynomial X, which
     // corresponds to thinly packed slots for BGV.
-    // Unfortunately, this doesn't work...the problem is that
+    // Unfortunately, this doesn't work. The problem is that
     // the bootstrapping rountines, even thin bootstrapping,
     // require G=F0 here.  What we really need to do is
     // put an EA wit G=F0 in rcData, separate from the
@@ -619,51 +640,6 @@ Context::Context(unsigned long m,
         std::make_shared<PolyModRing>(zMStar.getP(), alMod.getR(), getG(*ea));
   }
 }
-#if 0
-
-Context::Context(const Context& other) :
-    moduli(other.moduli),
-    zMStar(other.zMStar),
-    alMod(zMStar, other.alMod.getR()),
-    ea(other.ea),
-    pwfl_converter(other.pwfl_converter),
-    slotRing(other.slotRing),
-    stdev(other.stdev),
-    scale(other.scale),
-    ctxtPrimes(other.ctxtPrimes),
-    specialPrimes(other.specialPrimes),
-    smallPrimes(other.smallPrimes),
-    modSizes(other.modSizes),
-    digits(other.digits),
-    rcData(other.rcData),
-    hwt_param(other.hwt_param),
-    e_param(other.e_param),
-    ePrime_param(other.ePrime_param)
-{}
-
-Context::Context(Context&& other) :
-    moduli(std::move(other.moduli)),
-    zMStar(std::move(other.zMStar)),
-    alMod(zMStar, other.alMod.getR()),
-    ea(std::move(other.ea)),
-    pwfl_converter(std::move(other.pwfl_converter)),
-    slotRing(std::move(other.slotRing)),
-    stdev(std::move(other.stdev)),
-    scale(std::move(other.scale)),
-    ctxtPrimes(std::move(other.ctxtPrimes)),
-    specialPrimes(std::move(other.specialPrimes)),
-    smallPrimes(std::move(other.smallPrimes)),
-    modSizes(std::move(other.modSizes)),
-    digits(std::move(other.digits)),
-    rcData(std::move(other.rcData)),
-    hwt_param(std::move(other.hwt_param)),
-    e_param(std::move(other.e_param)),
-    ePrime_param(std::move(other.ePrime_param))
-{
-  std::move(other.alMod);
-}
-
-#endif
 
 void Context::printout(std::ostream& out) const
 {
@@ -677,48 +653,69 @@ void Context::printout(std::ostream& out) const
       << "security level = " << securityLevel() << std::endl;
 }
 
-#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
-template <typename SCHEME>
-Context::Context(const ContextBuilder<SCHEME>& b) :
-    Context(b.m_, b.p_, b.r_, b.gens_, b.ords_) // delegation
+Context::Context(long m,
+                 long p,
+                 long r,
+                 const std::vector<long>& gens,
+                 const std::vector<long>& ords,
+                 const std::optional<Context::ModChainParams>& mparams,
+                 const std::optional<Context::BootStrapParams>& bparams) :
+    Context(m, p, r, gens, ords)
 {
-  if (b.buildModChainFlag_) {
-    // Not the builder's setter method.
+  if (mparams) {
     ::helib::buildModChain(*this,
-                           b.bits_,
-                           b.c_,
-                           b.bootstrappableFlag_,
-                           b.skHwt_,
-                           b.resolution_,
-                           b.bitsInSpecialPrimes_);
-    if (b.bootstrappableFlag_) {
-      this->enableBootStrapping(b.mvec_, b.buildCacheFlag_, b.thickFlag_);
+                           mparams->bits,
+                           mparams->c,
+                           mparams->bootstrappableFlag,
+                           mparams->skHwt,
+                           mparams->resolution,
+                           mparams->bitsInSpecialPrimes);
+
+    if (mparams->bootstrappableFlag && bparams) {
+      this->enableBootStrapping(bparams->mvec,
+                                bparams->buildCacheFlag,
+                                bparams->thickFlag);
     }
   }
 }
-#else
+
+// Helper for the build and buildPtr methods
+template <typename SCHEME>
+const std::pair<std::optional<Context::ModChainParams>,
+                std::optional<Context::BootStrapParams>>
+ContextBuilder<SCHEME>::makeParamsArgs() const
+{
+  const auto mparams = buildModChainFlag_
+                           ? std::make_optional<Context::ModChainParams>({
+                                 bits_,
+                                 c_,
+                                 bootstrappableFlag_,
+                                 skHwt_,
+                                 resolution_,
+                                 bitsInSpecialPrimes_,
+                             })
+                           : std::nullopt;
+
+  const auto bparams = bootstrappableFlag_
+                           ? std::make_optional<Context::BootStrapParams>(
+                                 {mvec_, buildCacheFlag_, thickFlag_})
+                           : std::nullopt;
+  return {mparams, bparams};
+}
+
 template <typename SCHEME>
 Context ContextBuilder<SCHEME>::build() const
 {
-  if (buildModChainFlag_) {
-    Context context(m_, p_, r_, gens_, ords_);
-    // Not the builder's setter method.
-    ::helib::buildModChain(context,
-                           bits_,
-                           c_,
-                           bootstrappableFlag_,
-                           skHwt_,
-                           resolution_,
-                           bitsInSpecialPrimes_);
-    if (bootstrappableFlag_) {
-      context.enableBootStrapping(mvec_, buildCacheFlag_, thickFlag_);
-    }
-    return context;
-  } else {
-    return Context(m_, p_, r_, gens_, ords_);
-  }
+  auto [mparams, bparams] = makeParamsArgs();
+  return Context(m_, p_, r_, gens_, ords_, mparams, bparams);
 }
-#endif
+
+template <typename SCHEME>
+Context* ContextBuilder<SCHEME>::buildPtr() const
+{
+  auto [mparams, bparams] = makeParamsArgs();
+  return new Context(m_, p_, r_, gens_, ords_, mparams, bparams);
+}
 
 template <>
 std::ostream& operator<<<BGV>(std::ostream& os, const ContextBuilder<BGV>& cb)
@@ -767,10 +764,5 @@ std::ostream& operator<<<CKKS>(std::ostream& os, const ContextBuilder<CKKS>& cb)
 
 template class ContextBuilder<BGV>;
 template class ContextBuilder<CKKS>;
-
-#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
-template Context::Context(const ContextBuilder<BGV>&);
-template Context::Context(const ContextBuilder<CKKS>&);
-#endif
 
 } // namespace helib

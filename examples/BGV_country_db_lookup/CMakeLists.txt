@@ -9,21 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
-
-## Use -std=c++14 as default.
-set(CMAKE_CXX_STANDARD 14)
-## Disable C++ extensions
-set(CMAKE_CXX_EXTENSIONS OFF)
-## Require full C++ standard
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-project(BGV_country_db_lookup
-       	LANGUAGES CXX)
-
-      find_package(helib 1.1.0 EXACT REQUIRED)
-
 add_executable(BGV_country_db_lookup BGV_country_db_lookup.cpp)
 
 target_link_libraries(BGV_country_db_lookup helib)
-
