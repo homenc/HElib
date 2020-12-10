@@ -209,7 +209,7 @@ TEST_P(TestMatmulCKKS, vectorToMatrixMultiplication)
   ptxt.store(w);
 
   for (long i = 0; i < ea.size(); ++i) {
-    EXPECT_NEAR(w[i], w1[i], 0.01);
+    EXPECT_NEAR(w[i], w1[i], 0.015);
   }
 }
 
