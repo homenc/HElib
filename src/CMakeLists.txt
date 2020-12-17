@@ -182,6 +182,7 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/sample.h"
     "${HELIB_HEADER_DIR}/scheme.h"
     "${HELIB_HEADER_DIR}/set.h"
+    "${HELIB_HEADER_DIR}/SumRegister.h"
     "${HELIB_HEADER_DIR}/tableLookup.h"
     "${HELIB_HEADER_DIR}/timing.h"
     "${HELIB_HEADER_DIR}/zzX.h"

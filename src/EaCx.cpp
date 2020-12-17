@@ -29,49 +29,20 @@ namespace helib {
 
 static constexpr cx_double the_imaginary_i = cx_double(0.0, 1.0);
 
-void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
-                                  const SecKey& sKey,
-                                  std::vector<cx_double>& ptxt) const
+// decodes the given ZZX
+static void CKKS_decode(const NTL::ZZX& pp,
+                        NTL::xdouble xfactor,
+                        const PAlgebra& palg,
+                        std::vector<cx_double>& ptxt)
 {
-  assertEq(&getContext(),
-           &ctxt.getContext(),
-           "Cannot decrypt with non-matching context");
-  NTL::ZZX pp;
-  sKey.Decrypt(pp, ctxt);
-
-#if 0
-
-  // convert to zzX, if the pp is too big, scale it down
-  long nBits = NTL::MaxBits(pp) - NTL_SP_NBITS;
-  zzX zpp(NTL::INIT_SIZE, deg(pp)+1);
-  double factor;
-  if (nBits<=0) { // convert to zzX, double
-    for (long i=0; i<lsize(zpp); i++)
-      conv(zpp[i], pp[i]);
-    factor = NTL::to_double(ctxt.getRatFactor());
-  } else { // scale and then convert to zzX, double
-    for (long i=0; i<lsize(zpp); i++)
-      conv(zpp[i], pp[i]>>nBits);
-    factor = NTL::to_double(ctxt.getRatFactor()/NTL::power2_xdouble(nBits));
-  }
-  CKKS_canonicalEmbedding(ptxt, zpp, getPAlgebra()); // decode without scaling
-  for (cx_double& cx : ptxt)  // divide by the factor
-    cx /= factor;
-
-#else
-
-  // NOTE: I changed the code so that we convert to a
-  // vector<double> instead of a zzX. This is more
-  // efficient and more precise.  It should not affect overflow,
-  // as far as I can tell. The old code is above.
-  //   --Victor
-
   const long MAX_BITS = 400;
   long nBits = NTL::MaxBits(pp) - MAX_BITS;
   double factor;
-  if (nBits <= 0) { // convert to zzX, double
-    CKKS_canonicalEmbedding(ptxt, pp, getPAlgebra());
-    factor = NTL::to_double(ctxt.getRatFactor());
+
+  // This logic prevents floating point overflow
+  if (nBits <= 0) {
+    CKKS_canonicalEmbedding(ptxt, pp, palg);
+    factor = NTL::to_double(xfactor);
   } else {
     long dpp = deg(pp);
     std::vector<double> pp_scaled(dpp + 1);
@@ -80,13 +51,29 @@ void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
       RightShift(tmp, pp.rep[i], nBits);
       pp_scaled[i] = NTL::to_double(tmp);
     }
-    CKKS_canonicalEmbedding(ptxt, pp_scaled, getPAlgebra());
-    factor = NTL::to_double(ctxt.getRatFactor() / NTL::power2_xdouble(nBits));
+    CKKS_canonicalEmbedding(ptxt, pp_scaled, palg);
+    factor = NTL::to_double(xfactor / NTL::power2_xdouble(nBits));
   }
+
   for (cx_double& cx : ptxt) // divide by the factor
     cx /= factor;
+}
 
-#endif
+void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
+                                  const SecKey& sKey,
+                                  std::vector<cx_double>& ptxt) const
+{
+  assertEq(&getContext(),
+           &ctxt.getContext(),
+           "Cannot decrypt with non-matching context");
+
+  NTL::ZZX pp;
+  sKey.Decrypt(pp, ctxt);
+
+  NTL::xdouble xfactor = ctxt.getRatFactor();
+  const PAlgebra& palg = getPAlgebra();
+
+  CKKS_decode(pp, xfactor, palg, ptxt);
 }
 
 void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
@@ -103,32 +90,42 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
                                std::vector<cx_double>& ptxt,
                                OptLong prec) const
 {
+  assertEq(&getContext(),
+           &ctxt.getContext(),
+           "Cannot decrypt with non-matching context");
+
+  NTL::ZZX pp;
+  sKey.Decrypt(pp, ctxt);
+
   // This mitigates against the attack in
   // "On the Security of Homomorphic Encryption on Approximate Numbers",
   // by Baiyu Li and Daniele Micciancio.
 
-  // As a preprocessing step, we add noise so that
-  // the scaled error increases by at most eps (with some
-  // futher adjustments made in addNoiseForCKKSDecryption
-  // to maintain a certain level of security as the cost
-  // of accuracy).
+  // We add noise so that the scaled error increases by at most eps (with some
+  // futher adjustments made in addedNoiseForCKKSDecryption to maintain a
+  // certain level of security as the cost of accuracy).
 
-
+  // First, we compute eps, which by default is ctxt.errorBound().
   double eps = ctxt.errorBound();
   if (prec.isDefined()) {
     double eps1 = std::ldexp(1.0, -prec); // eps = 2^{-r}
-    if (eps1 < eps) Warning("CKKS decryption: 2^{-prec} < ctxt.errorBound(): "
-                            "potential security risk");
+    if (eps1 < eps)
+      Warning("CKKS decryption: 2^{-prec} < ctxt.errorBound(): "
+              "potential security risk");
     eps = eps1;
   }
 
-  // now add noise to a copy of ctxt
-  Ctxt ctxt1 = ctxt;
+  // Second, we compute the noise itself as a ZZX
+  NTL::ZZX noise;
+  ctxt.addedNoiseForCKKSDecryption(sKey, eps, noise);
 
-  ctxt1.addNoiseForCKKSDecryption(sKey, eps);
+  // Third, we add the noise to the raw plaintext
+  pp += noise;
 
-  // finally, perform the decryption
-  rawDecrypt(ctxt1, sKey, ptxt);
+  // Finally, we decode the adjusted plaintext
+  NTL::xdouble xfactor = ctxt.getRatFactor();
+  const PAlgebra& palg = getPAlgebra();
+  CKKS_decode(pp, xfactor, palg, ptxt);
 }
 
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
