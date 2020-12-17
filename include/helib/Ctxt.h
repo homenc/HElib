@@ -1286,6 +1286,27 @@ inline Ctxt innerProduct(const std::vector<Ctxt>& v1,
   return ret;
 }
 
+//! frobeniusAutomorph: free function version of frobeniusAutomorph method
+inline void frobeniusAutomorph(Ctxt& ctxt, long j)
+{
+  ctxt.frobeniusAutomorph(j);
+}
+
+//! conjugate: free function that is equivalent to frobeniusAutomorph(ctxt, 1)
+inline void conjugate(Ctxt& ctxt) { frobeniusAutomorph(ctxt, 1); }
+
+//! Free functions to extract real and imaginary parts.
+//! Unlike the corresponding Ctxt method, extractImPart is thread safe.
+//! NOTES: (1) these will raise an error for BGV ciphertexts.
+void extractRealPart(Ctxt& c);
+void extractImPart(Ctxt& c);
+
+//! power: free function version of power method
+inline void power(Ctxt& ctxt, long e) { ctxt.power(e); }
+
+//! negate: free function version of negate method
+inline void negate(Ctxt& ctxt) { ctxt.negate(); }
+
 //! print to cerr some info about ciphertext
 void CheckCtxt(const Ctxt& c, const char* label);
 

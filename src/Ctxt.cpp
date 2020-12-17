@@ -2384,21 +2384,6 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   // no change in noise bound
   HELIB_TIMER_STOP;
 }
-void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
-{
-  HELIB_TIMER_START;
-  // Special case: if *this is empty then do nothing
-  if (this->isEmpty())
-    return;
-
-  // Apply this automorphism to all the parts
-  for (auto& part : parts) {
-    part.complexConj();
-    if (!part.skHandle.isOne()) {
-      part.skHandle.powerOfX = context.zMStar.getM() - part.skHandle.powerOfX;
-    }
-  } // no change in noise bound
-}
 
 // Apply F(X)->F(X^k) followed by re-linearization. The automorphism is possibly
 // evaluated via a sequence of steps, to ensure that we can re-linearize the
@@ -2457,6 +2442,14 @@ void Ctxt::smartAutomorph(long k)
   // std::cerr << "\n";
   HELIB_TIMER_STOP;
 }
+    
+//  Complex conjugate, same as automorph(m-1)
+void Ctxt::complexConj() 
+{
+  HELIB_TIMER_START;
+
+  smartAutomorph(-1);
+}
 
 // applies the Frobenius automorphism p^j
 void Ctxt::frobeniusAutomorph(long j)
@@ -2468,8 +2461,8 @@ void Ctxt::frobeniusAutomorph(long j)
 
   if (isCKKS()) { // For CKKS compute complex conjugate
     if (j & 1)
-      complexConj(); // If j is even do nothing
-  } else {           // For BGV compute frobenius
+      smartAutomorph(-1); // If j is even do nothing
+  } else {                // For BGV compute frobenius
     long m = context.zMStar.getM();
     long p = context.zMStar.getP();
     long d = context.zMStar.getOrdP();
@@ -2932,6 +2925,25 @@ void Ctxt::addedNoiseForCKKSDecryption(const SecKey& sk,
   sampleGaussianBounded(noise, context, sigma);
 
   // on block exit, NTL's old PRG state is restored
+}
+
+void extractRealPart(Ctxt& c)
+{
+  Ctxt tmp = c;
+  conjugate(tmp);
+  c += tmp; // c + conj(c) = 2*real(c)
+  c *= 0.5;
+}
+
+void extractImPart(Ctxt& c)
+{
+  Ctxt tmp = c;
+  conjugate(c);
+  c -= tmp; // conj(c) - c = -2*i*imaginary(c)
+
+  PtxtArray halfI(c.getContext(), std::complex<double>(0.0, 0.5));
+
+  c *= halfI;
 }
 
 } // namespace helib

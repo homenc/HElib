@@ -2116,6 +2116,9 @@ void frobeniusAutomorph(const EncryptedArray& ea,
                         PlaintextArray& pa,
                         const NTL::Vec<long>& vec);
 
+void extractRealPart(const EncryptedArray& ea, PlaintextArray& pa);
+void extractImPart(const EncryptedArray& ea, PlaintextArray& pa);
+
 void applyPerm(const EncryptedArray& ea,
                PlaintextArray& pa,
                const NTL::Vec<long>& pi);
@@ -2441,6 +2444,12 @@ inline void frobeniusAutomorph(PtxtArray& a, const NTL::Vec<long>& vec)
 {
   frobeniusAutomorph(a.ea, a.pa, vec);
 }
+
+inline void conjugate(PtxtArray& a) { frobeniusAutomorph(a, 1); }
+
+inline void extractRealPart(PtxtArray& a) { extractRealPart(a.ea, a.pa); }
+
+inline void extractImPart(PtxtArray& a) { extractImPart(a.ea, a.pa); }
 
 inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
 {
