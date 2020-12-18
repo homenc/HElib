@@ -59,7 +59,8 @@ set(fetched_ntl_includedir
 ExternalProject_Add(
     ntl_fetched
     DEPENDS "${ntl_superbuild_dependencies}"
-    URL "https://www.shoup.net/ntl/ntl-${FETCHED_NTL_VERSION}.tar.gz"
+    URL "https://libntl.org/ntl-${FETCHED_NTL_VERSION}.tar.gz"
+        "https://www.shoup.net/ntl/ntl-${FETCHED_NTL_VERSION}.tar.gz"
     URL_HASH
         # NOTE: hash of version 11.4.3
         SHA256=b7c1ccdc64840e6a24351eb4a1e68887d29974f03073a1941c906562c0b83ad2
