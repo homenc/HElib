@@ -26,6 +26,7 @@ ExternalProject_Add(
     gmp_fetched
     DEPENDS "setup_install_dir"
     URL "https://gmplib.org/download/gmp/gmp-${FETCHED_GMP_VERSION}.tar.bz2"
+        "https://ftp.gnu.org/gnu/gmp/gmp-${FETCHED_GMP_VERSION}.tar.bz2"
     URL_HASH
         # NOTE: hash of version 6.2.0
         SHA256=f51c99cb114deb21a60075ffb494c1a210eb9d7cb729ed042ddb7de9534451ea
