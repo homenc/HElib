@@ -1,3 +1,12 @@
+HElib 1.3.1, December 2020
+=========================
+(tagged as v1.3.1)
+
+* Refactoring of CKKS Mitigation
+* Re-instated `Ctxt` isCorrect
+* Ctxt Conjugation fix
+* Added GMP and NTL alternative download locations
+
 HElib 1.3.0, December 2020
 =========================
 (tagged as v1.3.0)

@@ -20,7 +20,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(lookup LANGUAGES CXX)
 
-find_package(helib 1.3.0 EXACT REQUIRED)
+find_package(helib 1.3.1 EXACT REQUIRED)
 
 add_executable(lookup lookup.cpp)
 

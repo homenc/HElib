@@ -31,7 +31,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
 
-find_package(helib 1.3.0 EXACT REQUIRED)
+find_package(helib 1.3.1 EXACT REQUIRED)
 
 add_subdirectory(BGV_binary_arithmetic)
 add_subdirectory(BGV_country_db_lookup)
