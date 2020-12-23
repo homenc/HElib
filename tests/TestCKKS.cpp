@@ -170,6 +170,7 @@ protected:
                  context)),
       publicKey((secretKey.GenSecKey(),
                  helib::addSome1DMatrices(secretKey),
+                 helib::addSomeFrbMatrices(secretKey),
                  secretKey)),
       ea(context.ea->getCx())
   {}
@@ -361,7 +362,11 @@ TEST_P(TestCKKS, gettingTheComplexConjugateWorks)
 
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1);
-  rf = c1.getRatFactor();
+  // FIXME Have rf properly tested here.
+  // VJS-NOTE: there is no reason to assume that rf
+  //   will stay the same.  In fact, with the new complexConj
+  //   impl, which does key switching, it won't
+  // rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
   ea.encode(poly, vd1, /*size=*/1.0);
   c1.complexConj();
@@ -374,7 +379,7 @@ TEST_P(TestCKKS, gettingTheComplexConjugateWorks)
       << ", max(vd2)=" << helib::largestCoeff(vd2)
       << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
       << std::endl;
-  EXPECT_EQ(rf, c1.getRatFactor());
+  // EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 

@@ -47,7 +47,7 @@ endif (NOT CMAKE_BUILD_TYPE)
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
-find_package(helib 1.3.0 EXACT REQUIRED)
+find_package(helib 1.3.1 EXACT REQUIRED)
 find_package(benchmark REQUIRED)
 
 # Targets are simply associated with their source files.

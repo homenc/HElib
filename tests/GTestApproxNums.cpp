@@ -214,8 +214,10 @@ protected:
       seed(GetParam().seed),
       context(m, /*p=*/-1, r),
       secretKey((context.scale = 4, buildModChain(context, L), context)),
-      publicKey(
-          (secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
+      publicKey((secretKey.GenSecKey(),
+                 addSome1DMatrices(secretKey),
+                 addSomeFrbMatrices(secretKey),
+                 secretKey)),
       ea(context.ea->getCx())
   {}
 

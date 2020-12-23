@@ -13,7 +13,7 @@
 cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 
 project(helib
-        VERSION 1.3.0
+        VERSION 1.3.1
         LANGUAGES CXX)
 
 # Globals HELIB_CMAKE_EXTRA_DIR, HELIB_INCLUDE_DIR, HELIB_HEADER_DIR,
@@ -182,6 +182,7 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/sample.h"
     "${HELIB_HEADER_DIR}/scheme.h"
     "${HELIB_HEADER_DIR}/set.h"
+    "${HELIB_HEADER_DIR}/SumRegister.h"
     "${HELIB_HEADER_DIR}/tableLookup.h"
     "${HELIB_HEADER_DIR}/timing.h"
     "${HELIB_HEADER_DIR}/zzX.h"

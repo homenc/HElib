@@ -11,7 +11,7 @@
 
 cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 
-## Use -std=c++14 as default.
+## Use -std=c++17 as default.
 set(CMAKE_CXX_STANDARD 17)
 ## Disable C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -31,7 +31,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
 
-  find_package(helib 1.3.0 EXACT REQUIRED)
+  find_package(helib 1.3.1 EXACT REQUIRED)
 
 add_subdirectory(scoring)
 add_subdirectory(lookup)

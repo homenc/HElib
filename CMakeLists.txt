@@ -173,7 +173,7 @@ endif ()
 if (PACKAGE_BUILD)
   # Setting up dependencies versions
   # GMP version to be used (and eventually downloaded) if PACKAGE_BUILD
-  set(FETCHED_GMP_VERSION "6.2.0")
+  set(FETCHED_GMP_VERSION "6.2.1")
   # NTL version to be used (and eventually downloaded) if PACKAGE_BUILD
   set(FETCHED_NTL_VERSION "11.4.3")
   # Setting up default compilation output directory

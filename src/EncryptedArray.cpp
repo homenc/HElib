@@ -1581,6 +1581,78 @@ void frobeniusAutomorph(const EncryptedArray& ea,
   ea.dispatch<frobeniusAutomorph_pa_impl>(pa, vec);
 }
 
+//=============================================================================
+
+template <typename type>
+class extractRealPart_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const UNUSED EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa)
+  {
+    throw LogicError("function not implemented");
+  }
+};
+
+template <>
+class extractRealPart_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(PA_cx)
+
+    for (long i = 0; i < n; i++)
+      data[i] = data[i].real();
+  }
+};
+
+void extractRealPart(const EncryptedArray& ea, PlaintextArray& pa)
+{
+  ea.dispatch<extractRealPart_pa_impl>(pa);
+}
+
+//=============================================================================
+
+template <typename type>
+class extractImPart_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const UNUSED EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa)
+  {
+    throw LogicError("function not implemented");
+  }
+};
+
+template <>
+class extractImPart_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(PA_cx)
+
+    for (long i = 0; i < n; i++)
+      data[i] = data[i].imag();
+  }
+};
+
+void extractImPart(const EncryptedArray& ea, PlaintextArray& pa)
+{
+  ea.dispatch<extractImPart_pa_impl>(pa);
+}
+
+//=============================================================================
+
 void power(const EncryptedArray& ea, PlaintextArray& pa, long e)
 {
   if (e <= 1)

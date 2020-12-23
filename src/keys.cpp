@@ -21,6 +21,7 @@
 #include <helib/apiAttributes.h>
 #include <helib/fhe_stats.h>
 #include <helib/log.h>
+#include "internal_symbols.h" // DECRYPT_ON_PWFL_BASIS
 
 namespace helib {
 
@@ -463,12 +464,7 @@ long PubKey::Encrypt(Ctxt& ctxt,
       NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
 
   if (ptxt_sz > ptxt_bound) {
-    // TODO: Turn the following preprocessor logics into a warnOrThrow function
-#ifdef HELIB_DEBUG
     Warning("noise bound exceeded in encryption");
-#else
-    throw LogicError("noise bound exceeded in encryption");
-#endif
   }
 
   double ptxt_rat = ptxt_sz / ptxt_bound;
@@ -1293,8 +1289,6 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt,
 }
 #endif
 
-#define DECRYPT_ON_PWFL_BASIS
-
 void SecKey::Decrypt(NTL::ZZX& plaintxt,
                      const Ctxt& ciphertxt,
                      NTL::ZZX& f) const // plaintext before modular reduction
@@ -1312,17 +1306,9 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
   // previously performed on the polynomial basis were invalid
   // because of excess noise.
 
-  NTL::xdouble xQ =
-      NTL::xexp(getContext().logOfProduct(ciphertxt.getPrimeSet()));
-
-#ifdef DECRYPT_ON_PWFL_BASIS
-  double bnd = getContext().zMStar.getNormBnd();
-#else
-  double bnd = getContext().zMStar.getPolyNormBnd();
-#endif
-
-  if (ciphertxt.totalNoiseBound() * bnd > 0.48 * xQ) { 
+  if (!ciphertxt.isCorrect()) {
     std::string message = "Decrypting with too much noise";
+    // TODO: Turn the following preprocessor logics into a warnOrThrow function
 #ifdef HELIB_DEBUG
     Warning(message);
 #else
@@ -1362,20 +1348,20 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
   }
   // convert to coefficient representation & reduce modulo the plaintext space
 
-#ifdef DECRYPT_ON_PWFL_BASIS
-  const PowerfulDCRT& pwfl_converter = *getContext().pwfl_converter;
-  NTL::Vec<NTL::ZZ> pwfl;
+  if (DECRYPT_ON_PWFL_BASIS && !getContext().zMStar.getPow2()) {
+    const PowerfulDCRT& pwfl_converter = *getContext().pwfl_converter;
+    NTL::Vec<NTL::ZZ> pwfl;
 
-  pwfl_converter.dcrtToPowerful(pwfl, ptxt);
-  // convert to powerful basis, reduced mod product of primes in prime chain.
-  // the reduction mod Q is done on the powerful basis, as the
-  // coefficients tend to be smaller there
+    pwfl_converter.dcrtToPowerful(pwfl, ptxt);
+    // convert to powerful basis, reduced mod product of primes in prime chain.
+    // the reduction mod Q is done on the powerful basis, as the
+    // coefficients tend to be smaller there
 
-  pwfl_converter.powerfulToZZX(plaintxt, pwfl);
-  // now convert to polynomial basis, with no modular reduction
-#else
-  ptxt.toPoly(plaintxt);
-#endif
+    pwfl_converter.powerfulToZZX(plaintxt, pwfl);
+    // now convert to polynomial basis, with no modular reduction
+  } else {
+    ptxt.toPoly(plaintxt);
+  }
 
   f = plaintxt; // f used only for debugging
 

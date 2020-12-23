@@ -252,8 +252,8 @@ TEST(TestContextBGV, contextBuilderWithDefaultArguments)
 
 TEST(TestContextBGV, contextBuilderBuildsPointer)
 {
-  std::unique_ptr<helib::Context> context_built {
-    helib::ContextBuilder<helib::BGV>().buildPtr() };
+  std::unique_ptr<helib::Context> context_built{
+      helib::ContextBuilder<helib::BGV>().buildPtr()};
 
   helib::Context expected_default_context(/*m=*/3, /*p=*/2, /*r=*/1);
   buildModChain(expected_default_context, /*bits=*/300, /*c=*/3);

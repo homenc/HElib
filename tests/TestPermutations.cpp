@@ -271,7 +271,7 @@ TEST_P(TestPermutationsCKKS, ciphertextPermutationsWithNewAPI)
   helib::PtxtArray w(context);
   w.decrypt(ctxt, secretKey);
 
-  //TODO-FB investigate the use of EXPECT_NEAR with an error threshold
+  // TODO-FB investigate the use of EXPECT_NEAR with an error threshold
   EXPECT_TRUE(w == helib::Approx(v));
 }
 

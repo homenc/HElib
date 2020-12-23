@@ -1,3 +1,12 @@
+HElib 1.3.1, December 2020
+=========================
+(tagged as v1.3.1)
+
+* Refactoring of CKKS Mitigation
+* Re-instated `Ctxt` isCorrect
+* Ctxt Conjugation fix
+* Added GMP and NTL alternative download locations
+
 HElib 1.3.0, December 2020
 =========================
 (tagged as v1.3.0)
@@ -5,7 +14,7 @@ HElib 1.3.0, December 2020
 November-December 2020
 ---------------------
 * Mitigation for the CKKS vulnerability recently [observed](https://eprint.iacr.org/2020/1533.pdf) by Li and Micciancio
-* Context Builder unsing builder pattern
+* Context Builder using builder pattern
 * HElib now requires C++17
 
 HElib 1.2.0, November 2020
