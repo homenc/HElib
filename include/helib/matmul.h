@@ -155,7 +155,7 @@ public:
   {}
 
   MatMul_CKKS(const Context& context, get_fun_type _get_fun) :
-      ea(context.getDefaultEA()), get_fun(_get_fun)
+      ea(context.getEA()), get_fun(_get_fun)
   {}
 
   virtual const EncryptedArray& getEA() const override { return ea; }
@@ -184,7 +184,7 @@ public:
   {}
 
   MatMul_CKKS_Complex(const Context& context, get_fun_type _get_fun) :
-      ea(context.getDefaultEA()), get_fun(_get_fun)
+      ea(context.getEA()), get_fun(_get_fun)
   {}
 
   virtual const EncryptedArray& getEA() const override { return ea; }

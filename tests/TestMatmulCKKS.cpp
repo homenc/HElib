@@ -95,10 +95,14 @@ protected:
       r(GetParam().r),
       bits(GetParam().bits),
       nt(GetParam().nt),
-      context(m, /*p=*/-1, r),
-      secretKey((buildModChain(context, bits), context)),
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(m)
+                  .precision(r)
+                  .bits(bits)
+                  .build()),
+      secretKey(context),
       publicKey(keySetup(secretKey, GetParam().ks_strategy)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {}
 
   static helib::SecKey& keySetup(helib::SecKey& secretKey, int ks_strategy)
@@ -132,22 +136,23 @@ protected:
   virtual void SetUp() override
   {
     if (helib_test::verbose) {
-      context.zMStar.printout();
-      std::cout << "# small primes = " << context.smallPrimes.card() << "\n"
-                << "# ctxt primes = " << context.ctxtPrimes.card() << "\n"
-                << "# bits in ctxt primes = "
-                << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) +
-                        0.5)
-                << "\n"
-                << "# special primes = " << context.specialPrimes.card() << "\n"
-                << "# bits in special primes = "
-                << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
-                        0.5)
-                << "\n";
+      context.getZMStar().printout();
+      std::cout
+          << "# small primes = " << context.getSmallPrimes().card() << "\n"
+          << "# ctxt primes = " << context.getCtxtPrimes().card() << "\n"
+          << "# bits in ctxt primes = "
+          << long(context.logOfProduct(context.getCtxtPrimes()) / log(2.0) +
+                  0.5)
+          << "\n"
+          << "# special primes = " << context.getSpecialPrimes().card() << "\n"
+          << "# bits in special primes = "
+          << long(context.logOfProduct(context.getSpecialPrimes()) / log(2.0) +
+                  0.5)
+          << "\n";
 
       helib::fhe_stats = true;
     }
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override

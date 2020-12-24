@@ -486,7 +486,7 @@ void packedRecrypt(const CtPtrs& a,
   };
   const CtPtrs_pair ab(a, b);
 
-  packedRecrypt(ab, *unpackSlotEncoding, *(ct->getContext().ea));
+  packedRecrypt(ab, *unpackSlotEncoding, ct->getContext().getEA());
 }
 
 // Return a number as a vector of bits with little endian-ness
@@ -913,7 +913,7 @@ void addManyNumbers(CtPtrs& sum,
   }
 
   bool bootstrappable = ct_ptr->getPubKey().isBootstrappable();
-  const EncryptedArray& ea = *(ct_ptr->getContext().ea);
+  const EncryptedArray& ea = ct_ptr->getContext().getEA();
 
   long leftInQ = lsize(numbers);
   std::vector<CtPtrs*> numPtrs(leftInQ);

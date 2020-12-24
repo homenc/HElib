@@ -101,77 +101,6 @@ void innerProduct(Ptxt<Scheme>& result,
     result += (first_vec[i] * second_vec[i]);
 }
 
-/**
- * @brief Deserialize a `std::complex<double>` from the input stream `is`
- * delimited by '[' and ']' (instead of the default '(', ')').
- * @param is The input stream reference.
- * @param num The complex number to deserialize.
- * @throws IOError if the stream contains more than 2 parts.
- *
- * The input stream has to be formatted as '['number']' (this will be
- * deserialized as (number, 0)) or '['real_part', 'imag_part']' (this will be
- * deserialized as (real_part, imag_part)).
- */
-void deserialize(std::istream& is, std::complex<double>& num);
-
-/**
- * @brief Serialize a `std::complex<double>` to the output stream `os`
- * delimited by '[' and ']' (instead of the default '(', ')').
- * @param os The output stream reference.
- * @param num The complex number to serialize.
- *
- * The output will be formatted as '['`num.real()`', '`num.imag()`']'.
- */
-void serialize(std::ostream& os, const std::complex<double>& num);
-
-// Forward declaration as function is a friend of the templated `Ptxt` class.
-/**
- * @brief Function to deserialize a `Ptxt<Scheme>`.
- * @tparam Scheme The `Ptxt` object scheme.  Can be only be `BGV` or `CKKS`.
- * @param is Input `std::istream`.
- * @param ptxt Destination `Ptxt` object.
- * @throws IOError if the stream is badly formatted (i.e. it is not delimited by
- * '[' and ']').
- * @note `ptxt` must be constructed with an appropriate context @b BEFORE
- * calling this function. For example,
- * @code
- * Ptxt my_ptxt(context);
- * deserialize(std::cin, my_ptxt);
- * @endcode
- *
- * The input stream has to be formatted as a comma-separated list surrounded by
- * '[' and ']'.\n
- * Each element of the list will be deserialized as a slot of the
- * type determined by the scheme.\n
- * If the number of tokens in the list is less
- * than the number of slots, the remaining slots will be padded by 0.\n
- * For example '['slot0', 'slot1', 'slot2']' will be deserialized as a
- * plaintext `ptxt` where `ptxt[0]=slot0`, `ptxt[1]=slot1`,
- * `ptxt[2]=slot2` and `ptxt[i]=0` for `i>2`.
- */
-template <typename Scheme>
-void deserialize(std::istream& is, Ptxt<Scheme>& ptxt);
-
-// Forward declaration as function is a friend of the templated `Ptxt` class.
-/**
- * @brief Function to serialize a `Ptxt<Scheme>`.
- * @tparam Scheme The `Ptxt` object scheme.  Can be only be `BGV` or `CKKS`.
- * @param os Output `std::ostream`.
- * @param ptxt `Ptxt` object to be written.
- * @return Input `std::ostream` post serializing.
- * @note `Ptxt` `context` is not serialized, see note of `deserialize`.
- *
- * The output stream will be formatted as a comma-separated list surrounded by
- * '[' and ']'.\n
- * Each slot of `ptxt` will be serialized in an element of such list by the
- * `serialize` function determined by the scheme.\n
- * For example if we have a plaintext `ptxt` such that `ptxt[0]=slot0`,
- * `ptxt[1]=slot1`, `ptxt[2]=slot2`, and `ptxt[i]=0` for `i>2`, it will be
- * serialized as '['slot0', 'slot1', 'slot2', `0`, `0` ...]'.
- */
-template <typename Scheme>
-void serialize(std::ostream& os, const Ptxt<Scheme>& ptxt);
-
 // Forward declaration as function is a friend of the templated `Ptxt` class.
 /**
  * @brief Input shift operator.  Uses the `deserialize` function internally.
@@ -263,6 +192,12 @@ class Ptxt
                 "scheme (CKKS or BGV)");
 
 public:
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "Ptxt";
+
   /**
    * @brief Alias for type to be stored in the slots.
    *
@@ -796,10 +731,126 @@ public:
    **/
   Ptxt<Scheme>& mapTo01();
 
-  // No docs as the four functions have been forward-declared with docs.
-  friend void deserialize<Scheme>(std::istream& is, Ptxt& ptxt);
+  /**
+   * @brief Function to serialize `this` `Ptxt<Scheme>`.
+   * @param os Output `std::ostream`.
+   * @note `Ptxt` `context` is not serialized, see note of `readJSON`.
+   *
+   * The output stream will be a JSON where the `Ptxt` content will be
+   * serialized in the `slots` field.\n Each slot of `ptxt` will be serialized
+   * in an element of such list by the JSON serializer function determined by
+   * the scheme.\n For example if we have a plaintext `ptxt` such that
+   * `ptxt[0]=slot0`, `ptxt[1]=slot1`, `ptxt[2]=slot2`, and `ptxt[i]=0` for
+   * `i>2`, it will be serialized as '['slot0', 'slot1', 'slot2', `0`, `0`
+   * ...]'.
+   */
+  void writeToJSON(std::ostream& os) const;
 
-  friend void serialize<Scheme>(std::ostream& os, const Ptxt& ptxt);
+  /**
+   * @brief Function to serialize `this` `Ptxt<Scheme>`.
+   * @return The `JsonWrapper` containing the serialization.
+   * @note `Ptxt` `context` is not serialized, see note of `readJSON`.
+   *
+   * The output JsonWrapper will be a JSON where the `Ptxt` content will be
+   * serialized in the `slots` field.\n
+   * Each slot of `ptxt` will be serialized in an element of such list by the
+   * JSON serializer function determined by the scheme.\n
+   * For example if we have a plaintext `ptxt` such that `ptxt[0]=slot0`,
+   * `ptxt[1]=slot1`, `ptxt[2]=slot2`, and `ptxt[i]=0` for `i>2`, it will be
+   * serialized as '['slot0', 'slot1', 'slot2', `0`, `0`, ...]'.
+   */
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Function to deserialize and return a `Ptxt<Scheme>` from a JSON
+   * stream.
+   * @param is Input `std::istream`.
+   * @throws IOError if the stream is badly formatted (i.e. it does not contain
+   * a valid JSON).
+   * @code
+   * Ptxt<BGV> my_ptxt = Ptxt<BGV>::readFromJSON(std::cin, context);
+   * @endcode
+   *
+   * The input stream has to contain a valid typed JSON value.\n
+   * Each element of the content list will be deserialized as a slot of the type
+   * determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `ptxt` where `ptxt[0]=slot0`, `ptxt[1]=slot1`,
+   * `ptxt[2]=slot2` and `ptxt[i]=0` for `i>2`.
+   */
+  static Ptxt<Scheme> readFromJSON(std::istream& is, const Context& context);
+
+  /**
+   * @brief Function to deserialize and return a `Ptxt<Scheme>` from a
+   * `JsonWrapper` object.
+   * @param jw `JsonWrapper` containing the serialized object.
+   * @throws IOError if the `JsonWrapper` object does not contains a valid
+   * serialization of a `Ptxt<Scheme>`.
+   * @code
+   * Ptxt<BGV> my_ptxt = Ptxt<BGV>::readFromJSON(..., context);
+   * @endcode
+   *
+   * The `JsonWrapper` must contain a valid `Ptxt<scheme>` serialization.\n
+   * Each element of the content list will be deserialized as a slot of the type
+   * determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `ptxt` where `ptxt[0]=slot0`, `ptxt[1]=slot1`,
+   * `ptxt[2]=slot2` and `ptxt[i]=0` for `i>2`.
+   */
+  static Ptxt<Scheme> readFromJSON(const JsonWrapper& jw,
+                                   const Context& context);
+
+  /**
+   * @brief In-place function to deserialize a `Ptxt<Scheme>` from a JSON
+   * stream.
+   * @param is Input `std::istream`.
+   * @throws IOError if the stream is badly formatted (i.e. it does not contain
+   * a valid JSON).
+   * @note `this` must be constructed with an appropriate context @b BEFORE
+   * calling this function. For example,
+   * @code
+   * Ptxt my_ptxt(context);
+   * my_ptxt.readJSON(std::cin);
+   * @endcode
+   *
+   * The input stream has to contain a valid typed JSON value.\n
+   * Each element of the content list will be deserialized as a slot of the type
+   * determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `ptxt` where `ptxt[0]=slot0`, `ptxt[1]=slot1`,
+   * `ptxt[2]=slot2` and `ptxt[i]=0` for `i>2`.
+   */
+  void readJSON(std::istream& is);
+
+  /**
+   * @brief In-place function to deserialize a `Ptxt<Scheme>` from a
+   * `JsonWrapper` object.
+   * @param jw `JsonWrapper` containing the serialized object.
+   * @throws IOError if the `JsonWrapper` object does not contains a valid
+   * serialization of a `Ptxt<Scheme>`.
+   * @note `this` must be constructed with an appropriate context @b BEFORE
+   * calling this function. For example,
+   * @code
+   * Ptxt my_ptxt(context);
+   * my_ptxt.readJSON(...);
+   * @endcode
+   *
+   * The `JsonWrapper` must contain a valid `Ptxt<scheme>` serialization.\n
+   * Each element of the content list will be deserialized as a slot of the type
+   * determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `ptxt` where `ptxt[0]=slot0`, `ptxt[1]=slot1`,
+   * `ptxt[2]=slot2` and `ptxt[i]=0` for `i>2`.
+   */
+  void readJSON(const JsonWrapper& jw);
 
   friend std::istream& operator>><Scheme>(std::istream& is, Ptxt& ptxt);
 

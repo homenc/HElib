@@ -24,6 +24,7 @@
 #include <helib/apiAttributes.h>
 #include <helib/range.h>
 #include <helib/scheme.h>
+#include <helib/JsonWrapper.h>
 
 #include <NTL/Lazy.h>
 
@@ -60,49 +61,10 @@ constexpr int BOOT_DFLT_SK_HWT = MIN_SK_HWT;
  *   + sparse keys (weight=120): security ~ 2.4*X  +19
  * ```
  */
-
-inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
-{
-  if (hwt < 0 || (hwt > 0 && hwt < MIN_SK_HWT)) {
-    return 0;
-  }
-
-  // clang-format off
-  constexpr double hwgts[] =
-      {120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450};
-  constexpr double slopes[] =
-      {2.4, 2.67, 2.83, 3.0, 3.1, 3.3, 3.3, 3.35, 3.4, 3.45, 3.5, 3.55};
-  constexpr double cnstrms[] =
-      {19, 13, 10, 6, 3, 1, -3, -4, -5, -7, -10, -12};
-  // clang-format on
-
-  constexpr size_t numWghts = sizeof(hwgts) / sizeof(hwgts[0]);
-
-  const size_t idx = (hwt - 120) / 30; // index into the array above
-  double slope = 0, consterm = 0;
-  if (hwt == 0) { // dense keys
-    slope = 3.8;
-    consterm = -20;
-  } else if (idx < numWghts - 1) {
-    // estimate prms on a line from prms[i] to prms[i+1]
-    // how far into this interval
-    double a = double(hwt - hwgts[idx]) / (hwgts[idx + 1] - hwgts[idx]);
-    slope = slopes[idx] + a * (slopes[idx + 1] - slopes[idx]);
-    consterm = cnstrms[idx] + a * (cnstrms[idx + 1] - cnstrms[idx]);
-  } else {
-    // Use the params corresponding to largest weight (450 above)
-    slope = slopes[numWghts - 1];
-    consterm = cnstrms[numWghts - 1];
-  }
-
-  double x = n / log2AlphaInv;
-  double ret = slope * x + consterm;
-
-  return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
-}
+double lweEstimateSecurity(int n, double log2AlphaInv, int hwt);
 
 /**
- * @brief Returns smallest parameter m satisfying various constraints:
+ * @brief Returns smallest parameter m satisfying various constraints.
  * @param k security parameter
  * @param L number of levels
  * @param c number of columns in key switching matrices
@@ -110,6 +72,7 @@ inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
  * @param d embedding degree (d ==0 or d==1 => no constraint)
  * @param s at least that many plaintext slots
  * @param chosen_m preselected value of m (0 => not preselected)
+ * @return the smallest `m` parameter satisfying the constraints.
  * Fails with an error message if no suitable m is found
  * prints an informative message if verbose == true
  **/
@@ -131,7 +94,7 @@ class ContextBuilder;
 
 /**
  * @class Context
- * @brief Maintaining the parameters
+ * @brief Maintaining the HE scheme parameters
  **/
 class Context
 {
@@ -139,15 +102,107 @@ private:
   template <typename SCHEME>
   friend class ContextBuilder;
 
-  // Forward declarations of useful param structs for Context and
-  // ContextBuilder.
+  // Forward declarations of useful param structs
+  // for Context and ContextBuilder.
   struct ModChainParams;
   struct BootStrapParams;
 
-  std::vector<Cmodulus> moduli; // Cmodulus objects for the different primes
-  // This is private since the implementation assumes that the list of
-  // primes only grows and no prime is ever modified or removed.
+  // For serialization.
+  struct SerializableContent;
 
+  // Cmodulus objects for the different primes
+  // The implementation assumes that the list of
+  // primes only grows and no prime is ever modified or removed.
+  std::vector<Cmodulus> moduli;
+
+  // A helper table to map required modulo-sizes to primeSets
+  ModuliSizes modSizes;
+
+  // The structure of Zm*.
+  PAlgebra zMStar;
+
+  // Parameters stored in alMod.
+  // These are NOT invariant: it is possible to work
+  // with View objects that use a different PAlgebra object.
+
+  // The structure of Z[X]/(Phi_m(X),p^r).
+  PAlgebraMod alMod;
+
+  // A default EncryptedArray.
+  std::shared_ptr<const EncryptedArray> ea;
+
+  // These parameters are currently set by buildPrimeChain
+  long hwt_param = 0; // Hamming weight of all keys associated with context
+                      // 0 means "dense"
+  long e_param = 0;   // parameters specific to bootstrapping
+  long ePrime_param = 0;
+
+  std::shared_ptr<const PowerfulDCRT> pwfl_converter;
+
+  // The structure of a single slot of the plaintext space.
+  // Note, this will be Z[X]/(G(x),p^r) for some irreducible factor G of
+  // Phi_m(X).
+  std::shared_ptr<PolyModRing> slotRing;
+
+  // The `sqrt(variance)` of the LWE error (default=3.2).
+  NTL::xdouble stdev;
+
+  double scale; // default = 10
+
+  // The "ciphertext primes" are the "normal" primes that are used to
+  // represent the public encryption key and ciphertexts. These are all
+  // "large" single=precision primes, or bit-size roughly NTL_SP_SIZE bits.
+  IndexSet ctxtPrimes;
+
+  // A disjoint set of primes, used for key switching. See section 3.1.6
+  // in the design document (key-switching). These too are "large"
+  // single=precision primes, or bit-size close to NTL_SP_SIZE bits.
+  IndexSet specialPrimes;
+
+  // Yet a third set of primes, aimed at allowing modulus-switching with
+  // higher resolution. These are somewhat smaller single-precision
+  // primes, of size from NTL_SP_SIZE-20 to NTL_SP_SIZE-1.
+  IndexSet smallPrimes;
+
+  // The set of primes for the digits.
+  //
+  // The different columns in any key-switching matrix contain encryptions
+  // of multiplies of the secret key, sk, B1*sk, B2*B1*sk, B3*B2*B1*sk,...
+  // with each Bi a product of a few "non-special" primes in the chain. The
+  // digits data member indicate which primes correspond to each of the Bi's.
+  // These are all IndexSet objects, whose union is the subset ctxtPrimes.
+  //
+  // The number of Bi's is one less than the number of columns in the key
+  // switching matrices (since the 1st column encrypts sk, without any Bi's),
+  // but we keep in the digits std::vector also an entry for the primes that do
+  // not participate in any Bi (so digits.size() is the same as the number
+  // of columns in the key switching matrices).
+  // See section 3.1.6 in the design document (key-switching).
+  // Digits of ctxt/columns of key-switching matrix
+  std::vector<IndexSet> digits;
+
+  // Bootstrapping-related data in the context includes both thin and thick
+  ThinRecryptData rcData;
+
+  // Helper for serialisation.
+  static SerializableContent readParamsFrom(std::istream& str);
+
+  // Helper for serialisation.
+  static SerializableContent readParamsFromJSON(const JsonWrapper& str);
+
+  // Constructor for the `Context` object.
+  // m The index of the cyclotomic polynomial.
+  // p The plaintext modulus.
+  // r BGV: The Hensel lifting parameter. CKKS: The bit precision.
+  // gens The generators of `(Z/mZ)^*` (other than `p`).
+  // ords The orders of each of the generators of `(Z/mZ)^*`.
+  Context(unsigned long m,
+          unsigned long p,
+          unsigned long r,
+          const std::vector<long>& gens = std::vector<long>(),
+          const std::vector<long>& ords = std::vector<long>());
+
+  // Used by ContextBuilder
   Context(long m,
           long p,
           long r,
@@ -156,9 +211,39 @@ private:
           const std::optional<ModChainParams>& mparams,
           const std::optional<BootStrapParams>& bparams);
 
+  // Used for serialisation
+  Context(const SerializableContent& content);
+
+  // Methods for adding primes.
+  void addSpecialPrimes(long nDgts,
+                        bool willBeBootstrappable,
+                        long bitsInSpecialPrimes);
+
+  void addCtxtPrimes(long nBits, long targetSize);
+
+  void addSmallPrimes(long resolution, long cpSize);
+
+  // Add the given prime to the `smallPrimes` set.
+  // q The prime to add.
+  void addSmallPrime(long q);
+
+  // Add the given prime to the `ctxtPrimes` set.
+  // q The prime to add.
+  void addCtxtPrime(long q);
+
+  // Add the given prime to the `specialPrimes` set.
+  // q The prime to add.
+  void addSpecialPrime(long q);
+
 public:
-  // Parameters stored in zMStar.
-  // These are invariant for any computations involving this Context
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "Context";
+
+  // NOTE: Parameters stored in zMStar are invariant for any computations
+  // involving this Context.
 
   /**
    * @brief Getter method for the `m` used to create this `context`.
@@ -191,9 +276,17 @@ public:
    **/
   long getNSlots() const { return zMStar.getNSlots(); }
 
-  // Parameters stored in alMod.
-  // These are NOT invariant: it is possible to work
-  // with View objects that use a different PAlgebra object.
+  /**
+   * @brief Getter method for the scale.
+   * @return the scale as a `double`.
+   **/
+  double getScale() const { return scale; }
+
+  /**
+   * @brief Getter method for the standard deviation used..
+   * @return the standard deviation as an `NTL::xdouble`.
+   **/
+  NTL::xdouble getStdev() const { return stdev; }
 
   /**
    * @brief Getter method for the default `r` value of the created `context`.
@@ -202,7 +295,7 @@ public:
    * @note This value is not invariant: it is possible to work "view" objects
    * that use different `PAlgebra` objects.
    **/
-  long getDefaultR() const { return alMod.getR(); }
+  long getR() const { return alMod.getR(); }
 
   /**
    * @brief Getter method for the default `p^r` value of the created `context`.
@@ -210,86 +303,162 @@ public:
    * @note This value is not invariant: it is possible to work "view" objects
    * that use different `PAlgebra` objects.
    **/
-  long getDefaultPPowR() const { return alMod.getPPowR(); }
+  long getPPowR() const { return alMod.getPPowR(); }
 
-  // synonymn for getDefaultR().
+  // synonymn for getR().
   // this is used in various corner cases in CKKS where
   // we really need some default precisiion parameter.
   // It is also possible to define this differently
   // in the future.
   /**
-   * @brief Getter method for the default `precision` value of the created
+   * @brief Getter method for the `precision` value of the created
    * `CKKS` `context`.
    * @return The bit `precision` value.
    * @note This value is not invariant: it is possible to work "view" objects
    * that use different `PAlgebra` objects.
    **/
-  long getDefaultPrecision() const { return alMod.getR(); }
+  long getPrecision() const { return alMod.getR(); }
 
+  /**
+   * @brief Get a powerful converter.
+   * @return A powerful converter.
+   **/
+  const PowerfulDCRT& getPowerfulConverter() const { return *pwfl_converter; }
+
+  /**
+   * @brief Get a slot ring.
+   * @return A reference to a `std::shared` pointer pointing to a slotRing.
+   **/
+  const std::shared_ptr<PolyModRing>& getSlotRing() const { return slotRing; };
+
+  /**
+   * @brief Getter method to the index set to the small primes.
+   * @return A `const` reference to the index set to the small primes.
+   **/
+  const IndexSet& getSmallPrimes() const { return smallPrimes; }
+
+  /**
+   * @brief Getter method to the index set to the ciphertext primes.
+   * @return A `const` reference to the index set to the ciphertext primes.
+   **/
+  const IndexSet& getCtxtPrimes() const { return ctxtPrimes; }
+
+  /**
+   * @brief Getter method to the index set to the special primes.
+   * @return A `const` reference to the index set to the special primes.
+   **/
+  const IndexSet& getSpecialPrimes() const { return specialPrimes; }
+
+  /**
+   * @brief Getter method to the digits.
+   * @return A `const` reference to a `std::vector` of index sets that
+   * represent the digits.
+   **/
+  const std::vector<IndexSet>& getDigits() const { return digits; }
+
+  /**
+   * @brief Getter method to get a single digit.
+   * @param i The `i` the digit.
+   * @return A `const` reference to an index set that representing the `i`th
+   * digit.
+   **/
+  const IndexSet& getDigit(long i) const { return digits[i]; }
+
+  /**
+   * @brief Getter method for a recryption data object.
+   * @return A `const` reference to the recryption data object.
+   **/
+  const ThinRecryptData& getRcData() const { return rcData; }
+
+  /**
+   * @brief Return whether this is a CKKS context or not `Context`.
+   * @return A `bool`, `true` if the `Context` object uses CKKS scheme false
+   * otherwise.
+   * @note We assume `false` return to be BGV scheme.
+   **/
   bool isCKKS() const { return alMod.getTag() == PA_cx_tag; }
 
-  //============================================================
+  /**
+   * @brief Getter method for the Hamming weight value.
+   * @return The Hamming weight value.
+   **/
+  long getHwt() const { return hwt_param; }
 
-  //! @brief The structure of Zm*.
-  PAlgebra zMStar;
+  /**
+   * @brief Getter method for the e parameter.
+   * @return The e parameter.
+   **/
+  long getE() const { return e_param; }
 
-  //! @brief The structure of Z[X]/(Phi_m(X),p^r).
-  PAlgebraMod alMod;
+  /**
+   * @brief Getter method for the e prime parameter.
+   * @return The e prime parameter.
+   **/
+  long getEPrime() const { return ePrime_param; }
 
-  //! @brief A default EncryptedArray.
-  // VJS-FIXME: should this really be public?
-  std::shared_ptr<const EncryptedArray> ea;
+  /**
+   * @brief Get the underlying `zMStar` object.
+   * @return A `zMStar` object.
+   **/
+  const PAlgebra& getZMStar() const { return zMStar; };
+
+  /**
+   * @brief Get the underlying `AlMod` object.
+   * @return A `AlMod` object.
+   **/
+  const PAlgebraMod& getAlMod() const { return alMod; };
 
   /**
    * @brief Getter method returning the default `view` object of the created
    * `context`.
    * @return A reference to the `view` object.
    **/
-  const EncryptedArray& getDefaultView() const { return *ea; } // preferred name
-  // FIXME: This is deprecated and superseded by the above.
-  const EncryptedArray& getDefaultEA() const { return *ea; } // legacy name
-
-  std::shared_ptr<const PowerfulDCRT> pwfl_converter;
+  const EncryptedArray& getView() const { return *ea; } // preferred name
 
   /**
-   * @brief The structure of a single slot of the plaintext space.
-   * @note This will be Z[X]/(G(x),p^r) for some irreducible factor G of
-   * Phi_m(X).
+   * @brief Getter method returning the default `EncryptedArray` object of the
+   *created `context`.
+   * @return A reference to the `EncryptedArray` object.
+   * @note It is foreseen that this method will be eventually deprecated in
+   * favour of the alternative `getView`.
    **/
-  std::shared_ptr<PolyModRing> slotRing;
+  const EncryptedArray& getEA() const { return *ea; }
 
-  //! @brief The `sqrt(variance)` of the LWE error (default=3.2).
-  NTL::xdouble stdev;
+  /**
+   * @brief Getter method returning the `std::shared_ptr` to default
+   * `EncryptedArray` object of the created `context`.
+   * @return A reference to `std::shared_ptr` to the `EncryptedArray` object.
+   **/
+  const std::shared_ptr<const EncryptedArray>& shareEA() const { return ea; }
 
   //======================= high probability bounds ================
-  double scale; // default = 10
 
-  //! erfc(scale/sqrt(2)) * phi(m) should be less than some negligible
-  //! parameter epsilon.
-  //! The default value of 10 should be good enough for most applications.
-  //! NOTE: -log(erfc(8/sqrt(2)))/log(2)  = 49.5
-  //!       -log(erfc(10/sqrt(2)))/log(2) = 75.8
-  //!       -log(erfc(11/sqrt(2)))/log(2) = 91.1
-  //!       -log(erfc(12/sqrt(2)))/log(2) =107.8
+  // erfc(scale/sqrt(2)) * phi(m) should be less than some negligible
+  // parameter epsilon.
+  // The default value of 10 should be good enough for most applications.
+  // NOTE: -log(erfc(8/sqrt(2)))/log(2)  = 49.5
+  //       -log(erfc(10/sqrt(2)))/log(2) = 75.8
+  //       -log(erfc(11/sqrt(2)))/log(2) = 91.1
+  //       -log(erfc(12/sqrt(2)))/log(2) =107.8
 
-  //! The way this is used is as follows. If we have a normal random
-  //! variable X with variance sigma^2, then the probability that
-  //! that X lies outside the interval [-scale*sigma, scale*sigma] is
-  //! delta=erfc(scale/sqrt(2)). We will usually apply the union bound
-  //! to a vector of phi(m) such random variables (one for each primitive
-  //! m-th root of unity), so that the probability that that the L-infty
-  //! norm exceeds scale*sigma is at most epsilon=phim*delta. Thus,
-  //! scale*sigma will be used as a high-probability bound on the
-  //! L-infty norm of such vectors.
+  // The way this is used is as follows. If we have a normal random
+  // variable X with variance sigma^2, then the probability that
+  // that X lies outside the interval [-scale*sigma, scale*sigma] is
+  // delta=erfc(scale/sqrt(2)). We will usually apply the union bound
+  // to a vector of phi(m) such random variables (one for each primitive
+  // m-th root of unity), so that the probability that that the L-infty
+  // norm exceeds scale*sigma is at most epsilon=phim*delta. Thus,
+  // scale*sigma will be used as a high-probability bound on the
+  // L-infty norm of such vectors.
 
   //=======================================
 
-  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
-  //! that each f_i is chosen uniformly and independently from the
-  //! interval [-magBound, magBound], and that k = degBound.
-  //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most
-  //! epsilon.
+  // Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
+  // that each f_i is chosen uniformly and independently from the
+  // interval [-magBound, magBound], and that k = degBound.
+  // This returns a bound B such that the L-infty norm
+  // of the canonical embedding exceeds B with probability at most
+  // epsilon.
 
   // NOTE: this is a bit heuristic: we assume that if we evaluate
   // f at a primitive root of unity, then we get something that well
@@ -299,24 +468,28 @@ public:
   // We then multiply the sqrt of the variance by scale to get
   // the high probability bound.
 
+  /**
+   *
+   **/
   double noiseBoundForUniform(double magBound, long degBound) const
   {
     return scale * std::sqrt(double(degBound) / 3.0) * magBound;
   }
 
+  /**
+   *
+   **/
   NTL::xdouble noiseBoundForUniform(NTL::xdouble magBound, long degBound) const
   {
     return scale * std::sqrt(double(degBound) / 3.0) * magBound;
   }
 
-  //=======================================
-
-  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
-  //! that each f_i is chosen uniformly and independently from the
-  //! from the set of balanced residues modulo the given modulus.
-  //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most
-  //! epsilon.
+  // Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
+  // that each f_i is chosen uniformly and independently from the
+  // from the set of balanced residues modulo the given modulus.
+  // This returns a bound B such that the L-infty norm
+  // of the canonical embedding exceeds B with probability at most
+  // epsilon.
 
   // NOTE: for odd modulus, this means each f_i is uniformly distributed
   // over { -floor(modulus/2), ..., floor(modulus/2) }.
@@ -337,6 +510,9 @@ public:
   // NOTE: this is slightly more accurate that just calling
   // noiseBoundForUniform with magBound=modulus/2.
 
+  /**
+   *
+   **/
   double noiseBoundForMod(long modulus, long degBound) const
   {
     double var = fsquare(modulus) / 12.0;
@@ -346,38 +522,40 @@ public:
     return scale * std::sqrt(degBound * var);
   }
 
-  //=======================================
-
-  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
-  //! so that each f_i is chosen uniformly and independently from
-  //! N(0, sigma^2), and that k = degBound.
-  //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most
-  //! epsilon.
+  // Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  // so that each f_i is chosen uniformly and independently from
+  // N(0, sigma^2), and that k = degBound.
+  // This returns a bound B such that the L-infty norm
+  // of the canonical embedding exceeds B with probability at most
+  // epsilon.
 
   // NOTE: if we evaluate f at a primitive root of unity,
   // then we get a normal random variable variance degBound * sigma^2.
   // We then multiply the sqrt of the variance by scale to get
   // the high probability bound.
 
+  /**
+   *
+   **/
   double noiseBoundForGaussian(double sigma, long degBound) const
   {
     return scale * std::sqrt(double(degBound)) * sigma;
   }
 
+  /**
+   *
+   **/
   NTL::xdouble noiseBoundForGaussian(NTL::xdouble sigma, long degBound) const
   {
     return scale * std::sqrt(double(degBound)) * sigma;
   }
 
-  //=======================================
-
-  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
-  //! so that each f_i is zero with probability 1-prob, 1 with probability
-  //! prob/2, and -1 with probability prob/2.
-  //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most
-  //! epsilon.
+  // Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  // so that each f_i is zero with probability 1-prob, 1 with probability
+  // prob/2, and -1 with probability prob/2.
+  // This returns a bound B such that the L-infty norm
+  // of the canonical embedding exceeds B with probability at most
+  // epsilon.
 
   // NOTE: this is a bit heuristic: we assume that if we evaluate
   // f at a primitive root of unity, then we get something that
@@ -387,18 +565,19 @@ public:
   // We then multiply the sqrt of the variance by scale to get
   // the high probability bound.
 
+  /**
+   *
+   **/
   double noiseBoundForSmall(double prob, long degBound) const
   {
     return scale * std::sqrt(double(degBound)) * std::sqrt(prob);
   }
 
-  //=======================================
-
-  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
-  //! hwt coefficients are chosen to \pm 1, and the remainder zero.
-  //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most
-  //! epsilon.
+  // Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  // hwt coefficients are chosen to \pm 1, and the remainder zero.
+  // This returns a bound B such that the L-infty norm
+  // of the canonical embedding exceeds B with probability at most
+  // epsilon.
 
   // NOTE: this is a bit heuristic: we assume that if we evaluate
   // f at a primitive root of unity, then we get something that
@@ -410,31 +589,35 @@ public:
   // NOTE: degBound is not used here, but I include it
   // for consistency with the other noiseBound routines
 
+  /**
+   *
+   **/
   double noiseBoundForHWt(long hwt, UNUSED long degBound) const
   {
     return scale * std::sqrt(double(hwt));
   }
 
-  //=======================================
+  // This computes a high probability bound on the L-infty norm
+  // of x0+s*x1 in the pwrfl basis, assuming is chosen with coeffs
+  // in the pwrfl basis uniformly and independently dist'd over [-1/2,1/2],
+  // x0 has arbitrary coeffs over [-1/2,1/2] in the pwrfl basis,
+  // and assuming s is chosen with skHwt nonzero coeffs mod X^m-1
+  // in the power basis (uniformly and independently over {-1,1}).
+  // The bound should be satisfied with probability epsilon.
 
-  //! This computes a high probability bound on the L-infty norm
-  //! of x0+s*x1 in the pwrfl basis, assuming is chosen with coeffs
-  //! in the pwrfl basis uniformly and independently dist'd over [-1/2,1/2],
-  //! x0 has arbitrary coeffs over [-1/2,1/2] in the pwrfl basis,
-  //! and assuming s is chosen with skHwt nonzero coeffs mod X^m-1
-  //! in the power basis (uniformly and independently over {-1,1}).
-  //! The bound should be satisfied with probability epsilon.
+  // NOTE: this is a bit heuristic. See design document for details.
+  // NOTE: this is still valid even when m is a power of 2
 
-  //! NOTE: this is a bit heuristic. See design document for details.
-
-  //! NOTE: this is still valid even when m is a power of 2
-
+  /**
+   * @brief Calculate the standard deviation for recryption.
+   * @return The standard deviation for recryption.
+   **/
   double stdDevForRecryption() const
   {
     long skHwt = hwt_param;
 
-    long k = zMStar.getNFactors();
     // number of prime factors of m
+    long k = zMStar.getNFactors();
 
     long m = zMStar.getM();
     long phim = zMStar.getPhiM();
@@ -444,89 +627,35 @@ public:
     return std::sqrt(mrat * double(skHwt) * double(1L << k) / 3.0) * 0.5;
   }
 
+  /**
+   * @brief Calculate the bound for recryption.
+   * @return The bound for recryption.
+   **/
   double boundForRecryption() const
   {
-    double c_m = zMStar.get_cM();
-    // multiply by this fudge factor
-    // VJS-FIXME: this fudge factor has to go
-
-    return 0.5 + c_m * scale * stdDevForRecryption();
+    return 0.5 + scale * stdDevForRecryption();
   }
 
   /**
-   * The "ciphertext primes" are the "normal" primes that are used to
-   * represent the public encryption key and ciphertexts. These are all
-   * "large" single=precision primes, or bit-size roughly NTL_SP_SIZE bits.
+   * @brief Get the helper table to map required modulo-sizes to primeSets.
+   * @return The table as `ModuliSizes` type.
    **/
-  IndexSet ctxtPrimes;
+  const ModuliSizes& getModSizeTable() const { return modSizes; }
 
-  //! A disjoint set of primes, used for key switching. See section 3.1.6
-  //! in the design document (key-switching). These too are "large"
-  //! single=precision primes, or bit-size close to NTL_SP_SIZE bits.
-  IndexSet specialPrimes;
-
-  //! Yet a third set of primes, aimed at allowing modulus-switching with
-  //! higher resolution. These are somewhat smaller single-precision
-  //! primes, of size from NTL_SP_SIZE-20 to NTL_SP_SIZE-1.
-  IndexSet smallPrimes;
-
-  //! A helper table to map required modulo-sizes to primeSets
-  ModuliSizes modSizes;
+  /**
+   * @brief Set the helper table to map required modulo-sizes to primeSets.
+   **/
   void setModSizeTable() { modSizes.init(*this); }
-
-  /**
-   * @brief The set of primes for the digits.
-   *
-   * The different columns in any key-switching matrix contain encryptions
-   * of multiplies of the secret key, sk, B1*sk, B2*B1*sk, B3*B2*B1*sk,...
-   * with each Bi a product of a few "non-special" primes in the chain. The
-   * digits data member indicate which primes correspond to each of the Bi's.
-   * These are all IndexSet objects, whose union is the subset ctxtPrimes.
-   *
-   * The number of Bi's is one less than the number of columns in the key
-   * switching matrices (since the 1st column encrypts sk, without any Bi's),
-   * but we keep in the digits std::vector also an entry for the primes that do
-   * not participate in any Bi (so digits.size() is the same as the number
-   * of columns in the key switching matrices).
-   * See section 3.1.6 in the design document (key-switching).
-   **/
-  // Digits of ctxt/columns of key-switching matrix
-  std::vector<IndexSet> digits;
-
-  //! Bootstrapping-related data in the context
-  // includes both thin and thick
-  ThinRecryptData rcData;
-
-  //=======================================
-
-  // These parameters are currently set by buildPrimeChain
-
-  long hwt_param = 0; // Hamming weight of all keys associated with context
-                      // 0 means "dense"
-
-  long e_param = 0; // parameters specific to bootstrapping
-  long ePrime_param = 0;
-
-  /******************************************************************/
-  // constructor
-  /**
-   * @brief Constructor for the `Context` object.
-   * @param m The index of the cyclotomic polynomial.
-   * @param p The plaintext modulus.
-   * @param r BGV: The Hensel lifting parameter. CKKS: The bit precision.
-   * @param gens The generators of `(Z/mZ)^*` (other than `p`).
-   * @param ords The orders of each of the generators of `(Z/mZ)^*`.
-   **/
-  Context(unsigned long m,
-          unsigned long p,
-          unsigned long r,
-          const std::vector<long>& gens = std::vector<long>(),
-          const std::vector<long>& ords = std::vector<long>());
 
   /**
    * @brief Default destructor.
    **/
   ~Context() = default;
+
+  /**
+   * @brief Deleted default constructor.
+   **/
+  Context() = delete;
 
   /**
    * @brief Deleted copy constructor.
@@ -609,7 +738,7 @@ public:
     return IndexSet(first, last);
   }
 
-  // FIXME: replacement for bitsPerLevel...placeholder for now
+  // FIXME: replacement for bitsPerLevel placeholder for now
   long BPL() const { return 30; }
 
   /**
@@ -680,7 +809,6 @@ public:
     return false;
   }
 
-  ///@{
   /**
    * @brief Calculate the product of all primes in the given set.
    * @param p The product of the input primes.
@@ -693,7 +821,6 @@ public:
     productOfPrimes(p, s);
     return p;
   }
-  ///@}
 
   // FIXME: run-time error when ithPrime(i) returns 0
   /**
@@ -767,68 +894,6 @@ public:
   void printout(std::ostream& out = std::cout) const;
 
   /**
-   * @brief Add the given prime to the `smallPrimes` set.
-   * @param q The prime to add.
-   **/
-  void AddSmallPrime(long q);
-
-  /**
-   * @brief Add the given prime to the `ctxtPrimes` set.
-   * @param q The prime to add.
-   **/
-  void AddCtxtPrime(long q);
-
-  /**
-   * @brief Add the given prime to the `specialPrimes` set.
-   * @param q The prime to add.
-   **/
-  void AddSpecialPrime(long q);
-
-  ///@{
-  /**
-     @name I/O routines
-
-  To write out all the data associated with a context, do the following:
-
-  \code
-    writeContextBase(str, context);
-    str << context;
-  \endcode
-
-  The first function call writes out just [m p r gens ords], which is the
-  data needed to invoke the context constructor.
-
-  The second call writes out all other information, including the
-  stdev field, the prime sequence (including which primes are "special"),
-  and the digits info.
-
-  To read in all the data associated with a context, do the following:
-
-  \code
-    unsigned long m, p, r;
-    std::vector<long> gens, ords;
-
-    readContextBase(str, m, p, r, gens, ords);
-
-    Context context(m, p, r, gens, ords);
-
-    str >> context;
-  \endcode
-
-  The call to readContextBase just reads the values m, p, r and the set
-  of generators in Zm* /(p) and their order. Then, after constructing the
-  context, the >> operator reads in and attaches all other information.
-  **/
-
-  /**
-   * @brief Write out the basic information `m`, `p` and `r` of the given
-   * `Context` object.
-   * @param str Output `std::ostream`.
-   * @param context The `Context` to write.
-   **/
-  friend void writeContextBase(std::ostream& str, const Context& context);
-
-  /**
    * @brief Write out all other data associated with a given `Context` object.
    * @param str Output `std::ostream`.
    * @param context The `Context` to write.
@@ -864,12 +929,66 @@ public:
   friend std::istream& operator>>(std::istream& str, Context& context);
   ///@}
 
-  friend void writeContextBinary(std::ostream& str, const Context& context);
-  friend void readContextBinary(std::istream& str, Context& context);
+  /**
+   * @brief Write out the `Context` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
 
-  // internal function to undo buldModChain...used for parameter
-  // generation programs
+  /**
+   * @brief Read from the stream the serialized `Context` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `Context` object.
+   **/
+  static Context readFrom(std::istream& str);
 
+  /**
+   * @brief Read from the stream the serialized `Context` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return Raw pointer to the deserialized `Context` object.
+   **/
+  static Context* readPtrFrom(std::istream& str);
+
+  /**
+   * @brief Write out the `Context` object to the output stream using JSON
+   * format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the `Context` object to a `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized `Context` object using JSON
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `Context` object.
+   **/
+  static Context readFromJSON(std::istream& str);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized `Context` object.
+   * @param j The `JsonWrapper` containing the serialized `Context` object.
+   * @return The deserialized `Context` object.
+   **/
+  static Context readFromJSON(const JsonWrapper& j);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized `Context` object.
+   * @param j The `JsonWrapper` containing the serialized `Context` object.
+   * @return Raw pointer to the deserialized `Context` object.
+   **/
+  static Context* readPtrFromJSON(std::istream& str);
+
+  // Internal function to undo buldModChain.
+  // Used for parameter generation programs.
+  // FIXME Should this not be private?
   void clearModChain()
   {
     moduli.clear();
@@ -882,61 +1001,32 @@ public:
     e_param = 0;
     ePrime_param = 0;
   }
-};
 
-//! @brief write [m p r gens ords] data
-void writeContextBase(std::ostream& s, const Context& context);
-//! @brief read [m p r gens ords] data, needed to construct context
-void readContextBase(std::istream& s,
-                     unsigned long& m,
-                     unsigned long& p,
-                     unsigned long& r,
-                     std::vector<long>& gens,
-                     std::vector<long>& ords);
-std::unique_ptr<Context> buildContextFromAscii(std::istream& str);
+  /**
+   * @brief Build the modulus chain for given `Context` object.
+   * @param nBits Total number of bits required for the modulus chain.
+   * @param nDgts Number of digits/columns in the key-switching matrix. Default
+   * is 3.
+   * @param willBeBoostrappable Flag for initializing bootstrapping data.
+   *Default is `false`.
+   * @param skHwt The Hamming weight of the secret key. Default is 0.
+   * @param resolution The bit size of resolution of the modulus chain. Default
+   * is 3.
+   * @param bitsInSpecialPrimes The bit size of the special primes in the
+   *modulus chain. Default is 0.
+   **/
+  void buildModChain(long nBits,
+                     long nDgts = 3,
+                     bool willBeBootstrappable = false,
+                     long skHwt = 0,
+                     long resolution = 3,
+                     long bitsInSpecialPrimes = 0);
 
-//! @brief write [m p r gens ords] data
-void writeContextBaseBinary(std::ostream& str, const Context& context);
-void writeContextBinary(std::ostream& str, const Context& context);
+  // should be called if after you build the mod chain in some way
+  // *other* than calling buildModChain.
+  void endBuildModChain();
 
-//! @brief read [m p r gens ords] data, needed to construct context
-void readContextBaseBinary(std::istream& s,
-                           unsigned long& m,
-                           unsigned long& p,
-                           unsigned long& r,
-                           std::vector<long>& gens,
-                           std::vector<long>& ords);
-
-std::unique_ptr<Context> buildContextFromBinary(std::istream& str);
-void readContextBinary(std::istream& str, Context& context);
-
-// Build modulus chain with nBits worth of ctxt primes,
-// using nDgts digits in key-switching.
-
-/**
- * @brief Build the modulus chain for given `Context` object.
- * @param nBits Total number of bits required for the modulus chain.
- * @param nDgts Number of digits/columns in the key-switching matrix. Default
- * is 3.
- * @param willBeBoostrappable Flag for initializing bootstrapping data. Default
- * is `false`.
- * @param skHwt The Hamming weight of the secret key. Default is 0.
- * @param resolution The bit size of resolution of the modulus chain. Default
- * is 3.
- * @param bitsInSpecialPrimes The bit size of the special primes in the modulus
- * chain. Default is 0.
- **/
-void buildModChain(Context& context,
-                   long nBits,
-                   long nDgts = 3,
-                   bool willBeBootstrappable = false,
-                   long skHwt = 0,
-                   long resolution = 3,
-                   long bitsInSpecialPrimes = 0);
-
-// should be called if after you build the mod chain in some way
-// *other* than calling buildModChain.
-void endBuildModChain(Context& context);
+}; // End of class Context
 
 /**
  * @brief `ostream` operator for serializing the `ContextBuilder` object.
@@ -967,7 +1057,7 @@ private:
                   std::optional<Context::BootStrapParams>>
   makeParamsArgs() const;
 
-  // Default values by scheme.
+  // Default values by scheme
   struct default_values;
 
   // General parameters
@@ -986,6 +1076,9 @@ private:
   long bitsInSpecialPrimes_ = 0;
   bool buildModChainFlag_ = true; // Default build the modchain.
 
+  double stdev_ = 3.2;
+  double scale_ = 10;
+
   // Boostrap params (BGV only)
   NTL::Vec<long> mvec_;
   bool buildCacheFlag_ = false;
@@ -993,6 +1086,12 @@ private:
   bool bootstrappableFlag_ = false; // Default not boostrappable.
 
 public:
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "ContextBuilder";
+
   /**
    * @brief Sets `m` the order of the cyclotomic polynomial.
    * @param m The order of the cyclotomic polynomial.
@@ -1043,6 +1142,28 @@ public:
   ContextBuilder& precision(long precision)
   {
     r_ = precision;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `scale` the scale parameter.
+   * @param scale The bit scale parameter.
+   * @return Reference to the `ContextBuilder` object.
+   **/
+  ContextBuilder& scale(double scale)
+  {
+    scale_ = scale;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `stdev` the standard deviation parameter.
+   * @param stdev The standard deviation parameter.
+   * @return Reference to the `ContextBuilder` object.
+   **/
+  ContextBuilder& stdev(double stdev)
+  {
+    stdev_ = stdev;
     return *this;
   }
 
@@ -1222,7 +1343,7 @@ public:
    **/
   template <typename S = SCHEME,
             std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
-  ContextBuilder& bootstrappable(bool yesno)
+  ContextBuilder& bootstrappable(bool yesno = true)
   {
     bootstrappableFlag_ = yesno;
     return *this;
@@ -1244,7 +1365,7 @@ public:
 
   friend std::ostream& operator<<<SCHEME>(std::ostream& os,
                                           const ContextBuilder& cb);
-};
+}; // End of class ContextBuilder
 
 // Default BGV values
 template <>
@@ -1264,7 +1385,6 @@ struct ContextBuilder<CKKS>::default_values
   static constexpr long r = 20;
 };
 
-///@}
 // Should point to the "current" context
 extern Context* activeContext;
 

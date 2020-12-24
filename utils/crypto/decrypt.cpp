@@ -188,9 +188,9 @@ int main(int argc, char* argv[])
 
   // Read in, decrypt, output.
   try {
-    if (contextp->zMStar.getP() == -1) {
+    if (contextp->getP() == -1) {
       decryptFromTo<helib::CKKS>(cmdLineOpts, *contextp, *skp);
-    } else if (contextp->zMStar.getP() > 0) {
+    } else if (contextp->getP() > 0) {
       decryptFromTo<helib::BGV>(cmdLineOpts, *contextp, *skp);
     } else {
       std::cerr << "Unrecognized scheme from context." << std::endl;

@@ -58,26 +58,31 @@ protected:
       p(GetParam().p),
       r(GetParam().r),
       bits(GetParam().bits),
-      context(m, p, r),
-      secretKey((buildModChain(context, bits), context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .bits(bits)
+                  .build()),
+      secretKey(context),
       publicKey((secretKey.GenSecKey(),
                  addSome1DMatrices(secretKey),
                  addFrbMatrices(secretKey),
                  secretKey)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {}
 
   virtual void SetUp() override
   {
     if (helib_test::verbose) {
       ea.getPAlgebra().printout();
-      std::cout << "r = " << context.alMod.getR() << std::endl;
-      std::cout << "ctxtPrimes=" << context.ctxtPrimes
-                << ", specialPrimes=" << context.specialPrimes << std::endl
+      std::cout << "r = " << context.getAlMod().getR() << std::endl;
+      std::cout << "ctxtPrimes=" << context.getCtxtPrimes()
+                << ", specialPrimes=" << context.getSpecialPrimes() << "\n"
                 << std::endl;
     }
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
@@ -85,8 +90,9 @@ protected:
 
 TEST(TestPartialMatch, calculateMasksThrowsWhenPassedEmptyQueryOrDatabase)
 {
-  helib::Context context(1024, 1087, 1);
-  const helib::EncryptedArray& ea = *(context.ea);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
+  const helib::EncryptedArray& ea = context.getEA();
 
   helib::Matrix<helib::Ptxt<helib::BGV>> empty(0l, 0l);
   helib::Matrix<helib::Ptxt<helib::BGV>> nonempty(1l, 1l);
@@ -97,8 +103,9 @@ TEST(TestPartialMatch, calculateMasksThrowsWhenPassedEmptyQueryOrDatabase)
 
 TEST(TestPartialMatch, calculateMasksThrowsIfQueryAndDatabaseHaveUnequalWidth)
 {
-  helib::Context context(1024, 1087, 1);
-  const helib::EncryptedArray& ea = *(context.ea);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
+  const helib::EncryptedArray& ea = context.getEA();
 
   helib::Matrix<helib::Ptxt<helib::BGV>> query(1l, 2l);
   helib::Matrix<helib::Ptxt<helib::BGV>> database(2l, 3l);
@@ -108,8 +115,9 @@ TEST(TestPartialMatch, calculateMasksThrowsIfQueryAndDatabaseHaveUnequalWidth)
 
 TEST(TestPartialMatch, calculateMasksReturnsZerosWhenNoMatchFound)
 {
-  helib::Context context(1024, 1087, 1);
-  const helib::EncryptedArray& ea = *(context.ea);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
+  const helib::EncryptedArray& ea = context.getEA();
 
   helib::Matrix<helib::Ptxt<helib::BGV>> query(
       helib::Ptxt<helib::BGV>(context, std::vector<long>(ea.size(), 0)),
@@ -137,8 +145,9 @@ TEST(TestPartialMatch, calculateMasksReturnsZerosWhenNoMatchFound)
 
 TEST(TestPartialMatch, calculateMasksReturnsOnesWhenEverythingMatches)
 {
-  helib::Context context(1024, 1087, 1);
-  const helib::EncryptedArray& ea = *(context.ea);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
+  const helib::EncryptedArray& ea = context.getEA();
 
   helib::Matrix<helib::Ptxt<helib::BGV>> query(
       helib::Ptxt<helib::BGV>(context, std::vector<long>(ea.size(), 1)),
@@ -166,8 +175,9 @@ TEST(TestPartialMatch, calculateMasksReturnsOnesWhenEverythingMatches)
 
 TEST(TestPartialMatch, calculateMasksWorksCorrectly)
 {
-  helib::Context context(1024, 1087, 1);
-  const helib::EncryptedArray& ea = *(context.ea);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
+  const helib::EncryptedArray& ea = context.getEA();
 
   helib::Matrix<helib::Ptxt<helib::BGV>> plaintext_database(1l, 5l);
   // columns/features
@@ -220,7 +230,8 @@ TEST(TestPartialMatch, calculateMasksWorksCorrectly)
 
 TEST(TestPartialMatch, calculateScoresThrowsIfIndexSetsAndOffsetsDifferInSize)
 {
-  helib::Context context(1024, 1087, 1);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
 
   std::vector<std::vector<long>> index_sets(4, std::vector<long>{});
   std::vector<long> offsets(3, 0);
@@ -235,7 +246,8 @@ TEST(TestPartialMatch, calculateScoresThrowsIfIndexSetsAndOffsetsDifferInSize)
 
 TEST(TestPartialMatch, calculateScoresThrowsIfWeightsAndOffsetsDifferInSize)
 {
-  helib::Context context(1024, 1087, 1);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
 
   std::vector<std::vector<long>> index_sets(4, std::vector<long>{});
   std::vector<long> offsets(4, 0);
@@ -250,7 +262,8 @@ TEST(TestPartialMatch, calculateScoresThrowsIfWeightsAndOffsetsDifferInSize)
 
 TEST(TestPartialMatch, calculateScoresThrowsIfWeightsAndIndexSetsDifferInSize)
 {
-  helib::Context context(1024, 1087, 1);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
 
   std::vector<std::vector<long>> index_sets = {{2, 3}};
   std::vector<long> offsets = {5};
@@ -266,7 +279,8 @@ TEST(TestPartialMatch, calculateScoresThrowsIfWeightsAndIndexSetsDifferInSize)
 
 TEST(TestPartialMatch, calculateScoresThrowsIfMaskIsNotAColumnVector)
 {
-  helib::Context context(1024, 1087, 1);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
 
   std::vector<std::vector<long>> index_sets = {{2, 3}};
   std::vector<long> offsets = {5};
@@ -282,7 +296,8 @@ TEST(TestPartialMatch, calculateScoresThrowsIfMaskIsNotAColumnVector)
 
 TEST(TestPartialMatch, calculateScoresWorksCorrectly)
 {
-  helib::Context context(1024, 1087, 1);
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(1024).p(1087).r(1).build();
 
   helib::Matrix<helib::Ptxt<helib::BGV>> mask(2l, 5l);
   std::vector<std::vector<long>> mask_numbers = {
@@ -511,7 +526,7 @@ TEST_P(TestPartialMatch, partialMatchEncodeEncodesIntegersCorrectly)
     helib::PolyMod output = partialMatchEncode(input, context);
     auto vec = static_cast<std::vector<long>>(output);
     uint32_t result = 0;
-    ASSERT_EQ(vec.size(), context.zMStar.getOrdP());
+    ASSERT_EQ(vec.size(), context.getOrdP());
     for (long i = 0, multiplier = 1; i < long(vec.size()); multiplier *= p, ++i)
       result += multiplier * vec[i];
     EXPECT_EQ(input, result);
@@ -566,7 +581,7 @@ TEST_P(TestPartialMatch, databaseLookupWorksCorrectly)
 
   // FLT on scores
   scores.apply([&](auto& ptxt) {
-    ptxt.power(context.alMod.getPPowR() - 1);
+    ptxt.power(context.getAlMod().getPPowR() - 1);
     return ptxt;
   });
 
@@ -650,11 +665,11 @@ TEST_P(TestPartialMatch, databaseLookupWorksCorrectlyForCtxtAndPtxt)
 
   // FLT on scores
   plaintext_scores.apply([&](auto& ptxt) {
-    ptxt.power(context.alMod.getPPowR() - 1);
+    ptxt.power(context.getAlMod().getPPowR() - 1);
     return ptxt;
   });
   encrypted_scores.apply([&](auto& ctxt) {
-    ctxt.power(context.alMod.getPPowR() - 1);
+    ctxt.power(context.getAlMod().getPPowR() - 1);
     return ctxt;
   });
 

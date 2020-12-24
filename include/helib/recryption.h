@@ -46,18 +46,20 @@ public:
   long skHwt;
 
   //! for plaintext space p^{e-e'+r}
-  std::shared_ptr<const PAlgebraMod> alMod;
+  std::shared_ptr<const PAlgebraMod> alMod = nullptr;
 
   //! for plaintext space p^{e-e'+r}
-  std::shared_ptr<const EncryptedArray> ea;
+  std::shared_ptr<const EncryptedArray> ea = nullptr;
 
   bool build_cache;
 
+  bool alsoThick;
+
   //! linear maps
-  std::shared_ptr<const EvalMap> firstMap, secondMap;
+  std::shared_ptr<const EvalMap> firstMap = nullptr, secondMap = nullptr;
 
   //! conversion between ZZX and Powerful
-  std::shared_ptr<const PowerfulDCRT> p2dConv;
+  std::shared_ptr<const PowerfulDCRT> p2dConv = nullptr;
 
   //! linPolys for unpacking the slots
   std::vector<NTL::ZZX> unpackSlotEncoding;
@@ -67,6 +69,7 @@ public:
     skHwt = 0;
     e = ePrime = 0;
     build_cache = false;
+    alsoThick = false;
   }
 
   //! Initialize the recryption data in the context

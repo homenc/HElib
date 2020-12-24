@@ -181,7 +181,6 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   HELIB_TIMER_START;
 
   const PAlgebra& al = getPAlgebra();
-
   const std::vector<std::vector<RX>>& maskTable = tab.getMaskTable();
 
   RBak bak;

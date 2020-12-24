@@ -45,8 +45,13 @@ protected:
   GTestEaCx() :
       m(GetParam().m),
       r(GetParam().r),
-      context(m, /*p=*/-1, r),
-      eacx((helib::buildModChain(context, 5, 2), context.ea->getCx()))
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(m)
+                  .precision(r)
+                  .bits(5)
+                  .c(2)
+                  .build()),
+      eacx(context.getEA().getCx())
   {}
 
   virtual void SetUp() override

@@ -230,31 +230,29 @@ protected:
 
   void postContextSetup()
   {
-    if (scale) {
-      context.scale = scale;
-    }
-    context.zMStar.set_cM(mValues[idx][13] / 100.0);
-    helib::buildModChain(context,
-                         L,
-                         c,
-                         /*willBeBootstrappable=*/true,
-                         /*t=*/skHwt);
+    context.buildModChain(L,
+                          c,
+                          /*willBeBootstrappable=*/true,
+                          /*t=*/skHwt);
 
     if (!helib_test::noPrint) {
       std::cout << "security=" << context.securityLevel() << std::endl;
-      std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
-      std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+      std::cout << "# small primes = " << context.getSmallPrimes().card()
+                << "\n";
+      std::cout << "# ctxt primes = " << context.getCtxtPrimes().card() << "\n";
       std::cout << "# bits in ctxt primes = "
-                << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) +
+                << long(context.logOfProduct(context.getCtxtPrimes()) /
+                            log(2.0) +
                         0.5)
                 << "\n";
-      std::cout << "# special primes = " << context.specialPrimes.card()
+      std::cout << "# special primes = " << context.getSpecialPrimes().card()
                 << "\n";
       std::cout << "# bits in special primes = "
-                << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+                << long(context.logOfProduct(context.getSpecialPrimes()) /
+                            log(2.0) +
                         0.5)
                 << "\n";
-      std::cout << "scale=" << context.scale << std::endl;
+      std::cout << "scale=" << context.getScale() << std::endl;
     }
 
     context.enableBootStrapping(mvec,
@@ -270,10 +268,10 @@ protected:
     t += NTL::GetTime();
     if (!helib_test::noPrint) {
       std::cout << " done in " << t << " seconds\n";
-      std::cout << "  e=" << context.rcData.e
-                << ", e'=" << context.rcData.ePrime
-                << ", t=" << context.rcData.skHwt << "\n  ";
-      context.zMStar.printout();
+      std::cout << "  e=" << context.getRcData().e
+                << ", e'=" << context.getRcData().ePrime
+                << ", t=" << context.getRcData().skHwt << "\n  ";
+      context.printout();
     }
   }
 
@@ -344,18 +342,27 @@ protected:
       gens(calculateGens(idx)),
       ords(calculateOrds(idx)),
       t(0),
-      context((preContextSetup(), m), p, r, gens, ords),
+      context((preContextSetup(),
+               helib::ContextBuilder<helib::BGV>()
+                   .m(m)
+                   .p(p)
+                   .r(r)
+                   .gens(gens)
+                   .ords(ords)
+                   .scale(scale ? scale : 10 /*10 is default*/)
+                   .buildModChain(false)
+                   .build())),
       nPrimes((postContextSetup(), context.numPrimes())),
       allPrimes(0, nPrimes - 1),
       bitSize(context.logOfProduct(allPrimes) / log(2.0)),
       p2r((helib::setDryRun(
                helib_test::dry), // Now we can set the dry-run flag if desired
            postContextPrintout(),
-           context.alMod.getPPowR())),
+           context.getAlMod().getPPowR())),
       secretKey(context),
       publicKey(setUpSecretKey(secretKey)),
-      d(context.zMStar.getOrdP()),
-      nslots(context.zMStar.getPhiM() / d){};
+      d(context.getOrdP()),
+      nslots(context.getPhiM() / d){};
 
   virtual void TearDown() override
   {
@@ -364,7 +371,10 @@ protected:
   }
 
 public:
-  void SetUp() override { helib::setupDebugGlobals(&secretKey, context.ea); }
+  void SetUp() override
+  {
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
+  }
 
   static void TearDownTestCase()
   {
@@ -381,7 +391,7 @@ TEST_P(GTestThinBootstrapping, correctlyPerformsThinBootstrapping)
 {
   // GG defines the plaintext space Z_p[X]/GG(X)
   NTL::ZZX GG;
-  GG = context.alMod.getFactorsOverZZ()[0];
+  GG = context.getAlMod().getFactorsOverZZ()[0];
   std::shared_ptr<helib::EncryptedArray> ea(
       std::make_shared<helib::EncryptedArray>(context, GG));
 

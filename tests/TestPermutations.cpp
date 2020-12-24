@@ -107,16 +107,21 @@ protected:
       r(GetParam().r),
       bits(GetParam().bits),
       depth(GetParam().depth),
-      context(m, p, r),
-      secretKey((buildModChain(context, bits), context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .bits(bits)
+                  .build()),
+      secretKey(context),
       publicKey(
           (secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {}
 
   virtual void SetUp() override
   {
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
@@ -140,16 +145,20 @@ protected:
       r(GetParam().r),
       bits(GetParam().bits),
       depth(GetParam().depth),
-      context(m, /*p=*/-1, r),
-      secretKey((buildModChain(context, bits), context)),
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(m)
+                  .precision(r)
+                  .bits(bits)
+                  .build()),
+      secretKey(context),
       publicKey(
           (secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
-      ea(context.ea->getCx())
+      ea(context.getEA().getCx())
   {}
 
   virtual void SetUp() override
   {
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }

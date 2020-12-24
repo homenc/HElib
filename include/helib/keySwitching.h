@@ -86,6 +86,12 @@ namespace helib {
 class KeySwitch
 {
 public:
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "KeySwitch";
+
   SKHandle fromKey; // A handle for the key s'
   long toKeyID;     // Index of the key s that we are switching into
   long ptxtSpace;   // either p or p^r
@@ -121,8 +127,66 @@ public:
   void readMatrix(std::istream& str, const Context& context);
 
   //! Raw IO
-  void read(std::istream& str, const Context& context);
-  void write(std::ostream& str) const;
+  /**
+   * @brief Write out the `KeySwitch` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `KeySwitch` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `KeySwitch` object.
+   **/
+  static KeySwitch readFrom(std::istream& str, const Context& context);
+
+  /**
+   * @brief Write out the switch key (`KeySwitch`) object to the output
+   * stream using JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the switch key (`KeySwitch`) object to a `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized switch key (`KeySwitch`) object
+   * using JSON format.
+   * @param str Input `std::istream`.
+   * @param context The `Context` to be used.
+   * @return The deserialized `KeySwitch` object.
+   **/
+  static KeySwitch readFromJSON(std::istream& str, const Context& context);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized switch key (`KeySwitch`)
+   * object.
+   * @param j The `JsonWrapper` containing the serialized `KeySwitch` object.
+   * @param context The `Context` to be used.
+   * @return The deserialized `KeySwitch` object.
+   **/
+  static KeySwitch readFromJSON(const JsonWrapper& j, const Context& context);
+
+  /**
+   * @brief In-place read from the stream the serialized switch key
+   * (`KeySwitch`) object using JSON format.
+   * @param str Input `std::istream`.
+   * @param context The `Context` to be used.
+   **/
+  void readJSON(std::istream& str, const Context& context);
+
+  /**
+   * @brief In-place read from the `JsonWrapper` the serialized switch key
+   * (`KeySwitch`) object.
+   * @param j The `JsonWrapper` containing the serialized `KeySwitch` object.
+   * @param context The `Context` to be used.
+   **/
+  void readJSON(const JsonWrapper& j, const Context& context);
 };
 std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix);
 // We DO NOT have std::istream& operator>>(std::istream& str, KeySwitch&

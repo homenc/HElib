@@ -69,18 +69,23 @@ protected:
       p(GetParam().p),
       r(GetParam().r),
       bits(GetParam().bits),
-      context(m, p, r),
-      secretKey((buildModChain(context, bits), context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .bits(bits)
+                  .build()),
+      secretKey(context),
       publicKey((secretKey.GenSecKey(),
                  addFrbMatrices(secretKey),
                  addSome1DMatrices(secretKey),
                  secretKey)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {}
 
   virtual void SetUp() override
   {
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   };
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
@@ -93,7 +98,7 @@ class TestCtxtWithBadDimensions : public TestCtxt
 protected:
   TestCtxtWithBadDimensions() : TestCtxt()
   {
-    for (long i = 0; i < context.zMStar.numOfGens(); ++i) {
+    for (long i = 0; i < context.getZMStar().numOfGens(); ++i) {
       if (!ea.nativeDimension(i)) {
         return;
       }
@@ -232,7 +237,7 @@ TEST_P(TestCtxtWithBadDimensions, rotate1DRotatesCorrectlyWithBadDimensions)
   helib::Ctxt ctxt(publicKey);
   publicKey.Encrypt(ctxt, ptxt);
 
-  for (long i = 0; i < context.zMStar.numOfGens(); ++i) {
+  for (long i = 0; i < context.getZMStar().numOfGens(); ++i) {
     helib::Ctxt tmp(ctxt);
     ea.rotate1D(tmp, i, 3);
     helib::Ptxt<helib::BGV> expected_result(ptxt);

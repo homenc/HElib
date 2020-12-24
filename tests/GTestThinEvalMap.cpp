@@ -24,7 +24,6 @@ namespace {
 
 struct Parameters
 {
-
   const long p;
   const long r;
   const long c;
@@ -105,17 +104,14 @@ protected:
   helib::SecKey secretKey;
   const helib::PubKey& publicKey;
 
-  static std::vector<long> getDefaultGens()
+  static std::vector<long> getGens()
   {
     return std::vector<long>{3979, 3095, 3760};
   };
 
-  static std::vector<long> getDefaultOrds()
-  {
-    return std::vector<long>{6, 2, -8};
-  };
+  static std::vector<long> getOrds() { return std::vector<long>{6, 2, -8}; };
 
-  static NTL::Vec<long> getDefaultMvec()
+  static NTL::Vec<long> getMvec()
   {
     NTL::Vec<long> defaultMvec;
     defaultMvec.SetLength(3);
@@ -141,18 +137,15 @@ protected:
     if (helib::lsize(userMvec) >= 1)
       mvec = userMvec;
     else
-      mvec = getDefaultMvec();
+      mvec = getMvec();
     validateMvec(mvec);
     return mvec;
   };
 
-  static helib::Context& prepareContext(helib::Context& context,
-                                        const long L,
-                                        const long c)
+  static helib::Context& printContext(helib::Context& context)
   {
-    helib::buildModChain(context, L, c);
     if (!helib_test::noPrint) {
-      context.zMStar.printout(); // print structure of Zm* /(p) to std::cout
+      context.printout(); // print structure of Zm* /(p) to std::cout
       std::cout << std::endl;
     }
     return context;
@@ -181,29 +174,31 @@ protected:
       seed(
           (NTL::SetSeed(NTL::conv<NTL::ZZ>(GetParam().seed)), GetParam().seed)),
       mvec(calculateMvec(GetParam().mvec)),
-      gens(helib::lsize(GetParam().mvec) >= 1 ? GetParam().gens
-                                              : getDefaultGens()),
-      ords(helib::lsize(GetParam().mvec) >= 1 ? GetParam().ords
-                                              : getDefaultOrds()),
+      gens(helib::lsize(GetParam().mvec) >= 1 ? GetParam().gens : getGens()),
+      ords(helib::lsize(GetParam().mvec) >= 1 ? GetParam().ords : getOrds()),
       m(helib::computeProd(mvec)),
       nthreads((NTL::SetNumThreads(GetParam().nthreads), GetParam().nthreads)),
       useCache(GetParam().useCache),
       context((helib::setTimersOn(),
-               helib::setDryRun(
-                   false), // Need to get a "real context" to test ThinEvalMap
-               m),
-              p,
-              r,
-              gens,
-              ords),
-      d(prepareContext(context, L, c).zMStar.getOrdP()),
-      phim(context.zMStar.getPhiM()),
+               // Need to get a "real context" to test ThinEvalMap
+               helib::setDryRun(false),
+               helib::ContextBuilder<helib::BGV>()
+                   .m(m)
+                   .p(p)
+                   .r(r)
+                   .gens(gens)
+                   .ords(ords)
+                   .bits(L)
+                   .c(c)
+                   .build())),
+      d(printContext(context).getOrdP()),
+      phim(context.getPhiM()),
       nslots(phim / d),
       secretKey(
-          (helib::setDryRun(
-               helib_test::dry), // Now we can set the dry-run flag if desired
-           context)),
-      publicKey(prepareSecretKey(secretKey, w)){};
+          // Now we can set the dry-run flag if desired
+          (helib::setDryRun(helib_test::dry), context)),
+      publicKey(prepareSecretKey(secretKey, w))
+  {}
 
   virtual void TearDown() override
   {
@@ -220,10 +215,10 @@ TEST_P(GTestThinEvalMap, thinEvalMapIsCorrect)
 {
   // GG defines the plaintext space Z_p[X]/GG(X)
   NTL::ZZX GG;
-  GG = context.alMod.getFactorsOverZZ()[0];
+  GG = context.getAlMod().getFactorsOverZZ()[0];
   helib::EncryptedArray ea(context, GG);
 
-  NTL::zz_p::init(context.alMod.getPPowR());
+  NTL::zz_p::init(context.getAlMod().getPPowR());
 
   NTL::Vec<NTL::zz_p> val0(NTL::INIT_SIZE, nslots);
   for (auto& x : val0)

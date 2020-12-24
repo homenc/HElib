@@ -193,15 +193,21 @@ protected:
       m(GetParam().m),
       p(GetParam().p),
       r(GetParam().r),
-      context(m, p, r),
-      sk((helib::buildModChain(context, /*bits*/ 300, /*c*/ 2), context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .bits(300)
+                  .c(2)
+                  .build()),
+      sk(context),
       pk((sk.GenSecKey(), sk)),
-      ea(*context.ea)
+      ea(context.getEA())
   {}
 
   virtual void SetUp() override
   {
-    helib::setupDebugGlobals(&sk, context.ea);
+    helib::setupDebugGlobals(&sk, context.shareEA());
     if (!helib_test::noPrint) {
       helib::fhe_stats = true;
     }

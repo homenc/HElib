@@ -17,6 +17,8 @@
 #include <vector>
 #include <helib/NumbTh.h>
 
+#include "io.h"
+
 namespace helib {
 
 PolyMod::PolyMod() : ringDescriptor(nullptr) {}
@@ -284,60 +286,79 @@ PolyMod& PolyMod::operator-=(const NTL::ZZX& otherPoly)
   return *this;
 }
 
-void deserialize(std::istream& is, PolyMod& poly)
+void PolyMod::writeToJSON(std::ostream& os) const
 {
-  PolyMod::assertValidity(poly);
-  std::vector<std::stringstream> parts =
-      extractTokenizeRegion(is, '[', ']', ',');
-
-  long degree = NTL::deg(poly.ringDescriptor->G);
-  if (lsize(parts) > degree) {
-    // Too many elements. Raising an error.
-    std::stringstream err_msg;
-    err_msg << "Cannot deserialize to PolyMod: Degree is too small.  "
-            << "Trying to deserialize " << parts.size() << " coefficients.  "
-            << "Degree is " << degree << ".";
-    throw IOError(err_msg.str());
-  }
-
-  // Actual parsing and setup
-  NTL::clear(poly.data); // Make sure higher-degree terms don't remain
-  for (std::size_t i = 0; i < parts.size(); ++i) {
-    long tmp;
-    parts[i] >> tmp;
-    NTL::SetCoeff(poly.data, i, tmp);
-  }
-
-  // Normalization (removal of leading zeros) is done by modularReduce.
-  poly.modularReduce();
+  PolyMod::assertValidity(*this);
+  executeRedirectJsonError<void>([&]() { os << writeToJSON(); });
 }
 
-void serialize(std::ostream& os, const PolyMod& poly)
+JsonWrapper PolyMod::writeToJSON() const
 {
-  PolyMod::assertValidity(poly);
-  if (poly.data == NTL::ZZX::zero()) {
-    // Avoid string "[]" for zero ZZX.
-    os << "[0]";
-    return;
-  }
+  PolyMod::assertValidity(*this);
 
-  // TODO: Add stream modifier option for separator
-  std::string sep = ", ";
-  os << "[";
-  for (auto ite = poly.data.rep.begin(); ite != poly.data.rep.end(); ++ite) {
-    os << *ite;
-    if (ite + 1 != poly.data.rep.end()) {
-      os << ", ";
+  return executeRedirectJsonError<JsonWrapper>(
+      [&]() { return wrap(this->data); });
+}
+
+PolyMod PolyMod::readFromJSON(
+    std::istream& is,
+    const std::shared_ptr<PolyModRing>& ringDescriptor)
+{
+  PolyMod poly(ringDescriptor);
+  poly.readJSON(is);
+  return poly;
+}
+
+PolyMod PolyMod::readFromJSON(
+    const JsonWrapper& jw,
+    const std::shared_ptr<PolyModRing>& ringDescriptor)
+{
+  PolyMod poly(ringDescriptor);
+  poly.readJSON(jw);
+  return poly;
+}
+
+void PolyMod::readJSON(std::istream& is)
+{
+  executeRedirectJsonError<void>([&]() {
+    json j;
+    is >> j;
+    this->readJSON(wrap(j));
+  });
+}
+
+void PolyMod::readJSON(const JsonWrapper& jw)
+{
+  auto body = [&]() {
+    PolyMod::assertValidity(*this);
+
+    NTL::ZZX poly = unwrap(jw);
+
+    long g_degree = NTL::deg(this->ringDescriptor->G);
+    if (deg(poly) >= g_degree) {
+      // Too many elements. Raising an error.
+      std::stringstream err_msg;
+      err_msg << "Cannot deserialize to PolyMod: Degree is too small.  "
+              << "Trying to deserialize " << deg(poly) + 1 << " coefficients.  "
+              << "Slot modulus degree is " << g_degree << ".";
+      throw IOError(err_msg.str());
     }
-  }
-  os << "]";
+
+    NTL::clear(this->data); // Make sure higher-degree terms don't remain
+    this->data = poly;
+
+    // Normalization (removal of leading zeros) is done by modularReduce.
+    this->modularReduce();
+  };
+
+  executeRedirectJsonError<void>(body);
 }
 
 std::istream& operator>>(std::istream& is, PolyMod& poly)
 {
   PolyMod::assertValidity(poly);
 
-  deserialize(is, poly);
+  poly.readJSON(is);
   return is;
 }
 
@@ -345,7 +366,7 @@ std::ostream& operator<<(std::ostream& os, const PolyMod& poly)
 {
   PolyMod::assertValidity(poly);
 
-  serialize(os, poly);
+  poly.writeToJSON(os);
   return os;
 }
 

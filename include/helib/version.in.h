@@ -41,7 +41,7 @@ struct version
   /**
    * @brief The string representation of this version of HElib.
    **/
-  static constexpr auto asString = "v@PROJECT_VERSION@";
+  static constexpr auto asString = "@PROJECT_VERSION@";
 
   /**
    * @brief Function that returns whether this version of HElib is equal to or

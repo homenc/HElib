@@ -317,6 +317,7 @@ public:
   long leftChildIdx(long i) const { return nodes.at(i).leftChild; }
   long rightChildIdx(long i) const { return nodes.at(i).rightChild; }
 
+  // FIXME: refactoring2.0: should we change also this?
   void printout(std::ostream& s, long idx = 0) const
   {
     s << "[" << aux << " ";

@@ -253,16 +253,16 @@ PowerfulDCRT::PowerfulDCRT(const Context& _context,
   if (triv)
     return;
 
-  double polyNormBnd = context.zMStar.getPolyNormBnd();
+  double polyNormBnd = context.getZMStar().getPolyNormBnd();
 
-  // double normBnd = context.zMStar.getNormBnd();
+  // double normBnd = context.getNormBnd();
   // we compute this from the given factorization, just in case
   // it is not a prime-power factorization
   double normBnd = 1.0;
   for (long fac : mvec)
     normBnd *= calcPolyNormBnd(fac);
 
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   to_pwfl_excess_bits = long((log(normBnd) + log(double(phim))) / log(2.0)) + 5;
   to_poly_excess_bits =
@@ -309,7 +309,7 @@ PowerfulDCRT::PowerfulDCRT(const Context& _context,
 void PowerfulDCRT::ZZXtoPowerful(NTL::Vec<NTL::ZZ>& out,
                                  const NTL::ZZX& poly) const
 {
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   if (triv) {
     NTL::VectorCopy(out, poly, phim);
@@ -397,7 +397,7 @@ void PowerfulDCRT::dcrtToPowerful(NTL::Vec<NTL::ZZ>& powerful,
   dcrt.toPoly(poly);
 
   if (triv) {
-    long phim = context.zMStar.getPhiM();
+    long phim = context.getPhiM();
     NTL::VectorCopy(powerful, poly, phim);
     return;
   }

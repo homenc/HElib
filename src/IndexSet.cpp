@@ -11,7 +11,8 @@
  */
 
 #include <helib/IndexSet.h>
-#include <helib/binio.h>
+#include "binio.h"
+#include "io.h"
 
 namespace helib {
 
@@ -284,36 +285,7 @@ bool operator>(const IndexSet& s1, const IndexSet& s2)
   return card(s2) < card(s1) && s1.contains(s2);
 }
 
-std::ostream& operator<<(std::ostream& str, const IndexSet& set)
-{
-  if (set.card() == 0) {
-    str << "[]";
-  } else if (set.card() == 1) {
-    str << "[" << set.first() << "]";
-  } else {
-    str << "[" << set.first();
-    for (long i = set.next(set.first()); i <= set.last(); i = set.next(i))
-      str << " " << i;
-    str << "]";
-  }
-
-  return str;
-}
-
-std::istream& operator>>(std::istream& str, IndexSet& set)
-{
-  NTL::vec_long v;
-  str >> v; // read in the set as a vector
-
-  // insert all these indexes into the set
-  set.clear();
-  for (long i = 0; i < v.length(); i++)
-    set.insert(v[i]);
-
-  return str;
-}
-
-void IndexSet::write(std::ostream& str) const
+void IndexSet::writeTo(std::ostream& str) const
 {
   // Size of Set
   write_raw_int(str, this->card());
@@ -324,19 +296,71 @@ void IndexSet::write(std::ostream& str) const
   }
 }
 
-void IndexSet::read(std::istream& str)
+IndexSet IndexSet::readFrom(std::istream& str)
 {
+  IndexSet res;
   // Size of Set
   long sizeOfS = read_raw_int(str);
 
   // insert all these indexes into the set
-  this->clear();
+  res.clear();
 
   // The data itself
   for (long i = 0, n; i < sizeOfS; i++) {
     n = read_raw_int(str);
-    this->insert(n);
+    res.insert(n);
   }
+
+  return res;
+}
+
+void IndexSet::writeToJSON(std::ostream& str) const { str << writeToJSON(); }
+
+JsonWrapper IndexSet::writeToJSON() const
+{
+  // TODO: I'm sure there is a better way to do this
+  std::vector<long> content;
+  for (long n = this->first(); n <= this->last(); n = this->next(n)) {
+    content.emplace_back(n);
+  }
+
+  json j = content;
+
+  return wrap(j);
+}
+
+IndexSet IndexSet::readFromJSON(std::istream& str)
+{
+  json j;
+  str >> j;
+  return readFromJSON(wrap(j));
+}
+
+IndexSet IndexSet::readFromJSON(const JsonWrapper& jw)
+{
+  std::vector<long> content = unwrap(jw);
+
+  IndexSet res;
+  res.clear();
+
+  // The data itself
+  for (const auto& n : content) {
+    res.insert(n);
+  }
+
+  return res;
+}
+
+std::ostream& operator<<(std::ostream& str, const IndexSet& set)
+{
+  set.writeToJSON(str);
+  return str;
+}
+
+std::istream& operator>>(std::istream& str, IndexSet& set)
+{
+  set = IndexSet::readFromJSON(str);
+  return str;
 }
 
 } // namespace helib

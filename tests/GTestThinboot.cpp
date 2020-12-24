@@ -159,15 +159,6 @@ private:
     time = -NTL::GetTime();
   }
 
-  void postContextSetup()
-  {
-    if (scale) {
-      context.scale = scale;
-    }
-
-    context.zMStar.set_cM(c_m / 100.0);
-  }
-
   static void setGlobals(int force_bsgs, int force_hoist, int chen_han)
   {
     helib::fhe_test_force_bsgs = force_bsgs;
@@ -250,12 +241,19 @@ protected:
       m(helib::computeProd(mvec)),
       phim((checkPM(p, m), helib::phi_N(m))),
       time(0),
-      context((preContextSetup(), m), p, r, gens, ords),
+      context((preContextSetup(),
+               helib::ContextBuilder<helib::BGV>()
+                   .m(m)
+                   .p(p)
+                   .r(r)
+                   .gens(gens)
+                   .ords(ords)
+                   .scale(scale ? scale : 10 /*10 is default.*/)
+                   .buildModChain(false)
+                   .build())),
       v_values_name(GetParam().v_values_name)
 
-  {
-    postContextSetup();
-  }
+  {}
 
   void TearDown() override
   {
@@ -360,28 +358,31 @@ protected:
 
 TEST_P(GTestThinboot, correctlyPerformsThinboot)
 {
-  helib::buildModChain(context,
-                       bits,
-                       c,
-                       /*willBeBootstrappable=*/true,
-                       /*skHwt=*/skHwt,
-                       /*resolution=*/3,
-                       /*bitsInSpecialPrimes=*/helib_test::special_bits);
+  context.buildModChain(bits,
+                        c,
+                        /*willBeBootstrappable=*/true,
+                        /*skHwt=*/skHwt,
+                        /*resolution=*/3,
+                        /*bitsInSpecialPrimes=*/helib_test::special_bits);
 
   if (!helib_test::noPrint) {
     std::cout << "security=" << context.securityLevel() << std::endl;
-    std::cout << "# small primes = " << context.smallPrimes.card() << std::endl;
-    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << std::endl;
+    std::cout << "# small primes = " << context.getSmallPrimes().card()
+              << std::endl;
+    std::cout << "# ctxt primes = " << context.getCtxtPrimes().card()
+              << std::endl;
     std::cout << "# bits in ctxt primes = "
-              << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) + 0.5)
-              << std::endl;
-    std::cout << "# special primes = " << context.specialPrimes.card()
-              << std::endl;
-    std::cout << "# bits in special primes = "
-              << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+              << long(context.logOfProduct(context.getCtxtPrimes()) / log(2.0) +
                       0.5)
               << std::endl;
-    std::cout << "scale=" << context.scale << std::endl;
+    std::cout << "# special primes = " << context.getSpecialPrimes().card()
+              << std::endl;
+    std::cout << "# bits in special primes = "
+              << long(context.logOfProduct(context.getSpecialPrimes()) /
+                          log(2.0) +
+                      0.5)
+              << std::endl;
+    std::cout << "scale=" << context.getScale() << std::endl;
   }
 
   context.enableBootStrapping(mvec, useCache, /*alsoThick=*/false);
@@ -392,15 +393,16 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
   // if (skHwt>0) context.rcData.skHwt = skHwt;
   if (!helib_test::noPrint) {
     std::cout << " done in " << time << " seconds" << std::endl;
-    std::cout << "  e=" << context.rcData.e << ", e'=" << context.rcData.ePrime
-              << ", t=" << context.rcData.skHwt << std::endl
+    std::cout << "  e=" << context.getRcData().e
+              << ", e'=" << context.getRcData().ePrime
+              << ", t=" << context.getRcData().skHwt << "\n"
               << "  ";
-    context.zMStar.printout();
+    context.printout();
   }
   helib::setDryRun(
       helib_test::dry); // Now we can set the dry-run flag if desired
 
-  long p2r = context.alMod.getPPowR();
+  long p2r = context.getAlMod().getPPowR();
 
   for (long numkey = 0; numkey < iter; numkey++) { // test with 3 keys
     if (helib::fhe_stats && numkey > 0 && numkey % 100 == 0) {
@@ -431,13 +433,13 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
 
     const helib::PubKey publicKey = secretKey;
 
-    long d = context.zMStar.getOrdP();
-    long phim = context.zMStar.getPhiM();
+    long d = context.getOrdP();
+    long phim = context.getPhiM();
     long nslots = phim / d;
 
     // GG defines the plaintext space Z_p[X]/GG(X)
     NTL::ZZX GG;
-    GG = context.alMod.getFactorsOverZZ()[0];
+    GG = context.getAlMod().getFactorsOverZZ()[0];
     std::shared_ptr<helib::EncryptedArray> ea(
         std::make_shared<helib::EncryptedArray>(context, GG));
 
@@ -478,10 +480,10 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
 
     if (!helib_test::noPrint) {
       // compute minimal capacity before bootstrapping (rawModSwitch)
-      long e = context.rcData.e;
+      long e = context.getRcData().e;
       long q = NTL::power_long(p, e) + 1;
       double Bnd = context.boundForRecryption();
-      double mfac = context.zMStar.getNormBnd();
+      double mfac = context.getZMStar().getNormBnd();
       double min_bit_cap =
           log(mfac * q / (p2r * Bnd * HELIB_MIN_CAP_FRAC)) / log(2.0);
 

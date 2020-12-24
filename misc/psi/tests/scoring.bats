@@ -14,8 +14,10 @@
 utils_dir="../../../../utils"
 load "../../../utils/tests/std"
 
-modulus=257
-nslots=13860
+nslots=3
+modulus=13
+#nslots=13860
+#modulus=257
 #nslots=79872
 #modulus=1278209
 datadir="data_and_params"

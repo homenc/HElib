@@ -31,16 +31,6 @@ std::string readline(std::istream& is)
   return s;
 }
 
-void readKeyBinary(std::istream& keyFile, helib::PubKey& pk)
-{
-  helib::readPubKeyBinary(keyFile, pk);
-}
-
-void readKeyBinary(std::istream& keyFile, helib::SecKey& sk)
-{
-  helib::readSecKeyBinary(keyFile, sk);
-}
-
 template <typename T1, typename T2>
 using uniq_pair = std::pair<std::unique_ptr<T1>, std::unique_ptr<T2>>;
 
@@ -55,13 +45,17 @@ uniq_pair<helib::Context, KEY> loadContextAndKey(const std::string& keyFilePath)
   unsigned long m, p, r;
   std::vector<long> gens, ords;
 
-  helib::readContextBaseBinary(keyFile, m, p, r, gens, ords);
-  std::unique_ptr<helib::Context> contextp =
-      std::make_unique<helib::Context>(m, p, r, gens, ords);
-  helib::readContextBinary(keyFile, *contextp);
+  std::unique_ptr<helib::Context> contextp(
+      helib::Context::readPtrFrom(keyFile));
 
   std::unique_ptr<KEY> keyp = std::make_unique<KEY>(*contextp);
-  readKeyBinary(keyFile, *keyp);
+  if constexpr (std::is_same_v<KEY, helib::SecKey>) {
+    keyp = std::make_unique<helib::SecKey>(
+        helib::SecKey::readFrom(keyFile, *contextp));
+  } else {
+    keyp = std::make_unique<helib::PubKey>(
+        helib::PubKey::readFrom(keyFile, *contextp));
+  }
 
   return {std::move(contextp), std::move(keyp)};
 }
@@ -83,6 +77,10 @@ inline long estimateCtxtSize(const helib::Context& context, long offset)
 
   long size = 0;
 
+  // Header metadata
+  size += 24;
+
+  // Begin eye-catcher
   size += 4;
 
   // Begin Ctxt metadata
@@ -92,7 +90,7 @@ inline long estimateCtxtSize(const helib::Context& context, long offset)
 
   // primeSet.write(str);
   // size of set (long) + each prime (long)
-  size += 8 + context.ctxtPrimes.card() * 8;
+  size += 8 + context.getCtxtPrimes().card() * 8;
 
   // Begin Ctxt content size
   // write_raw_vector(str, parts);
@@ -111,14 +109,13 @@ inline long estimateCtxtSize(const helib::Context& context, long offset)
   // this->DoubleCRT::write(str);
   // map.getIndexSet().write(str);
   // size of set (long) + each prime (long)
-  part_size += 8 + context.ctxtPrimes.card() * 8;
+  part_size += 8 + context.getCtxtPrimes().card() * 8;
 
   // DCRT data write as write_ntl_vec_long(str, map[i]);
   // For each prime in the ctxt modulus chain
   //    size of DCRT column (long) + size of each element (long) +
   //    size of all the slots (column in DCRT) (PhiM long elements)
-  long dcrt_size =
-      (8 + 8 * context.zMStar.getPhiM()) * context.ctxtPrimes.card();
+  long dcrt_size = (8 + 8 * context.getPhiM()) * context.getCtxtPrimes().card();
 
   part_size += dcrt_size;
 

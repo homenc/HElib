@@ -106,7 +106,7 @@ protected:
   helib::SecKey secretKey;
   const helib::PubKey& publicKey;
 
-  static NTL::Vec<long> getDefaultMvec()
+  static NTL::Vec<long> getMvec()
   {
     NTL::Vec<long> defaultMvec;
     defaultMvec.SetLength(3);
@@ -116,15 +116,12 @@ protected:
     return defaultMvec;
   };
 
-  static std::vector<long> getDefaultGens()
+  static std::vector<long> getGens()
   {
     return std::vector<long>{3979, 3095, 3760};
   };
 
-  static std::vector<long> getDefaultOrds()
-  {
-    return std::vector<long>{6, 2, -8};
-  };
+  static std::vector<long> getOrds() { return std::vector<long>{6, 2, -8}; };
 
   // Throws if mvec is invalid, returns mvec otherwise
   static NTL::Vec<long> checkMvec(NTL::Vec<long> mvec)
@@ -151,15 +148,13 @@ protected:
     return m;
   };
 
-  static void prepareContext(helib::Context& context, long L, long c)
+  static void printContext(helib::Context& context)
   {
-    helib::buildModChain(context, L, c);
-
     if (!helib_test::noPrint) {
-      context.zMStar.printout(); // print structure of Zm* /(p) to std::cout
+      context.printout(); // print structure of Zm* /(p) to std::cout
       std::cout << std::endl;
     }
-  };
+  }
 
   GTestEvalMap() :
       p(GetParam().p),
@@ -169,26 +164,31 @@ protected:
       L(GetParam().L),
       s(GetParam().s),
       seed(GetParam().seed),
-      mvec(checkMvec(helib::lsize(GetParam().mvec) < 1 ? getDefaultMvec()
+      mvec(checkMvec(helib::lsize(GetParam().mvec) < 1 ? getMvec()
                                                        : GetParam().mvec)),
       m(calculateM(mvec, p)),
-      gens(helib::lsize(GetParam().mvec) < 1 ? getDefaultGens()
-                                             : GetParam().gens),
-      ords(helib::lsize(GetParam().mvec) < 1 ? getDefaultOrds()
-                                             : GetParam().ords),
+      gens(helib::lsize(GetParam().mvec) < 1 ? getGens() : GetParam().gens),
+      ords(helib::lsize(GetParam().mvec) < 1 ? getOrds() : GetParam().ords),
       nthreads(GetParam().nthreads),
       useCache(GetParam().useCache),
-      context((helib::setDryRun(false), m),
-              p,
-              r,
-              gens,
-              ords), // We need to get a 'real' context to test EvalMap.
-      d((prepareContext(context, L, c), context.zMStar.getOrdP())),
-      phim(context.zMStar.getPhiM()),
+      context(
+          (helib::setDryRun(false),
+           helib::ContextBuilder<helib::BGV>()
+               .m(m)
+               .p(p)
+               .r(r)
+               .gens(gens)
+               .ords(ords)
+               .bits(L)
+               .c(c)
+               .build())), // We need to get a 'real' context to test EvalMap.
+      d((printContext(context), context.getOrdP())),
+      phim(context.getPhiM()),
       nslots(phim / d),
       secretKey((helib::setDryRun(helib_test::dry),
                  context)), // We can now switch to dry run if desired.
-      publicKey(secretKey){};
+      publicKey(secretKey)
+  {}
 
   void SetUp() override
   {
@@ -202,7 +202,7 @@ protected:
     helib::addFrbMatrices(
         secretKey); // compute key-switching matrices that we need
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   };
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
@@ -212,10 +212,10 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
 {
   // GG defines the plaintext space Z_p[X]/GG(X)
   NTL::ZZX GG;
-  GG = context.alMod.getFactorsOverZZ()[0];
+  GG = context.getAlMod().getFactorsOverZZ()[0];
   helib::EncryptedArray ea(context, GG);
 
-  NTL::zz_p::init(context.alMod.getPPowR());
+  NTL::zz_p::init(context.getAlMod().getPPowR());
   NTL::zz_pX F;
   random(F, phim); // a random polynomial of degree phi(m)-1 modulo p
 

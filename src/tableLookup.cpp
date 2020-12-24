@@ -67,7 +67,7 @@ void computeAllProducts(/*Output*/ CtPtrs& products,
                "Cannot bootstrap with non-bootstrappable public key");
     packedRecrypt(array,
                   *unpackSlotEncoding,
-                  *(ct->getContext().ea),
+                  ct->getContext().getEA(),
                   /*belowLevel=*/nBits + 3);
   }
   if (findMinBitCapacity(array) < (NTL::NumBits(nBits) + 1) * bpl)

@@ -31,7 +31,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
 
-  find_package(helib 1.3.1 EXACT REQUIRED)
+# STRINGS avoids having the 2 newline characters at the end of the string.
+# Alternatively it's possible to use file(READ ...) and then
+# string(REGEX REPLACE "\n$" "" HELIB_VERSION "${HELIB_VERSION}")
+file(STRINGS "../../VERSION" HELIB_VERSION)
+
+find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
 add_subdirectory(scoring)
 add_subdirectory(lookup)

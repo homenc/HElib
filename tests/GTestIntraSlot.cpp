@@ -46,14 +46,13 @@ struct Parameters
 class GTestIntraSlot : public ::testing::TestWithParam<Parameters>
 {
 
-  static helib::Context& setupContext(helib::Context& context, long L)
+  static helib::Context& setupContext(helib::Context& context)
   {
     if (helib_test::verbose) {
-      context.zMStar.printout();
+      context.printout();
     }
-    buildModChain(context, L, 3);
     return context;
-  };
+  }
 
 protected:
   GTestIntraSlot() :
@@ -63,9 +62,16 @@ protected:
       L(GetParam().L),
       m(GetParam().m),
       seed(GetParam().seed),
-      context(m, p, r),
-      secretKey(setupContext(context, L)),
-      publicKey(secretKey){};
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .bits(L)
+                  .c(3)
+                  .build()),
+      secretKey(setupContext(context)),
+      publicKey(secretKey)
+  {}
 
   long p;
   long n;
@@ -85,7 +91,7 @@ protected:
         secretKey); // compute key-switching matrices that we need
     helib::addFrbMatrices(secretKey);
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   };
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
@@ -93,7 +99,7 @@ protected:
 
 TEST_P(GTestIntraSlot, packingAndUnpackingWorks)
 {
-  NTL::ZZX G = context.alMod.getFactorsOverZZ()[0];
+  NTL::ZZX G = context.getAlMod().getFactorsOverZZ()[0];
   helib::EncryptedArray ea(context, G);
 
   long d = ea.getDegree(); // size of each slot

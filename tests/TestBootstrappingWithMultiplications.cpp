@@ -11,6 +11,7 @@
  */
 #include <helib/helib.h>
 #include <helib/debugging.h>
+#include <helib/apiAttributes.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -88,11 +89,14 @@ protected:
 
   TestFatBootstrappingWithMultiplications() :
       n(GetParam().n),
-      context(GetParam().m,
-              GetParam().p,
-              GetParam().r,
-              GetParam().gens,
-              GetParam().ords),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(GetParam().m)
+                  .p(GetParam().p)
+                  .r(GetParam().r)
+                  .gens(GetParam().gens)
+                  .ords(GetParam().ords)
+                  .buildModChain(false)
+                  .build()),
       secretKey(postContextSetup(context,
                                  GetParam().c_m,
                                  GetParam().bits,
@@ -100,18 +104,17 @@ protected:
                                  GetParam().t,
                                  GetParam().mvec)),
       publicKey(keySetup(secretKey)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {}
 
   static helib::Context& postContextSetup(helib::Context& context,
-                                          int c_m,
+                                          UNUSED int c_m,
                                           long bits,
                                           long c,
                                           long t,
                                           NTL::Vec<long> mvec)
   {
-    context.zMStar.set_cM(c_m / 100);
-    helib::buildModChain(context, bits, c, true, t);
+    context.buildModChain(bits, c, true, t);
     context.enableBootStrapping(mvec);
     return context;
   }
@@ -137,11 +140,11 @@ protected:
                 << ", gens=" << helib::vecToStr(GetParam().gens)
                 << ", ords=" << helib::vecToStr(GetParam().ords) << std::endl;
       ea.getPAlgebra().printout();
-      std::cout << "ctxtPrimes=" << context.ctxtPrimes
-                << ", specialPrimes=" << context.specialPrimes << std::endl
+      std::cout << "ctxtPrimes=" << context.getCtxtPrimes()
+                << ", specialPrimes=" << context.getSpecialPrimes() << std::endl
                 << std::endl;
     }
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override
@@ -240,7 +243,7 @@ TEST_P(TestFatBootstrappingWithMultiplications,
        correctlyPerformsFatBootstrappingWithMultiplications)
 {
   const long nslots = ea.size();
-  const long p2r = context.alMod.getPPowR();
+  const long p2r = context.getAlMod().getPPowR();
   std::vector<long> ptxt(
       generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);
@@ -306,11 +309,14 @@ protected:
 
   TestThinBootstrappingWithMultiplications() :
       n(GetParam().n),
-      context(GetParam().m,
-              GetParam().p,
-              GetParam().r,
-              GetParam().gens,
-              GetParam().ords),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(GetParam().m)
+                  .p(GetParam().p)
+                  .r(GetParam().r)
+                  .gens(GetParam().gens)
+                  .ords(GetParam().ords)
+                  .buildModChain(false)
+                  .build()),
       secretKey(postContextSetup(context,
                                  GetParam().c_m,
                                  GetParam().bits,
@@ -318,18 +324,17 @@ protected:
                                  GetParam().t,
                                  GetParam().mvec)),
       publicKey(keySetup(secretKey)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {}
 
   static helib::Context& postContextSetup(helib::Context& context,
-                                          int c_m,
+                                          UNUSED int c_m,
                                           long bits,
                                           long c,
                                           long t,
                                           NTL::Vec<long> mvec)
   {
-    context.zMStar.set_cM(c_m / 100);
-    helib::buildModChain(context, bits, c, true, t);
+    context.buildModChain(bits, c, true, t);
     context.enableBootStrapping(mvec);
     return context;
   }
@@ -355,12 +360,12 @@ protected:
                 << ", gens=" << helib::vecToStr(GetParam().gens)
                 << ", ords=" << helib::vecToStr(GetParam().ords) << std::endl;
       ea.getPAlgebra().printout();
-      std::cout << "ctxtPrimes=" << context.ctxtPrimes
-                << ", specialPrimes=" << context.specialPrimes << std::endl
+      std::cout << "ctxtPrimes=" << context.getCtxtPrimes()
+                << ", specialPrimes=" << context.getSpecialPrimes() << std::endl
                 << std::endl;
     }
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override
@@ -401,7 +406,7 @@ TEST_P(TestThinBootstrappingWithMultiplications,
        correctlyPerformsThinBootstrappingWithMultiplications)
 {
   const long nslots = ea.size();
-  const long p2r = context.alMod.getPPowR();
+  const long p2r = context.getAlMod().getPPowR();
   std::vector<long> ptxt(
       generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);

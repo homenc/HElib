@@ -103,7 +103,7 @@ public:
   void writeByLocation(const D& data, uint64_t row, uint64_t col)
   {
     writeStream.seekp(toc->getIdx(row, col));
-    data.write(writeStream);
+    data.writeTo(writeStream);
   }
 
   TOC& getTOC() { return *toc; }

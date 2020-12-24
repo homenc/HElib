@@ -128,15 +128,14 @@ int main(int argc, char* argv[])
   // This object will hold information about the algebra used for this scheme.
   std::cout << "\nInitializing the Context ... ";
   HELIB_NTIMER_START(timer_Context);
-  helib::Context context(m, p, r);
+  helib::Context context = helib::ContextBuilder<helib::BGV>()
+                               .m(m)
+                               .p(p)
+                               .r(r)
+                               .bits(bits)
+                               .c(c)
+                               .build();
   HELIB_NTIMER_STOP(timer_Context);
-
-  // Modify the context, adding primes to the modulus chain
-  // This defines the ciphertext space
-  std::cout << "\nBuilding modulus chain ... ";
-  HELIB_NTIMER_START(timer_CHAIN);
-  helib::buildModChain(context, bits, c);
-  HELIB_NTIMER_STOP(timer_CHAIN);
 
   // Secret key management
   std::cout << "\nCreating Secret Key ...";
@@ -160,12 +159,12 @@ int main(int argc, char* argv[])
   HELIB_NTIMER_STOP(timer_PubKey);
 
   // Get the EncryptedArray of the context
-  const helib::EncryptedArray& ea = *(context.ea);
+  const helib::EncryptedArray& ea = context.getEA();
 
   // Print the context
   std::cout << std::endl;
   if (debug)
-    context.zMStar.printout();
+    context.printout();
 
   // Print the security level
   // Note: This will be negligible to improve performance time.

@@ -37,9 +37,6 @@ namespace helib {
 #define HELIB_KSS_MIN (3)
 // minimal strategy (for g_i, and for g_i^{-ord_i} for bad dims)
 
-void writePubKeyBinary(std::ostream& str, const PubKey& pk);
-void readPubKeyBinary(std::istream& str, PubKey& pk);
-
 /**
  * @class PubKey
  * @brief The public key
@@ -73,8 +70,13 @@ private:
   Ctxt recryptEkey;  // the key itself, encrypted under key #0
 
 public:
-  //! This constructor thorws run-time error if activeContext=nullptr
-  PubKey();
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "PubKey";
+
+  PubKey() = delete;
 
   explicit PubKey(const Context& _context);
 
@@ -213,8 +215,65 @@ public:
   friend class SecKey;
   friend std::ostream& operator<<(std::ostream& str, const PubKey& pk);
   friend std::istream& operator>>(std::istream& str, PubKey& pk);
-  friend void ::helib::writePubKeyBinary(std::ostream& str, const PubKey& pk);
-  friend void ::helib::readPubKeyBinary(std::istream& str, PubKey& pk);
+
+  /**
+   * @brief Write out the `PubKey` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `PubKey` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `PubKey` object.
+   **/
+  static PubKey readFrom(std::istream& str, const Context& context);
+
+  /**
+   * @brief Write out the public key (`PubKey`) object to the output
+   * stream using JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the public key (`PubKey`) object to a `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized public key (`PubKey`) object
+   * using JSON format.
+   * @param str Input `std::istream`.
+   * @param context The `Context` to be used.
+   * @return The deserialized `PubKey` object.
+   **/
+  static PubKey readFromJSON(std::istream& str, const Context& context);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized public key (`PubKey`)
+   * object.
+   * @param j The `JsonWrapper` containing the serialized `PubKey` object.
+   * @param context The `Context` to be used.
+   * @return The deserialized `PubKey` object.
+   **/
+  static PubKey readFromJSON(const JsonWrapper& j, const Context& context);
+
+  /**
+   * @brief In-place read from the stream the serialized public key (`PubKey`)
+   * object using JSON format.
+   * @param str Input `std::istream`.
+   **/
+  void readJSON(std::istream& str);
+
+  /**
+   * @brief In-place read from the `JsonWrapper` the serialized public key
+   * (`PubKey`) object.
+   * @param j The `JsonWrapper` containing the serialized `PubKey` object.
+   **/
+  void readJSON(const JsonWrapper& j);
 
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
@@ -224,19 +283,24 @@ public:
   void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
 
-void writeSecKeyBinary(std::ostream& str, const SecKey& sk);
-void readSecKeyBinary(std::istream& str, SecKey& sk);
-
 /**
  * @class SecKey
  * @brief The secret key
  ******************************************************************/
 class SecKey : public PubKey
 { // The secret key
-public:
+private:
+  friend class KeySwitch;
   std::vector<DoubleCRT> sKeys; // The secret key(s) themselves
+  explicit SecKey(const PubKey& pk);
 
 public:
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "SecKey";
+
   // Disable default constructor
   SecKey() = delete;
 
@@ -329,8 +393,65 @@ public:
 
   friend std::ostream& operator<<(std::ostream& str, const SecKey& sk);
   friend std::istream& operator>>(std::istream& str, SecKey& sk);
-  friend void ::helib::writeSecKeyBinary(std::ostream& str, const SecKey& sk);
-  friend void ::helib::readSecKeyBinary(std::istream& str, SecKey& sk);
+
+  /**
+   * @brief Write out the `SecKey` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `SecKey` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `SecKey` object.
+   **/
+  static SecKey readFrom(std::istream& str, const Context& context);
+
+  /**
+   * @brief Write out the secret key (`SecKey`) object to the output
+   * stream using JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the secret key (`SecKey`) object to a `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized secret key (`SecKey`) object
+   * using JSON format.
+   * @param str Input `std::istream`.
+   * @param context The `Context` to be used.
+   * @return The deserialized `SecKey` object.
+   **/
+  static SecKey readFromJSON(std::istream& str, const Context& context);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized secret key (`SecKey`)
+   * object.
+   * @param j The `JsonWrapper` containing the serialized `SecKey` object.
+   * @param context The `Context` to be used.
+   * @return The deserialized `SecKey` object.
+   **/
+  static SecKey readFromJSON(const JsonWrapper& j, const Context& context);
+
+  /**
+   * @brief Read from the stream the serialized secret key (`SecKey`) object
+   * using JSON format.
+   * @param str Input `std::istream`.
+   **/
+  void readJSON(std::istream& str);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized secret key (`SecKey`)
+   * object.
+   * @param j The `JsonWrapper` containing the serialized `SecKey` object.
+   **/
+  void readJSON(const JsonWrapper& j);
 
   // TODO: Add a similar method for binary serialization
   // This just writes the derived part, not including the public key

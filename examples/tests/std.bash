@@ -15,8 +15,13 @@ function random-char-string {
 }
 
 tmp_folder="tmp_$(random-char-string)"
+helib_root="../.."
 examples_root="../.."
 examples_bin="$examples_root/build/bin"
+
+function helib_version {
+  cat "${helib_root}/VERSION"
+}
 
 function assert {
   if "$@"; then 

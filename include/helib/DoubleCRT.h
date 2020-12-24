@@ -415,8 +415,72 @@ public:
   void reduce() const {} // place-holder for consistent with AltCRT
 
   // Raw I/O
+
+  /**
+   * @brief Write out the `DoubleCRT` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `DoubleCRT` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `DoubleCRT` object.
+   **/
+  static DoubleCRT readFrom(std::istream& str, const Context& context);
+
+  /**
+   * @brief In-place read from the stream the serialized `DoubleCRT` object in
+   * binary format.
+   * @param str Input `std::istream`.
+   **/
   void read(std::istream& str);
-  void write(std::ostream& str) const;
+
+  /**
+   * @brief Write out the ciphertext (`Ctxt`) object to the output
+   * stream using JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the ciphertext (`Ctxt`) object to a `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized ciphertext (`Ctxt`) object using
+   * JSON format.
+   * @param str Input `std::istream`.
+   * @param context The `Context` to be used.
+   * @return The deserialized `Ctxt` object.
+   **/
+  static DoubleCRT readFromJSON(std::istream& str, const Context& context);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized ciphertext (`Ctxt`)
+   * object.
+   * @param j The `JsonWrapper` containing the serialized `Ctxt` object.
+   * @param context The `Context` to be used.
+   * @return The deserialized `Ctxt` object.
+   **/
+  static DoubleCRT readFromJSON(const JsonWrapper& j, const Context& context);
+
+  /**
+   * @brief In-place read from the `str` `std::istream` the serialized
+   * ciphertext (`Ctxt`) object.
+   * @param j The `JsonWrapper` containing the serialized `Ctxt` object.
+   **/
+  void readJSON(std::istream& str);
+
+  /**
+   * @brief In-place read from the `JsonWrapper` the serialized ciphertext
+   * (`Ctxt`) object.
+   * @param j The `JsonWrapper` containing the serialized `Ctxt` object.
+   **/
+  void readJSON(const JsonWrapper& j);
 
   // I/O: ONLY the matrix is outputted/recovered, not the moduli chain!! An
   // error is raised on input if this is not consistent with the current chain

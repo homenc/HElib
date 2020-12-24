@@ -66,25 +66,30 @@ protected:
       p(GetParam().p),
       r(GetParam().r),
       bits(GetParam().bits),
-      context(m, p, r),
-      secretKey((buildModChain(context, bits), context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .bits(bits)
+                  .build()),
+      secretKey(context),
       publicKey((secretKey.GenSecKey(),
                  helib::addSome1DMatrices(secretKey),
                  secretKey)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {}
 
   virtual void SetUp() override
   {
     if (helib_test::verbose) {
       ea.getPAlgebra().printout();
-      std::cout << "r = " << context.alMod.getR() << std::endl;
-      std::cout << "ctxtPrimes=" << context.ctxtPrimes
-                << ", specialPrimes=" << context.specialPrimes << std::endl
+      std::cout << "r = " << context.getAlMod().getR() << std::endl;
+      std::cout << "ctxtPrimes=" << context.getCtxtPrimes()
+                << ", specialPrimes=" << context.getSpecialPrimes() << "\n"
                 << std::endl;
     }
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }

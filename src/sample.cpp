@@ -240,7 +240,7 @@ void sampleUniform(NTL::ZZX& poly, long n, const NTL::ZZ& B)
  ********************************************************************/
 double sampleHWt(zzX& poly, const Context& context, long Hwt)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   double retval;
 
   if (palg.getPow2() == 0) { // not power of two
@@ -259,22 +259,17 @@ double sampleHWt(zzX& poly, const Context& context, long Hwt)
 
 double sampleHWtBoundedEffectiveBound(const Context& context, long Hwt)
 {
-  const PAlgebra& palg = context.zMStar;
-  long phim = palg.getPhiM();
-
-  double bound = sqrt(Hwt * log(phim));
   // should be good with probability at least 1/2
   // NOTE: the general formula is sigma*sqrt(log(phim)),
   // assuming we are sampling from a zero mean complex Gaussian
   // with std deviation sigma
-
-  return bound;
+  return sqrt(Hwt * log(context.getPhiM()));
 }
 
 double sampleHWtBounded(zzX& poly, const Context& context, long Hwt)
 {
   double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
 
 #if 1
   double val;
@@ -324,7 +319,7 @@ double sampleHWtBounded(zzX& poly, const Context& context, long Hwt)
 
 double sampleSmall(zzX& poly, const Context& context)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   double retval;
 
   if (palg.getPow2() == 0) { // not power of two
@@ -346,7 +341,7 @@ double sampleSmall(zzX& poly, const Context& context)
 // Same as above, but ensure the result is not too much larger than typical
 double sampleSmallBounded(zzX& poly, const Context& context)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   long phim = palg.getPhiM();
 
   double bound = sqrt(phim * log(phim) / 2.0);
@@ -402,7 +397,7 @@ double sampleSmallBounded(zzX& poly, const Context& context)
 
 double sampleGaussian(zzX& poly, const Context& context, double stdev)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   double retval;
 
   if (palg.getPow2() == 0) { // not power of two
@@ -426,7 +421,7 @@ NTL::xdouble sampleGaussian(NTL::ZZX& poly,
                             const Context& context,
                             NTL::xdouble stdev)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   NTL::xdouble retval;
 
   if (palg.getPow2() == 0) { // not power of two
@@ -449,7 +444,7 @@ NTL::xdouble sampleGaussian(NTL::ZZX& poly,
 
 double sampleGaussianBoundedEffectiveBound(const Context& context)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   long m = palg.getM();
   long phim = palg.getPhiM();
 
@@ -463,7 +458,7 @@ double sampleGaussianBoundedEffectiveBound(const Context& context)
 // Same as above, but ensure the result is not too much larger than typical
 double sampleGaussianBounded(zzX& poly, const Context& context, double stdev)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
 
   double bound = stdev * sampleGaussianBoundedEffectiveBound(context);
 
@@ -517,7 +512,7 @@ NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly,
                                    const Context& context,
                                    NTL::xdouble stdev)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
 
   NTL::xdouble bound = stdev * sampleGaussianBoundedEffectiveBound(context);
 
@@ -539,7 +534,7 @@ NTL::xdouble sampleGaussianBounded(NTL::ZZX& poly,
 
 double sampleUniform(zzX& poly, const Context& context, long B)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   double retval;
 
   if (palg.getPow2() == 0) { // not power of two
@@ -560,7 +555,7 @@ NTL::xdouble sampleUniform(NTL::ZZX& poly,
                            const Context& context,
                            const NTL::ZZ& B)
 {
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
   NTL::xdouble retval;
 
   if (palg.getPow2() == 0) { // not power of two

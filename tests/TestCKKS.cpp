@@ -164,28 +164,32 @@ protected:
       r(GetParam().r),
       L(GetParam().L),
       epsilon(GetParam().epsilon),
-      context(m, /*p=*/-1, r),
-      secretKey((context.scale = 4,
-                 helib::buildModChain(context, L, /*c=*/2),
-                 context)),
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(m)
+                  .precision(r)
+                  .scale(4)
+                  .bits(L)
+                  .c(2)
+                  .build()),
+      secretKey(context),
       publicKey((secretKey.GenSecKey(),
                  helib::addSome1DMatrices(secretKey),
                  helib::addSomeFrbMatrices(secretKey),
                  secretKey)),
-      ea(context.ea->getCx())
+      ea(context.getEA().getCx())
   {}
 
   virtual void SetUp() override
   {
     if (helib_test::verbose) {
       ea.getPAlgebra().printout();
-      std::cout << "r = " << context.alMod.getR() << std::endl;
-      std::cout << "ctxtPrimes=" << context.ctxtPrimes
-                << ", specialPrimes=" << context.specialPrimes << std::endl
+      std::cout << "r = " << context.getAlMod().getR() << std::endl;
+      std::cout << "ctxtPrimes=" << context.getCtxtPrimes()
+                << ", specialPrimes=" << context.getSpecialPrimes() << "\n"
                 << std::endl;
     }
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
@@ -611,7 +615,10 @@ TEST_P(TestCKKS, multiplyBySmallNegativeConstantFollowedByOperationWorks)
 
 TEST(TestCKKS, buildingCKKSContextWithMAsNotAPowerOfTwoThrows)
 {
-  EXPECT_THROW(helib::Context context(99, -1, 20), helib::InvalidArgument);
+  EXPECT_THROW(
+      helib::Context context(
+          helib::ContextBuilder<helib::CKKS>().m(99).precision(20).build()),
+      helib::InvalidArgument);
 }
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,

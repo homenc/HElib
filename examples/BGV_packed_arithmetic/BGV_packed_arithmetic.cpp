@@ -50,14 +50,16 @@ int main(int argc, char* argv[])
   // Initialize context
   // This object will hold information about the algebra created from the
   // previously set parameters
-  helib::Context context(m, p, r);
-  // Modify the context, adding primes to the modulus chain
-  // This defines the ciphertext space
-  std::cout << "Building modulus chain..." << std::endl;
-  buildModChain(context, bits, c);
+  helib::Context context = helib::ContextBuilder<helib::BGV>()
+                               .m(m)
+                               .p(p)
+                               .r(r)
+                               .bits(bits)
+                               .c(c)
+                               .build();
 
   // Print the context
-  context.zMStar.printout();
+  context.printout();
   std::cout << std::endl;
 
   // Print the security level
@@ -78,7 +80,7 @@ int main(int argc, char* argv[])
   const helib::PubKey& public_key = secret_key;
 
   // Get the EncryptedArray of the context
-  const helib::EncryptedArray& ea = *(context.ea);
+  const helib::EncryptedArray& ea = context.getEA();
 
   // Get the number of slot (phi(m))
   long nslots = ea.size();

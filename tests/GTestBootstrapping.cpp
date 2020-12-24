@@ -254,31 +254,34 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
   helib::setDryRun(false); // Need to get a "real context" to test bootstrapping
 
   double t = -NTL::GetTime();
-  helib::Context context(m, p, r, gens, ords);
+  helib::ContextBuilder<helib::BGV> cb;
+  cb.m(m).p(p).r(r).gens(gens).ords(ords);
   if (scale) {
-    context.scale = scale;
+    cb.scale(scale);
   }
+  helib::Context context = cb.buildModChain(false).build();
 
-  context.zMStar.set_cM(mValues[idx][13] / 100.0);
-  helib::buildModChain(context,
-                       L,
-                       c,
-                       /*willBeBootstrappable=*/true,
-                       /*t=*/skHwt);
+  context.buildModChain(L,
+                        c,
+                        /*willBeBootstrappable=*/true,
+                        /*t=*/skHwt);
 
   if (!helib_test::noPrint) {
     std::cout << "security=" << context.securityLevel() << std::endl;
-    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
-    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+    std::cout << "# small primes = " << context.getSmallPrimes().card() << "\n";
+    std::cout << "# ctxt primes = " << context.getCtxtPrimes().card() << "\n";
     std::cout << "# bits in ctxt primes = "
-              << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) + 0.5)
-              << "\n";
-    std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
-    std::cout << "# bits in special primes = "
-              << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+              << long(context.logOfProduct(context.getCtxtPrimes()) / log(2.0) +
                       0.5)
               << "\n";
-    std::cout << "scale=" << context.scale << std::endl;
+    std::cout << "# special primes = " << context.getSpecialPrimes().card()
+              << "\n";
+    std::cout << "# bits in special primes = "
+              << long(context.logOfProduct(context.getSpecialPrimes()) /
+                          log(2.0) +
+                      0.5)
+              << "\n";
+    std::cout << "scale=" << context.getScale() << std::endl;
   }
 
   // FIXME: The willBeBootstrappable flag is a hack, used to bypass the
@@ -291,14 +294,15 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
   // if (skHwt>0) context.rcData.skHwt = skHwt;
   if (!helib_test::noPrint) {
     std::cout << " done in " << t << " seconds\n";
-    std::cout << "  e=" << context.rcData.e << ", e'=" << context.rcData.ePrime
-              << ", t=" << context.rcData.skHwt << "\n  ";
-    context.zMStar.printout();
+    std::cout << "  e=" << context.getRcData().e
+              << ", e'=" << context.getRcData().ePrime
+              << ", t=" << context.getRcData().skHwt << "\n";
+    context.printout();
   }
   helib::setDryRun(
       helib_test::dry); // Now we can set the dry-run flag if desired
 
-  long p2r = context.alMod.getPPowR();
+  long p2r = context.getAlMod().getPPowR();
 
   for (long numkey = 0; numkey < OUTER_REP; numkey++) { // test with 3 keys
 
@@ -319,9 +323,9 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
       std::cout << " done in " << t << " seconds\n";
 
     NTL::zz_p::init(p2r);
-    NTL::zz_pX poly_p = NTL::random_zz_pX(context.zMStar.getPhiM());
+    NTL::zz_pX poly_p = NTL::random_zz_pX(context.getPhiM());
     helib::PowerfulConversion pConv(
-        context.rcData.p2dConv->getIndexTranslation());
+        context.getRcData().p2dConv->getIndexTranslation());
     helib::HyperCube<NTL::zz_p> powerful(pConv.getShortSig());
     pConv.polyToPowerful(powerful, poly_p);
     NTL::ZZX ptxt_poly = NTL::conv<NTL::ZZX>(poly_p);

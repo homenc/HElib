@@ -146,15 +146,15 @@ protected:
         std::cout << "  using " << NTL::AvailableThreads() << " threads\n";
       std::cout << "computing key-independent tables..." << std::flush;
     }
-    buildModChain(context, L, c, /*willBeBootstrappable=*/bootstrap);
+    context.buildModChain(L, c, /*willBeBootstrappable=*/bootstrap);
     if (bootstrap) {
       context.enableBootStrapping(mvec);
     }
-    buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
+    buildUnpackSlotEncoding(unpackSlotEncoding, context.getEA());
 
     if (helib_test::verbose) {
       std::cout << " done.\n";
-      context.zMStar.printout();
+      context.printout();
     }
 
     return context;
@@ -204,8 +204,16 @@ protected:
       ords(calculateOrds(vals)),
       c(vals[14]),
       L(calculateLevels(bootstrap, bitSize)),
-      context(m, p, /*r=*/1, gens, ords),
-      secKey(prepareContext(context)){};
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(1)
+                  .gens(gens)
+                  .ords(ords)
+                  .buildModChain(false)
+                  .build()),
+      secKey(prepareContext(context))
+  {}
 
   void SetUp() override
   {
@@ -218,7 +226,7 @@ protected:
 
     helib::activeContext = &context; // make things a little easier sometimes
 
-    helib::setupDebugGlobals(&secKey, context.ea);
+    helib::setupDebugGlobals(&secKey, context.shareEA());
   };
 
   virtual void TearDown() override
@@ -241,7 +249,7 @@ constexpr long GTestBinaryCompare::mValues[5][15];
 
 TEST_P(GTestBinaryCompare, comparison)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
 
   // Choose two random n-bit integers
   long pa = NTL::RandomBits_long(bitSize);
@@ -348,7 +356,7 @@ TEST_P(GTestBinaryCompare, comparison)
 TEST_P(GTestBinaryCompare,
        comparingTwoPositiveNumbersInTwosComplementWorksCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
 
   // Choose random n-bit numbers in 2's complement
   long pa = NTL::RandomBits_long(bitSize - 1);
@@ -422,7 +430,7 @@ TEST_P(GTestBinaryCompare,
 TEST_P(GTestBinaryCompare,
        comparingTwoNegativeNumbersInTwosComplementWorksCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
 
   // Choose random n-bit numbers in 2's complement
   long pa_data = NTL::RandomBits_long(bitSize - 1);
@@ -500,7 +508,7 @@ TEST_P(GTestBinaryCompare,
 TEST_P(GTestBinaryCompare,
        comparingNegativeAndPositiveNumbersInTwosComplementWorksCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
 
   // Choose random n-bit numbers in 2's complement
   long pa_data = NTL::RandomBits_long(bitSize - 1);

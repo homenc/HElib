@@ -14,6 +14,11 @@ cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 
 project(helib_superbuild LANGUAGES C CXX)
 
+# STRINGS avoids having the 2 newline characters at the end of the string.
+# Alternatively it's possible to use file(READ ...) and then
+# string(REGEX REPLACE "\n$" "" HELIB_VERSION "${HELIB_VERSION}")
+file(STRINGS "${PROJECT_SOURCE_DIR}/VERSION" HELIB_VERSION)
+
 # Fail if the target architecture is not 64-bit.
 if (NOT (CMAKE_SIZEOF_VOID_P EQUAL 8))
   message(FATAL_ERROR "HElib requires a 64-bit architecture.")
@@ -43,6 +48,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 
+# Location of the root folder of HElib (the one where this file is)
+set(HELIB_PROJECT_ROOT_DIR "${PROJECT_SOURCE_DIR}")
 # Location of the cmake extra files
 set(HELIB_CMAKE_EXTRA_DIR "${PROJECT_SOURCE_DIR}/cmake")
 # Prefix of the header files (directory to be added to the include list)
@@ -53,6 +60,8 @@ set(HELIB_HEADER_DIR "${HELIB_INCLUDE_DIR}/helib")
 set(HELIB_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 # Location of the google tests
 set(HELIB_TESTS_DIR "${PROJECT_SOURCE_DIR}/tests")
+# Location of the dependencies
+set(HELIB_DEPENDENCIES_DIR "${PROJECT_SOURCE_DIR}/dependencies")
 # Location of the directory containing the test binary (runTests). If
 # PACKAGE_BUILD=ON, this location will be changed to reflect the tests location.
 set(HELIB_TEST_BIN_DIR "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
@@ -325,11 +334,14 @@ if (PACKAGE_BUILD)
                -DFETCH_GMP=${FETCH_GMP}
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
+               -DHELIB_PROJECT_ROOT_DIR=${HELIB_PROJECT_ROOT_DIR}
                -DHELIB_CMAKE_EXTRA_DIR=${HELIB_CMAKE_EXTRA_DIR}
                -DHELIB_INCLUDE_DIR=${HELIB_INCLUDE_DIR}
                -DHELIB_HEADER_DIR=${HELIB_HEADER_DIR}
                -DHELIB_SOURCE_DIR=${HELIB_SOURCE_DIR}
                -DHELIB_TESTS_DIR=${HELIB_TESTS_DIR}
+               -DHELIB_DEPENDENCIES_DIR=${HELIB_DEPENDENCIES_DIR}
+               -DHELIB_VERSION=${HELIB_VERSION}
     BUILD_ALWAYS ON)
 
     if (ENABLE_TEST)

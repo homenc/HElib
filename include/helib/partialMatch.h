@@ -170,14 +170,14 @@ inline Matrix<TXT> calculateScores(
  **/
 inline PolyMod partialMatchEncode(uint32_t input, const Context& context)
 {
-  const long p = context.zMStar.getP();
-  std::vector<long> coeffs(context.zMStar.getOrdP());
+  const long p = context.getP();
+  std::vector<long> coeffs(context.getOrdP());
   // TODO - shouldn't keep checking input.
   for (long i = 0; i < long(coeffs.size()) && input != 0; ++i) {
     coeffs[i] = input % p;
     input /= p;
   }
-  return PolyMod(coeffs, context.slotRing);
+  return PolyMod(coeffs, context.getSlotRing());
 }
 
 struct Expr;
@@ -609,7 +609,7 @@ inline Matrix<TXT2> Database<TXT>::contains(
   if (lookup_query.containsOR) {
     // FLT on the scores
     result.apply([&](auto& txt) {
-      txt.power(context->alMod.getPPowR() - 1);
+      txt.power(context->getAlMod().getPPowR() - 1);
       return txt;
     });
   }
@@ -623,7 +623,7 @@ inline Matrix<TXT2> Database<TXT>::getScore(
     const Query_t& weighted_query,
     const Matrix<TXT2>& query_data) const
 {
-  auto mask = calculateMasks(*(context->ea), query_data, this->data);
+  auto mask = calculateMasks(context->getEA(), query_data, this->data);
 
   auto result = calculateScores(weighted_query.Fs,
                                 weighted_query.mus,

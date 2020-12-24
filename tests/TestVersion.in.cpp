@@ -25,7 +25,7 @@ namespace {
 std::tuple<int, int, int, std::string> readVersionFromCmakeFile()
 {
   // File will be in src/, we are in tests/
-  const std::string cmakeFilePath = "@HELIB_SOURCE_DIR@/CMakeLists.txt";
+  const std::string cmakeFilePath = "@HELIB_PROJECT_ROOT_DIR@/VERSION";
 
   // Slurp the file. It isn't a large file.
   std::string fileStr;
@@ -42,24 +42,22 @@ std::tuple<int, int, int, std::string> readVersionFromCmakeFile()
 
   // Find the version.
   // e.g.
-  // project(helib
-  //         VERSION x.y.z
-  //         LANGUAGES CXX)
+  // x.y.z
 
   std::regex re_version(
-      R"(project[\s\S]*?helib[\s\S]*?VERSION[\s\S]*?((\d+)\.(\d+)\.(\d)))");
+      R"((\d+)\.(\d+)\.(\d))");
   std::smatch match;
   std::regex_search(fileStr, match, re_version);
-  if (match.size() < 5) {
+  if (match.size() != 4) {
     std::ostringstream oss;
-    oss << "Expected 5 matches, got " << match.size() << ".";
+    oss << "Expected 4 matches, got " << match.size() << ".";
     throw std::runtime_error(oss.str());
   }
 
-  return std::tuple<int, int, int, std::string>(std::stoi(match[2]),
+  return std::tuple<int, int, int, std::string>(std::stoi(match[1]),
+                                                std::stoi(match[2]),
                                                 std::stoi(match[3]),
-                                                std::stoi(match[4]),
-                                                "v" + match[1].str());
+                                                match[0].str());
 }
 
 TEST(TestVersion, versionMatchesThatFoundInCMakelists)

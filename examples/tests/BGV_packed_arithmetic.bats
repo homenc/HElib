@@ -26,8 +26,8 @@ function teardown {
   remove-test-directory "$tmp_folder"
 }
 
-results=("[[0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0], [0]]"
-         "[[2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2], [2]]")
+results=("{\"HElibVersion\":\"$(helib_version)\",\"content\":{\"scheme\":\"BGV\",\"slots\":[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]},\"serializationVersion\":\"0.0.1\",\"type\":\"Ptxt\"}"
+         "{\"HElibVersion\":\"$(helib_version)\",\"content\":{\"scheme\":\"BGV\",\"slots\":[[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2],[2]]},\"serializationVersion\":\"0.0.1\",\"type\":\"Ptxt\"}")
 
 @test "BGV_packed_arithmetic works" {
   run $BGV_packed_arithmetic 

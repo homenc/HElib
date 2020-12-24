@@ -417,7 +417,7 @@ int main(int argc, char* argv[])
     if (verbose) {
       std::cout << "security=" << context.securityLevel() << endl;
       ea.getPAlgebra().printout();
-      cout << "r = " << context.alMod.getR() << endl;
+      cout << "r = " << context.getAlMod().getR() << endl;
       cout << "ctxtPrimes=" << context.ctxtPrimes
            << ", specialPrimes=" << context.specialPrimes << endl
            << endl;

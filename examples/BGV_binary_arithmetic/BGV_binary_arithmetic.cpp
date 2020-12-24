@@ -64,22 +64,20 @@ int main(int argc, char* argv[])
   // Initialize the context.
   // This object will hold information about the algebra created from the
   // previously set parameters.
-  helib::Context context(m, p, r, gens, ords);
-
-  // Modify the context, adding primes to the modulus chain.
-  // This defines the ciphertext space.
-  std::cout << "Building modulus chain..." << std::endl;
-  buildModChain(context, bits, c, /*willBeBootstrappable=*/true);
-
-  // Make bootstrappable.
-  // Modify the context, providing bootstrapping capabilities.
-  // Boostrapping has the affect of 'refreshing' a ciphertext back to a higher
-  // level so more operations can be performed.
-  context.enableBootStrapping(
-      helib::convert<NTL::Vec<long>, std::vector<long>>(mvec));
+  helib::Context context = helib::ContextBuilder<helib::BGV>()
+                               .m(m)
+                               .p(p)
+                               .r(r)
+                               .gens(gens)
+                               .ords(ords)
+                               .bits(bits)
+                               .c(c)
+                               .bootstrappable(true)
+                               .mvec(mvec)
+                               .build();
 
   // Print the context.
-  context.zMStar.printout();
+  context.printout();
   std::cout << std::endl;
 
   // Print the security level.
@@ -100,7 +98,7 @@ int main(int argc, char* argv[])
   const helib::PubKey& public_key = secret_key;
 
   // Get the EncryptedArray of the context.
-  const helib::EncryptedArray& ea = *(context.ea);
+  const helib::EncryptedArray& ea = context.getEA();
 
   // Build the unpack slot encoding.
   std::vector<helib::zzX> unpackSlotEncoding;

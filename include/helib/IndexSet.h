@@ -18,6 +18,8 @@
 
 #include <helib/NumbTh.h>
 
+#include <helib/JsonWrapper.h>
+
 namespace helib {
 
 //! @brief A dynamic set of non-negative integers.
@@ -29,11 +31,9 @@ namespace helib {
 //! \endcode
 class IndexSet
 {
-
   std::vector<bool> rep;
   // NOTE: modern versions of C++ are supposed
   // to implement this efficiently as a "specialized template class".
-  // Older versions of C++ define the equivalent class bit_std::vector.
 
   long _first, _last, _card;
 
@@ -121,8 +121,48 @@ public:
   bool isInterval() const { return (_card == (1 + _last - _first)); }
 
   /*** raw IO ***/
-  void read(std::istream& str);
-  void write(std::ostream& str) const;
+
+  /**
+   * @brief Write out the `IndexSet` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `IndexSet` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `IndexSet` object.
+   **/
+  static IndexSet readFrom(std::istream& str);
+
+  /**
+   * @brief Write out the `IndexSet` object to the output stream using
+   * JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the `IndexSet` object to a `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized `IndexSet` object using JSON
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `IndexSet` object.
+   **/
+  static IndexSet readFromJSON(std::istream& str);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized `IndexSet` object.
+   * @param j The `JsonWrapper` containing the serialized `IndexSet` object.
+   * @return The deserialized `IndexSet` object.
+   **/
+  static IndexSet readFromJSON(const JsonWrapper& j);
 
   /*** code to allow one to write "for (long i: set)" ***/
 
@@ -132,6 +172,7 @@ public:
 
   public:
     long operator*() const { return i_; }
+
     iterator& operator++()
     {
       i_ = s_.next(i_);
@@ -157,8 +198,7 @@ public:
   iterator end() const { return iterator(*this, this->last() + 1); }
 };
 
-// some high-level convenience methods...not very efficient...
-// not sure if we really need these
+// some high-level convenience methods.
 
 //! @brief union
 IndexSet operator|(const IndexSet& s, const IndexSet& t);
