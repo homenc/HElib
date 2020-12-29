@@ -468,10 +468,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext(),
-                       q);
+    checkRecryptBounds(zzParts, dbgKey->getRecryptKey(), ctxt.getContext(), q);
   }
 #endif
 
@@ -487,10 +484,10 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
+    checkRecryptBounds_v(v, dbgKey->getRecryptKey(), ctxt.getContext(), q);
     checkCriticalValue(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext().rcData,
+                       dbgKey->getRecryptKey(),
+                       ctxt.getContext().getRcData(),
                        q);
   }
 #endif
@@ -1066,10 +1063,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext(),
-                       q);
+    checkRecryptBounds(zzParts, dbgKey->getRecryptKey(), ctxt.getContext(), q);
   }
 #endif
 
@@ -1085,9 +1079,9 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
+    checkRecryptBounds_v(v, dbgKey->getRecryptKey(), ctxt.getContext(), q);
     checkCriticalValue(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
+                       dbgKey->getRecryptKey(),
                        ctxt.getContext().getRcData(),
                        q);
   }
@@ -1202,7 +1196,7 @@ static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
                                  const Context& context,
                                  UNUSED long q)
 {
-  const RecryptData& rcData = context.rcData;
+  const RecryptData& rcData = context.getRcData();
 
   long p = context.getP();
   long e = rcData.e;

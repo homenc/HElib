@@ -391,6 +391,12 @@ public:
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();
 
+  /**
+   * @brief Getter method for the recryption key.
+   * @return A `const` reference to the recryption key.
+   **/
+  const DoubleCRT& getRecryptKey() const { return sKeys[recryptKeyID]; }
+
   friend std::ostream& operator<<(std::ostream& str, const SecKey& sk);
   friend std::istream& operator>>(std::istream& str, SecKey& sk);
 

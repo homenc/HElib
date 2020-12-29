@@ -333,7 +333,7 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
 
 #ifdef HELIB_DEBUG
     // debugging key and ea // EA for plaintext space p^{e+r-e'}
-    helib::setupDebugGlobals(&secretKey, context.rcData.ea, ptxt_poly);
+    helib::setupDebugGlobals(&secretKey, context.getRcData().ea, ptxt_poly);
     if (helib::dbgEa->size() > 100)
       helib::printFlag = 0; // don't print too many slots
 #endif
