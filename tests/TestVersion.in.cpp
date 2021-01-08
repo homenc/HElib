@@ -44,8 +44,7 @@ std::tuple<int, int, int, std::string> readVersionFromCmakeFile()
   // e.g.
   // x.y.z
 
-  std::regex re_version(
-      R"((\d+)\.(\d+)\.(\d))");
+  std::regex re_version(R"((\d+)\.(\d+)\.(\d))");
   std::smatch match;
   std::regex_search(fileStr, match, re_version);
   if (match.size() != 4) {

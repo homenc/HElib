@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,15 +16,30 @@
 
 namespace {
 
-static std::string penultimateLine(std::istream& is)
+// Find matching line in file. Match substr. Currently, just scans file.
+// Fine as for test log files will be relatively small.
+static bool findMatchingLine(std::istream& is, const std::string& str)
 {
   std::string line;
-  std::string penultimateLine;
-  while (!is.eof()) {
-    penultimateLine = line;
-    std::getline(is, line);
+  while (std::getline(is, line)) {
+    if (line.find(str) != std::string::npos) {
+      return true;
+    }
   }
-  return penultimateLine;
+  return false;
+}
+
+// Similar to findMatchingLine above however it looks for s1 first and if found
+// continues to look for s2. so s1 comes before s2.
+static bool findMatchingLines(std::istream& is,
+                              const std::string& s1,
+                              const std::string& s2)
+{
+  if (findMatchingLine(is, s1)) {
+    return findMatchingLine(is, s2);
+  }
+
+  return false;
 }
 
 // First we run the tests that do not change the default `ostream`.
@@ -34,18 +49,12 @@ TEST(TestLogging, testWarningToDefaultLogfile)
 {
   const char* filepath = "helib.log";
 
-  helib::Warning("Warning message!");
+  const std::string warningMsg = "Warning message 900!";
+  helib::Warning(warningMsg);
   std::ifstream filestream(filepath);
 
   ASSERT_TRUE(filestream);
-
-  std::string warningMsg;
-
-  // The default file will append so need to check last line.
-  // Technically the penultimate as the last line is blank due to a final '\n'.
-  warningMsg = penultimateLine(filestream);
-
-  EXPECT_EQ("WARNING: Warning message!", warningMsg);
+  EXPECT_TRUE(findMatchingLine(filestream, warningMsg));
 
   // Should not really delete the default log file
 }
@@ -58,16 +67,12 @@ TEST(TestLogging, testWarningToSetLogfile)
 
   helib::helog.setLogToFile(filepath);
 
-  helib::Warning("Warning message!");
+  const std::string warningMsg = "Warning message 700!";
+  helib::Warning(warningMsg);
   std::ifstream filestream(filepath);
 
   ASSERT_TRUE(filestream);
-
-  std::string warningMsg;
-  std::getline(filestream, warningMsg);
-
-  EXPECT_EQ("WARNING: Warning message!", warningMsg);
-
+  EXPECT_TRUE(findMatchingLine(filestream, warningMsg));
   ASSERT_FALSE(std::remove(filepath));
 }
 
@@ -79,27 +84,19 @@ TEST(TestLogging, testWarningToSetLogfileAppend)
   std::ofstream fout(filepath);
 
   ASSERT_TRUE(fout);
-
-  fout << "This line was first.\n";
+  const std::string firstLine = "This line was first.";
+  fout << firstLine << std::endl;
   fout.close();
 
   // Now set helib to it.
   helib::helog.setLogToFile(filepath);
 
-  helib::Warning("Warning message!");
+  const std::string warningMsg = "Warning message 600!";
+  helib::Warning(warningMsg);
   std::ifstream filestream(filepath);
 
   ASSERT_TRUE(filestream);
-
-  std::string warningMsg;
-  std::getline(filestream, warningMsg);
-
-  EXPECT_EQ("This line was first.", warningMsg);
-
-  std::getline(filestream, warningMsg);
-
-  EXPECT_EQ("WARNING: Warning message!", warningMsg);
-
+  ASSERT_TRUE(findMatchingLines(filestream, firstLine, warningMsg));
   ASSERT_FALSE(std::remove(filepath));
 }
 
@@ -111,24 +108,22 @@ TEST(TestLogging, testWarningToSetLogfileOverwrite)
   std::ofstream fout(filepath);
 
   ASSERT_TRUE(fout);
-
-  fout << "This line was first.\n";
+  const std::string firstLine = "This line was first.";
+  fout << firstLine << std::endl;
   fout.close();
 
   // Now set helib to it.
   helib::helog.setLogToFile(filepath, true);
 
-  helib::Warning("Warning message!");
+  const std::string warningMsg = "Warning message 500!";
+  helib::Warning(warningMsg);
   std::ifstream filestream(filepath);
 
   ASSERT_TRUE(filestream);
-
-  std::string warningMsg;
-  std::getline(filestream, warningMsg);
-
-  EXPECT_NE("This line was first.", warningMsg);
-  EXPECT_EQ("WARNING: Warning message!", warningMsg);
-
+  ASSERT_FALSE(findMatchingLine(filestream, firstLine));
+  filestream.clear();  // clear stream flags.
+  filestream.seekg(0); // file reset.
+  ASSERT_TRUE(findMatchingLine(filestream, warningMsg));
   ASSERT_FALSE(std::remove(filepath));
 }
 
@@ -142,12 +137,13 @@ TEST(TestLogging, testWarningToStderr)
   std::streambuf* sbuf = std::cerr.rdbuf();
   std::cerr.rdbuf(capturedStderr.rdbuf());
 
-  helib::Warning("Warning message!");
+  const std::string warningMsg = "Warning message 400!";
+  helib::Warning(warningMsg);
 
   // Reset std cerr buffer
   std::cerr.rdbuf(sbuf);
 
-  EXPECT_EQ("WARNING: Warning message!\n", capturedStderr.str());
+  EXPECT_TRUE(capturedStderr.str().find(warningMsg) != std::string::npos);
 }
 
 } // namespace
