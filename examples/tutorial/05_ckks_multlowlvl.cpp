@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -9,11 +9,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
-#include <helib/helib.h>
-
-using namespace std;
-using namespace helib;
 
 // In the CKKS encryption scheme (as well as in BGV), ciphertext multiplication
 // is a two-step process.  The operation ctxt1 *= ctxt2 is equivalent to the
@@ -30,15 +25,15 @@ using namespace helib;
 // can sometimes be exploited to achieve significant speedups, as illustrated
 // here.
 
+#include <helib/helib.h>
+
+using namespace std;
+using namespace helib;
+
 int main(int argc, char* argv[])
 {
   Context context =
-      ContextBuilder<CKKS>()
-          .m(16 * 1024)
-          .bits(119)
-          .precision(20)
-          .c(2)
-          .build();
+      ContextBuilder<CKKS>().m(16 * 1024).bits(119).precision(20).c(2).build();
 
   cout << "securityLevel=" << context.securityLevel() << "\n";
 

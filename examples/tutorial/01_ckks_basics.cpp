@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,11 +10,6 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include <helib/helib.h>
-
-using namespace std;
-using namespace helib;
-
 // In the CKKS encryption scheme, plaintexts are vectors of real or complex
 // numbers.  The length, n, of these vectors is determined by the choice of
 // parameters, as discussed below.  We often refer to the components of these
@@ -24,11 +19,16 @@ using namespace helib;
 // means Single Instruction Multiple Data), since we can effectively perform
 // the same scalar operation in parallel on all n slots.
 
+#include <helib/helib.h>
+
+using namespace std;
+using namespace helib;
+
 int main(int argc, char* argv[])
 {
   // To get started, we need to choose some parameters.  This is done by
   // initializing a Context object.  Since there are a lot of parameters, many
-  // of them optional, HElib provides a "builder pattern" then lets you provide
+  // of them optional, HElib provides a "builder pattern" than lets you provide
   // these parameters "by name".
 
   Context context =
@@ -194,6 +194,9 @@ int main(int argc, char* argv[])
   // When this is done, if we denote the i-th slot of a ciphertext c by c[i],
   // then we have c3[i] = c0[i]*c1[i] + c2[i]*1.5 for i = 0..n-1.
 
+  // More generally, for a Ctxt c, one can perform c *= d, c += d, or c -= d,
+  // where d can be (among other things) a long, a double, or even a PtxtArray.
+
   //===========================================================================
 
   // Next we decrypt c3.
@@ -220,7 +223,7 @@ int main(int argc, char* argv[])
 
   // Then, we compute the distance between p3 (computed on plaintexts) and pp3
   // (computed homomorphically on ciphertexts). This is computed as
-  //  max{ |p3[i]-pp3[i]| : i = 0..n-1 }
+  // max{ |p3[i]-pp3[i]| : i = 0..n-1 }
   double distance = Distance(p3, pp3);
 
   cout << "distance=" << distance << "\n";

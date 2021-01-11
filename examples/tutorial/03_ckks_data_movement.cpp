@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,24 +10,19 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+// In the CKKS encryption scheme, besides SIMD operations that act on the slots
+// of a ciphertext in parallel, it is also possible to move data around among
+// the slots of a ciphertext.
+
 #include <helib/helib.h>
 
 using namespace std;
 using namespace helib;
 
-// In the CKKS encryption scheme, besides SIMD operations that act on the slots
-// of a ciphertext in parallel, it is also possible to move data around among
-// the slots of a ciphertext.
-
 int main(int argc, char* argv[])
 {
   Context context =
-      ContextBuilder<CKKS>()
-        .m(32 * 1024)
-        .bits(358)
-        .precision(30)
-        .c(6)
-        .build();
+      ContextBuilder<CKKS>().m(32 * 1024).bits(358).precision(30).c(6).build();
 
   cout << "securityLevel=" << context.securityLevel() << "\n";
 

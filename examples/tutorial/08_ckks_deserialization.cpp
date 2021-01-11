@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -34,18 +34,22 @@
 int main(int argc, char* argv[])
 {
   // CKKS context created with a builder.
-  helib::Context CKKSContext = helib::ContextBuilder<helib::CKKS>()
-                                   .m(128)
-                                   .precision(20)
-                                   .bits(30)
-                                   .c(3)
-                                   .build();
+  helib::Context context = helib::ContextBuilder<helib::CKKS>()
+                               .m(128)
+                               .precision(20)
+                               .bits(30)
+                               .c(3)
+                               .build();
+
+  // NOTE These chosen parameters are for demonstration only. They do not the
+  // provide security level that might be required for real use/application
+  // scenarios.
 
   std::ofstream outContextFile;
   outContextFile.open("context.json", std::ios::out);
   if (outContextFile.is_open()) {
     // Write the context to a file
-    CKKSContext.writeToJSON(outContextFile);
+    context.writeToJSON(outContextFile);
     // Close the ofstream
     outContextFile.close();
   } else {
@@ -68,7 +72,7 @@ int main(int argc, char* argv[])
   std::remove("context.json");
 
   // Create a secret key associated with the CKKS context
-  helib::SecKey secretKey(CKKSContext);
+  helib::SecKey secretKey(context);
 
   // Generate the secret key
   secretKey.GenSecKey();
@@ -92,10 +96,10 @@ int main(int argc, char* argv[])
   if (inSecretKeyFile.is_open()) {
     // Read in the secret key from the file
     helib::SecKey deserializedSecretKey =
-        helib::SecKey::readFromJSON(inSecretKeyFile, CKKSContext);
+        helib::SecKey::readFromJSON(inSecretKeyFile, context);
     // Note there are alternative methods for deserialization of SecKey objects.
     // After initialization
-    // helib::SecKey deserializedSecretKey(CKKSContext);
+    // helib::SecKey deserializedSecretKey(context);
     // One can write
     // inSecretKeyFile >> deserializedSecretKey;
     // Or alternatively
@@ -129,10 +133,10 @@ int main(int argc, char* argv[])
   if (inPublicKeyFile.is_open()) {
     // Read in the public key from the file
     helib::PubKey deserializedPublicKey =
-        helib::PubKey::readFromJSON(inPublicKeyFile, CKKSContext);
+        helib::PubKey::readFromJSON(inPublicKeyFile, context);
     // Note there are alternative methods for deserialization of PubKey objects.
     // After initialization
-    // helib::PubKey deserializedPublicKey(CKKSContext);
+    // helib::PubKey deserializedPublicKey(context);
     // One can write
     // inPublicKeyFile >> deserializedPublicKey;
     // Or alternatively
@@ -147,18 +151,15 @@ int main(int argc, char* argv[])
   // inspect the file.
   std::remove("pk.json");
 
-  // Get the EncryptedArray of the context
-  const helib::EncryptedArray& ea = CKKSContext.getEA();
-
   // Create a Ptxt data object
-  std::vector<long> data(ea.size());
+  std::vector<long> data(context.getNSlots());
 
   // Generate some data
   std::iota(data.begin(), data.end(), 0);
 
   // Create a ptxt. Note that in this tutorial we make use of the
   // alternative ptxt API.
-  helib::Ptxt<helib::CKKS> ptxt(CKKSContext, data);
+  helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   std::ofstream outPtxtFile;
   outPtxtFile.open("ptxt.json", std::ios::out);
@@ -176,7 +177,7 @@ int main(int argc, char* argv[])
   if (inPtxtFile.is_open()) {
     // Read in the ptxt from the file
     helib::Ptxt<helib::CKKS> deserializedPtxt =
-        helib::Ptxt<helib::CKKS>::readFromJSON(inPtxtFile, CKKSContext);
+        helib::Ptxt<helib::CKKS>::readFromJSON(inPtxtFile, context);
     // Note there are alternative methods for deserialization of Ptxt objects.
     // After initialization
     // helib::Ptxt<helib::CKKS> deserializedPtxt(publicKey);
@@ -198,7 +199,7 @@ int main(int argc, char* argv[])
   helib::Ctxt ctxt(publicKey);
 
   // Encrypt `data` into the ciphertext
-  ea.getCx().encrypt(ctxt, publicKey, data);
+  publicKey.Encrypt(ctxt, ptxt);
 
   std::ofstream outCtxtFile;
   outCtxtFile.open("ctxt.json", std::ios::out);

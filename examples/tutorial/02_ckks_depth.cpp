@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -38,15 +38,15 @@ using namespace helib;
 // Given a ciphertext c, one can obtain its capacity by invoking c.capacity(),
 // and one can obtain a bound on its absolute error by invoking c.errorBound().
 
+#include <helib/helib.h>
+
+using namespace std;
+using namespace helib;
+
 int main(int argc, char* argv[])
 {
   Context context =
-      ContextBuilder<CKKS>()
-          .m(32 * 1024)
-          .bits(358)
-          .precision(20)
-          .c(6)
-          .build();
+      ContextBuilder<CKKS>().m(32 * 1024).bits(358).precision(20).c(6).build();
 
   cout << "securityLevel=" << context.securityLevel() << "\n";
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -34,21 +34,25 @@
 int main(int argc, char* argv[])
 {
   // CKKS context created with a builder.
-  helib::Context CKKS_context = helib::ContextBuilder<helib::CKKS>()
-                                    .m(128)
-                                    .precision(20)
-                                    .bits(30)
-                                    .c(3)
-                                    .build();
+  helib::Context context = helib::ContextBuilder<helib::CKKS>()
+                               .m(128)
+                               .precision(20)
+                               .bits(30)
+                               .c(3)
+                               .build();
+
+  // NOTE These chosen parameters are for demonstration only. They do not the
+  // provide security level that might be required for real use/application
+  // scenarios.
 
   // Print context to stdout
   std::cout << "*** CKKS context:\n";
   // Below we pretty print the JSON. If you do not wish to pretty print an
-  // alternative is to call `CKKS_context.writeJSON(std::cout);`
-  std::cout << CKKS_context.writeToJSON().pretty() << std::endl;
+  // alternative is to call `context.writeJSON(std::cout);`
+  std::cout << context.writeToJSON().pretty() << std::endl;
 
   // Create a secret key associated with the CKKS context
-  helib::SecKey secret_key(CKKS_context);
+  helib::SecKey secret_key(context);
 
   // Generate the secret key
   secret_key.GenSecKey();
@@ -67,18 +71,15 @@ int main(int argc, char* argv[])
   std::cout << "\n\n*** Public Key:\n";
   std::cout << public_key.writeToJSON().pretty() << std::endl;
 
-  // Get the EncryptedArray of the context
-  const helib::EncryptedArray& ea = CKKS_context.getEA();
-
   // Create a Ptxt data object
-  std::vector<long> data(ea.size());
+  std::vector<long> data(context.getNSlots());
 
   // Generate some data
   std::iota(data.begin(), data.end(), 0);
 
   // Create a ptxt. Note that in this tutorial we make use of the
   // alternative ptxt API.
-  helib::Ptxt<helib::CKKS> ptxt(CKKS_context, data);
+  helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   // Print the ptxt to stdout
   std::cout << "\n\n*** Ptxt:\n";
@@ -88,7 +89,7 @@ int main(int argc, char* argv[])
   helib::Ctxt ctxt(public_key);
 
   // Encrypt `data` into the ciphertext
-  ea.getCx().encrypt(ctxt, public_key, data);
+  public_key.Encrypt(ctxt, ptxt);
 
   // Print the ctxt to stdout
   std::cout << "\n\n*** Ctxt:\n";

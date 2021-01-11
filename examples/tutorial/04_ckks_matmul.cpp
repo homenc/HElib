@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,15 +10,15 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+// In the CKKS encryption scheme, since a ciphertext encrypts a vector of
+// slots, it makes sense to multiply that vector by a matrix.  HElib provides
+// highly optimized routines for multiplying an encrypted vector by a plaintext
+// matrix.
+
 #include <helib/helib.h>
 
 using namespace std;
 using namespace helib;
-
-// In the CKKS encryption scheme, since a ciphertext encrypts a vector
-// of slots, it makes sense to multiply that vector by a matrix.
-// HElib provides highly optimized routines for multiplying
-// an encrypted vector by a plaintext matrix.
 
 // To use these routines, we need to include an extra file:
 #include <helib/matmul.h>
@@ -43,12 +43,7 @@ void printMemoryUsage() {}
 int main(int argc, char* argv[])
 {
   Context context =
-      ContextBuilder<CKKS>()
-          .m(16 * 1024)
-          .bits(119)
-          .precision(30)
-          .c(2)
-          .build();
+      ContextBuilder<CKKS>().m(16 * 1024).bits(119).precision(30).c(2).build();
 
   cout << "securityLevel=" << context.securityLevel() << "\n";
 
@@ -76,14 +71,15 @@ int main(int argc, char* argv[])
 
   //===========================================================================
 
-  // We define a plaintext matrix as follows:
+  // We define an n x n plaintext matrix as follows:
   MatMul_CKKS mat(context,
                   [n](long i, long j) { return ((i + j) % n) / double(n); });
 
   // Note that the second parameter of the MatMul_CKKS constructor is of type
   // std::function<double(long, long)>, meaning that it should be a
   // function-like object that takes two long's and returns a double.  In this
-  // example, the actual parameter is a C++ "lambda" object.
+  // example, the actual parameter is a C++ "lambda" object. In input (i, j),
+  // this should return the value of the matrix in row i and column j.
 
   // We now multiply ciphertext c by this matrix:
   c *= mat;
