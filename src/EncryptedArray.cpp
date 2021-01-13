@@ -19,6 +19,8 @@
 #include <helib/norms.h>
 #include <helib/exceptions.h>
 
+#include "io.h"
+
 namespace helib {
 
 EncryptedArrayBase* buildEncryptedArray(const Context& context,
@@ -545,6 +547,147 @@ void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
     ptr.make(CB, CBi);
     builder.move(ptr);
   } while (0);
+}
+
+// PtxtArray member functions
+
+void PtxtArray::writeToJSON(std::ostream& os) const
+{
+  executeRedirectJsonError<void>([&]() { os << this->writeToJSON(); });
+}
+
+JsonWrapper PtxtArray::writeToJSON() const
+{
+  auto body = [this]() {
+    json jslots;
+
+    if (ea.isCKKS()) {
+      // When it is CKKS
+      std::vector<std::complex<double>> data;
+      store(data);
+      jslots = data;
+    } else {
+      // When is it BGV
+      std::vector<NTL::ZZX> data;
+      store(data);
+      std::vector<std::vector<long>> slots(data.size());
+      for (std::size_t i = 0; i < data.size(); ++i) {
+        long deg = NTL::deg(data[i]);
+        if (deg == -1) {
+          slots[i].emplace_back(0);
+        }
+        for (long j = 0; j <= deg; ++j) {
+          slots[i].emplace_back(NTL::conv<long>(data[i][j]));
+        }
+      }
+      jslots = slots;
+    }
+
+    json j{{"scheme", (ea.isCKKS() ? "CKKS" : "BGV")}, {"slots", jslots}};
+
+    return wrap(toTypedJson<PtxtArray>(j));
+  };
+
+  return executeRedirectJsonError<JsonWrapper>(body);
+}
+
+PtxtArray PtxtArray::readFromJSON(std::istream& is, const Context& context)
+{
+  PtxtArray ret{context};
+  ret.readJSON(is);
+  return ret;
+}
+
+PtxtArray PtxtArray::readFromJSON(const JsonWrapper& tjw,
+                                  const Context& context)
+{
+  PtxtArray ret{context};
+  ret.readJSON(tjw);
+  return ret;
+}
+
+void PtxtArray::readJSON(std::istream& is)
+{
+  executeRedirectJsonError<void>([&]() {
+    json j;
+    is >> j;
+    this->readJSON(wrap(j));
+  });
+}
+
+void PtxtArray::readJSON(const JsonWrapper& tjw)
+{
+  auto body = [&]() {
+    json tj = unwrap(tjw);
+    json jslots;
+    // if the input is just an array short-circuit to slot deserialization
+    // (assuming there is no type-header).
+    if (tj.is_array()) {
+      jslots = tj;
+
+    } else {
+      json j = fromTypedJson<PtxtArray>(tj);
+
+      std::string expected_scheme{j.at("scheme").get<std::string>()};
+      assertTrue<IOError>(
+          expected_scheme == (ea.isCKKS() ? "CKKS" : "BGV"),
+          "Scheme mismatch in deserialization.\nExpected: " + expected_scheme +
+              ", actual: " + std::string(ea.isCKKS() ? "CKKS" : "BGV") + ".");
+
+      jslots = j.at("slots");
+
+      if (!jslots.is_array()) {
+        throw IOError("Slot content is not a JSON array");
+      }
+    }
+
+    if (static_cast<long>(jslots.size()) > this->getEA().size()) {
+      std::stringstream err_msg;
+      err_msg << "Cannot deserialize to PtxtArray: not enough slots.  "
+              << "Trying to deserialize " << jslots.size() << " elements.  "
+              << "Got " << this->getEA().size() << " slots.";
+      throw IOError(err_msg.str());
+    }
+
+    if (ea.isCKKS()) {
+      // Scheme is CKKS
+      this->load(jslots.get<std::vector<std::complex<double>>>());
+    } else {
+      // Scheme is BGV
+      auto json2data = [](const json& jslots) {
+        std::vector<NTL::ZZX> data;
+        data.reserve(jslots.size());
+        for (const auto& jslot : jslots) {
+          NTL::ZZX slot;
+          if (jslot.is_array()) {
+            for (std::size_t i = 0; i < jslot.size(); ++i) {
+              NTL::SetCoeff(slot, i, static_cast<long>(jslot[i]));
+            }
+          } else {
+            // Slot is a single number
+            slot = static_cast<long>(jslot);
+          }
+          data.emplace_back(slot);
+        }
+        return data;
+      };
+      this->load(json2data(jslots));
+    }
+  };
+
+  executeRedirectJsonError<void>(body);
+}
+
+std::istream& operator>>(std::istream& is, PtxtArray& pa)
+{
+  pa.readJSON(is);
+  return is;
+}
+
+std::ostream& operator<<(std::ostream& os, const PtxtArray& pa)
+{
+  pa.writeToJSON(os);
+  return os;
 }
 
 // Other functions...

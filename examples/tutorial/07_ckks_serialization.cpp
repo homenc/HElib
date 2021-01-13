@@ -71,15 +71,14 @@ int main(int argc, char* argv[])
   std::cout << "\n\n*** Public Key:\n";
   std::cout << public_key.writeToJSON().pretty() << std::endl;
 
-  // Create a Ptxt data object
+  // Create a data object
   std::vector<long> data(context.getNSlots());
 
   // Generate some data
   std::iota(data.begin(), data.end(), 0);
 
-  // Create a ptxt. Note that in this tutorial we make use of the
-  // alternative ptxt API.
-  helib::Ptxt<helib::CKKS> ptxt(context, data);
+  // Create a PtxtArray.
+  helib::PtxtArray ptxt(context, data);
 
   // Print the ptxt to stdout
   std::cout << "\n\n*** Ptxt:\n";
@@ -89,7 +88,7 @@ int main(int argc, char* argv[])
   helib::Ctxt ctxt(public_key);
 
   // Encrypt `data` into the ciphertext
-  public_key.Encrypt(ctxt, ptxt);
+  ptxt.encrypt(ctxt);
 
   // Print the ctxt to stdout
   std::cout << "\n\n*** Ctxt:\n";

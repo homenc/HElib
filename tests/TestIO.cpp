@@ -13,6 +13,8 @@
 /* Note this file only tests JSON (de)serialization.*/
 /* If you are searching for binary (de)serialization go to TestBinIO.cpp*/
 
+#include <tuple>
+
 #include <helib/helib.h>
 #include <helib/debugging.h>
 #include <io.h>
@@ -22,11 +24,49 @@
 
 namespace {
 
-std::string addHeader(const std::string& data, const std::string& scheme)
+// Returns the data vector and the expected string for BGV
+static std::pair<std::vector<NTL::ZZX>, std::string> createData(long size,
+                                                                long p2r,
+                                                                long deg)
+{
+  std::vector<NTL::ZZX> data(size);
+  std::stringstream ss;
+  ss << "[";
+  for (long i = 0; i < size; ++i) {
+    NTL::ZZX input;
+    NTL::SetCoeff(input, 0, i % p2r);
+    ss << "[" << (i % p2r);
+    long num = (i + 2) % p2r;
+    if (deg != 1 && num != 0) {
+      NTL::SetCoeff(input, 1, num);
+      ss << "," << num;
+    }
+    data[i] = input;
+    ss << "]" << (i != size - 1 ? "," : "");
+  }
+  ss << "]";
+
+  return {std::move(data), ss.str()};
+}
+
+// Returns the data vector and the expected string for CKKS
+static std::vector<std::complex<double>> createData(long size)
+{
+  std::vector<std::complex<double>> data(size);
+  for (long i = 0; i < size; ++i) {
+    data[i] = {(i + 2) / 10.0, (2 * i) / 2.5};
+  }
+
+  return data;
+}
+
+static std::string addHeader(const std::string& data,
+                             const std::string& scheme,
+                             const std::string& type = "Ptxt")
 {
   return "{\"HElibVersion\":\"" + std::string(helib::version::asString) +
          "\",\"content\":{\"scheme\":\"" + scheme + "\",\"slots\":" + data +
-         "},\"serializationVersion\":\"0.0.1\",\"type\":\"Ptxt\"}";
+         "},\"serializationVersion\":\"0.0.1\",\"type\":\"" + type + "\"}";
 }
 
 struct BGVParameters
@@ -217,6 +257,7 @@ TEST(TestIO, TypedJSONLabelsAreTypeNames)
   EXPECT_EQ(helib::SecKey::typeName, "SecKey");
   EXPECT_EQ(helib::KeySwitch::typeName, "KeySwitch");
   EXPECT_EQ(helib::Ptxt<helib::BGV>::typeName, "Ptxt");
+  EXPECT_EQ(helib::PtxtArray::typeName, "PtxtArray");
 }
 
 TEST(TestIO, toTypedJSONWorks)
@@ -238,6 +279,8 @@ TEST(TestIO, toTypedJSONWorks)
             helib::KeySwitch::typeName);
   EXPECT_EQ(helib::toTypedJson<helib::Ptxt<helib::BGV>>(jcont).at("type"),
             helib::Ptxt<helib::BGV>::typeName);
+  EXPECT_EQ(helib::toTypedJson<helib::PtxtArray>(jcont).at("type"),
+            helib::PtxtArray::typeName);
 
   EXPECT_EQ(
       helib::toTypedJson<helib::Context>(jcont).at("serializationVersion"),
@@ -274,6 +317,9 @@ TEST(TestIO, fromTypedJSONWorks)
   EXPECT_EQ(helib::fromTypedJson<helib::Ptxt<helib::BGV>>(
                 helib::toTypedJson<helib::Ptxt<helib::BGV>>(jcont)),
             jcont);
+  EXPECT_EQ(helib::fromTypedJson<helib::PtxtArray>(
+                helib::toTypedJson<helib::PtxtArray>(jcont)),
+            jcont);
 
   EXPECT_EQ(helib::fromTypedJson<helib::Context>(
                 helib::toTypedJson<helib::Context>(jcont)),
@@ -300,6 +346,7 @@ TEST(TestIO, fromTypedJSONThrowsWhenMetadataIsWrong)
   EXPECT_THROW(helib::fromTypedJson<helib::KeySwitch>(tj), helib::IOError);
   EXPECT_THROW(helib::fromTypedJson<helib::Ptxt<helib::BGV>>(tj),
                helib::IOError);
+  EXPECT_THROW(helib::fromTypedJson<helib::PtxtArray>(tj), helib::IOError);
 
   tj = tj_orig;
   std::stringstream ss;
@@ -1089,6 +1136,237 @@ TEST_P(TestIO_BGV, ptxtReadsManyPtxtsFromStream)
   EXPECT_EQ(ptxt3, deserialized3);
 }
 
+// This test should be moved to a set of PtxtArray tests
+TEST(TestPtxtArray, ptxtArrayLoadsDataWithLessSlotsThanMax)
+{
+  // nslots = 18
+  helib::Context context =
+      helib::ContextBuilder<helib::BGV>().m(127).p(2).build();
+
+  std::vector<long> data(10, 1);
+  helib::PtxtArray pa(context);
+
+  EXPECT_NO_THROW(pa.store(data));
+}
+
+TEST_P(TestIO_BGV, ptxtArrayWritesDataCorrectlyToOstream)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+
+  auto [data, expectedString] = createData(context.getNSlots(), p2r, d);
+
+  std::string expected = addHeader(expectedString, "BGV", "PtxtArray");
+
+  helib::PtxtArray pa(context, data);
+  std::ostringstream os;
+  os << pa;
+
+  EXPECT_EQ(os.str(), expected);
+}
+
+TEST_P(TestIO_BGV, ptxtArrayReadsDataCorrectlyFromIstream)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+
+  auto [data, expectedString] = createData(context.getNSlots(), p2r, d);
+
+  helib::PtxtArray pa(context);
+  std::string expected = addHeader(expectedString, "BGV", "PtxtArray");
+  std::stringstream ss(expectedString);
+  ss >> pa;
+
+  EXPECT_EQ(pa, helib::PtxtArray(context, data));
+}
+
+TEST_P(TestIO_BGV, ptxtArrayReadsJSONVectorFromIstream)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+
+  auto [data, expectedString] = createData(context.getNSlots(), p2r, d);
+
+  helib::PtxtArray pa(context);
+  std::stringstream ss(expectedString);
+  ss >> pa;
+
+  EXPECT_EQ(pa, helib::PtxtArray(context, data));
+}
+
+TEST_P(TestIO_BGV, ptxtArrayWriteToJSONFunctionSerializesPtxtCorrectly)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+
+  auto [data, expectedString] = createData(context.getNSlots(), p2r, d);
+
+  helib::PtxtArray pa(context, data);
+
+  std::stringstream ss;
+  pa.writeToJSON(ss);
+
+  EXPECT_EQ(ss.str(), addHeader(expectedString, "BGV", "PtxtArray"));
+}
+
+TEST_P(TestIO_BGV, ptxtArrayReadFromJSONFunctionDeserializesPtxtCorrectly)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+
+  auto [data, expectedString] = createData(context.getNSlots(), p2r, d);
+
+  std::string expected = addHeader(expectedString, "BGV", "PtxtArray");
+  std::stringstream ss(expectedString);
+
+  helib::PtxtArray pa(context, data);
+  helib::PtxtArray deserialized_pa =
+      helib::PtxtArray::readFromJSON(ss, context);
+
+  EXPECT_EQ(pa, deserialized_pa);
+}
+
+TEST_P(TestIO_BGV, ptxtArrayReadFromJSONFunctionThrowsIfMoreElementsThanSlots)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+  std::string expectedString;
+
+  std::tie(std::ignore, expectedString) =
+      createData(context.getNSlots() + 1, p2r, d);
+
+  std::stringstream ss(addHeader(expectedString, "BGV", "PtxtArray"));
+
+  EXPECT_THROW(helib::PtxtArray::readFromJSON(ss, context), helib::IOError);
+}
+
+TEST_P(TestIO_BGV, ptxtArrayRightShiftOperatorThrowsIfMoreElementsThanSlots)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+  std::string expectedString;
+
+  std::tie(std::ignore, expectedString) =
+      createData(context.getNSlots() + 1, p2r, d);
+
+  std::stringstream ss(addHeader(expectedString, "BGV", "PtxtArray"));
+  helib::PtxtArray pa(context);
+
+  EXPECT_THROW(ss >> pa, helib::IOError);
+}
+
+TEST_P(TestIO_BGV, ptxtArrayWriteToJSONCorrectlyWritesMetdata)
+{
+  helib::PtxtArray pa(context);
+  std::stringstream ss;
+  ss << pa;
+  json j;
+  ss >> j;
+
+  EXPECT_TRUE(j.contains("type"));
+  EXPECT_EQ(j.at("type").get<std::string>(), helib::PtxtArray::typeName);
+
+  EXPECT_TRUE(j.contains("serializationVersion"));
+  EXPECT_EQ(j.at("serializationVersion").get<std::string>(),
+            helib::jsonSerializationVersion);
+
+  EXPECT_TRUE(j.contains("HElibVersion"));
+  EXPECT_EQ(j.at("HElibVersion").get<std::string>(), helib::version::asString);
+
+  j = j.at("content");
+  EXPECT_TRUE(j.contains("scheme"));
+  EXPECT_EQ(j.at("scheme").get<std::string>(), helib::BGV::schemeName);
+
+  EXPECT_TRUE(j.contains("slots"));
+  EXPECT_EQ(j.at("slots").size(), ea.size());
+}
+
+TEST_P(TestIO_BGV, ptxtArrayReadFromJSONFailsWhenBadMetadata)
+{
+  const long p2r = context.getSlotRing()->p2r;
+  const long d = context.getOrdP();
+  std::vector<NTL::ZZX> data;
+
+  std::tie(data, std::ignore) = createData(context.getNSlots(), p2r, d);
+
+  helib::PtxtArray pa(context, data);
+  helib::JsonWrapper jw = pa.writeToJSON();
+
+  helib::PtxtArray destPa(context);
+  json jmod = unwrap(jw);
+  jmod.at("type") = "wrong";
+  EXPECT_THROW(destPa.readJSON(helib::wrap(jmod)), helib::IOError);
+
+  jmod = unwrap(jw);
+  jmod.at("serializationVersion") = "wrong";
+  EXPECT_THROW(destPa.readJSON(helib::wrap(jmod)), helib::IOError);
+
+  jmod = unwrap(jw);
+  jmod.at("HElibVersion") = "wrong";
+  EXPECT_THROW(destPa.readJSON(helib::wrap(jmod)), helib::IOError);
+
+  jmod = unwrap(jw);
+  jmod.at("content") = "wrong";
+  EXPECT_THROW(destPa.readJSON(helib::wrap(jmod)), helib::IOError);
+}
+
+TEST_P(TestIO_BGV, ptxtArrayReadFromJSONCorrectlyPadsData)
+{
+  std::stringstream ss(addHeader("[]", "BGV", "PtxtArray"));
+  helib::PtxtArray pa(context);
+  ss >> pa;
+
+  EXPECT_EQ(pa.size(), ea.size());
+
+  ss.str("");
+  ss.clear();
+
+  std::vector<long> data(context.getNSlots() / 2, 1);
+  json j = data;
+  ss.str(addHeader(j.dump(), "BGV", "PtxtArray"));
+  ss >> pa;
+
+  EXPECT_EQ(pa.size(), ea.size());
+  std::vector<long> deserialized;
+  pa.store(deserialized);
+
+  EXPECT_EQ(pa.size(), deserialized.size());
+
+  for (long i = 0; i < pa.size(); ++i) {
+    if (i < static_cast<long>(data.size())) {
+      EXPECT_EQ(deserialized[i], 1);
+    } else {
+      EXPECT_EQ(deserialized[i], {});
+    }
+  }
+}
+
+TEST_P(TestIO_BGV, ptxtArrayReadsManyPtxtsFromStream)
+{
+  helib::PtxtArray pa1(context);
+  helib::PtxtArray pa2(context);
+  helib::PtxtArray pa3(context);
+  pa1.random();
+  pa2.random();
+  pa3.random();
+
+  std::stringstream ss;
+  ss << pa1 << std::endl;
+  ss << pa2 << std::endl;
+  ss << pa3 << std::endl;
+
+  helib::PtxtArray deserialized1(context);
+  helib::PtxtArray deserialized2(context);
+  helib::PtxtArray deserialized3(context);
+  ss >> deserialized1;
+  ss >> deserialized2;
+  ss >> deserialized3;
+
+  EXPECT_EQ(pa1, deserialized1);
+  EXPECT_EQ(pa2, deserialized2);
+  EXPECT_EQ(pa3, deserialized3);
+}
+
 TEST_P(TestIO_CKKS, serializeContextWithStreamOperator)
 {
   std::stringstream strm;
@@ -1374,13 +1652,18 @@ TEST_P(TestIO_CKKS, ptxtReadsDataCorrectlyFromIstream)
 TEST_P(TestIO_CKKS, ptxtReadsSquareBracketsDataCorrectly)
 {
   std::vector<std::complex<double>> data(context.getEA().size());
+  std::stringstream ss;
+
+  ss << "[" << std::setprecision(std::numeric_limits<double>::max_digits10);
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+    ss << "[" << data[i].real() << "," << data[i].imag() << "]"
+       << (i != data.size() - 1 ? "," : "");
   }
+  ss << "]";
+
   helib::Ptxt<helib::CKKS> ptxt(context);
-  json j = data;
-  std::string expected = addHeader(j.dump(), "CKKS");
-  std::istringstream is(expected);
+  std::istringstream is(ss.str());
   is >> ptxt;
 
   COMPARE_CXDOUBLE_VECS(ptxt, data);
@@ -1501,6 +1784,130 @@ TEST_P(TestIO_CKKS, ptxtReadsManyPtxtsFromStream)
   COMPARE_CXDOUBLE_VECS(ptxt1, deserialized1);
   COMPARE_CXDOUBLE_VECS(ptxt2, deserialized2);
   COMPARE_CXDOUBLE_VECS(ptxt3, deserialized3);
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayWritesDataCorrectlyToOstream)
+{
+  auto data = createData(context.getNSlots());
+  json j = data;
+  std::string expected = addHeader(j.dump(), "CKKS", "PtxtArray");
+
+  helib::PtxtArray pa(context, data);
+  std::ostringstream os;
+  os << pa;
+
+  EXPECT_EQ(os.str(), expected);
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayReadsDataCorrectlyFromIstream)
+{
+  auto data = createData(context.getNSlots());
+  helib::PtxtArray pa(context);
+  json j = data;
+  std::stringstream ss;
+  ss << addHeader(j.dump(), "CKKS", "PtxtArray");
+  std::istringstream is(ss.str());
+  is >> pa;
+
+  EXPECT_EQ(pa, helib::PtxtArray(context, data));
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayReadsSquareBracketsDataCorrectly)
+{
+  auto data = createData(context.getNSlots());
+
+  std::stringstream ss;
+  ss << "[" << std::setprecision(std::numeric_limits<double>::digits10);
+  for (auto it = data.begin(); it != data.end(); ++it) {
+    ss << "[" << it->real() << "," << it->imag() << "]"
+       << (it != data.end() - 1 ? "," : "");
+  }
+  ss << "]";
+
+  helib::PtxtArray pa(context);
+  std::istringstream is(ss.str());
+  is >> pa;
+
+  EXPECT_EQ(pa, helib::PtxtArray(context, data));
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayWriteToJSONSerializesPtxtCorrectly)
+{
+  auto data = createData(context.getNSlots());
+  helib::PtxtArray pa(context, data);
+  json j = data;
+  std::string expected = addHeader(j.dump(), "CKKS", "PtxtArray");
+  std::stringstream ss;
+  pa.writeToJSON(ss);
+
+  EXPECT_EQ(ss.str(), expected);
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayRightShiftDeserializeCorrectly)
+{
+  auto data = createData(context.getNSlots());
+  helib::PtxtArray pa(context);
+  json j = data;
+  std::istringstream is(addHeader(j.dump(), "CKKS", "PtxtArray"));
+  is >> pa;
+
+  EXPECT_EQ(pa, helib::PtxtArray(context, data));
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayReadsJSONVectorFromIstream)
+{
+  auto data = createData(context.getNSlots());
+  helib::PtxtArray pa(context);
+  json j = data;
+  std::istringstream is(j.dump());
+  is >> pa;
+
+  EXPECT_EQ(pa, helib::PtxtArray(context, data));
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayReadFromJSONThrowsIfMoreElementsThanSlots)
+{
+  auto data = createData(context.getNSlots() + 1);
+  json j = data;
+  std::istringstream is(j.dump());
+
+  EXPECT_THROW(helib::PtxtArray::readFromJSON(is, context), helib::IOError);
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayRightShiftOperatorThrowsIfMoreElementsThanSlots)
+{
+  auto data = createData(context.getNSlots() + 1);
+  helib::PtxtArray pa(context);
+  json j = data;
+  std::istringstream is(j.dump());
+
+  EXPECT_THROW(is >> pa, helib::IOError);
+}
+
+TEST_P(TestIO_CKKS, ptxtArrayReadsManyPtxtsFromStream)
+{
+  helib::PtxtArray pa1(context);
+  helib::PtxtArray pa2(context);
+  helib::PtxtArray pa3(context);
+  pa1.random();
+  pa2.random();
+  pa3.random();
+
+  std::stringstream ss;
+  ss << pa1 << std::endl;
+  ss << pa2 << std::endl;
+  ss << pa3 << std::endl;
+
+  helib::PtxtArray deserialized1(context);
+  helib::PtxtArray deserialized2(context);
+  helib::PtxtArray deserialized3(context);
+  ss >> deserialized1;
+  ss >> deserialized2;
+  ss >> deserialized3;
+
+  EXPECT_EQ(pa1, deserialized1);
+  EXPECT_EQ(pa2, deserialized2);
+  EXPECT_EQ(pa3, deserialized3);
 }
 
 TEST_P(TestIO_BGV, contextBuilderLogsCorrectly)

@@ -151,21 +151,23 @@ int main(int argc, char* argv[])
   // inspect the file.
   std::remove("pk.json");
 
-  // Create a Ptxt data object
+  // Create a data object
   std::vector<long> data(context.getNSlots());
 
   // Generate some data
   std::iota(data.begin(), data.end(), 0);
 
-  // Create a ptxt. Note that in this tutorial we make use of the
-  // alternative ptxt API.
-  helib::Ptxt<helib::CKKS> ptxt(context, data);
+  // Create a ptxt.
+  helib::PtxtArray ptxt(context, data);
 
   std::ofstream outPtxtFile;
   outPtxtFile.open("ptxt.json", std::ios::out);
   if (outPtxtFile.is_open()) {
     // Write the ptxt to a file
     ptxt.writeToJSON(outPtxtFile);
+    // Alternatively one can use
+    // outPtxtFile << ptxt;
+
     // Close the ofstream
     outPtxtFile.close();
   } else {
@@ -176,11 +178,11 @@ int main(int argc, char* argv[])
   inPtxtFile.open("ptxt.json");
   if (inPtxtFile.is_open()) {
     // Read in the ptxt from the file
-    helib::Ptxt<helib::CKKS> deserializedPtxt =
-        helib::Ptxt<helib::CKKS>::readFromJSON(inPtxtFile, context);
+    helib::PtxtArray deserializedPtxt =
+        helib::PtxtArray::readFromJSON(inPtxtFile, context);
     // Note there are alternative methods for deserialization of Ptxt objects.
     // After initialization
-    // helib::Ptxt<helib::CKKS> deserializedPtxt(publicKey);
+    // helib::PtxtArray deserializedPtxt(publicKey);
     // One can write
     // inPtxtFile >> deserializedPtxt;
     // Or alternatively
@@ -199,7 +201,7 @@ int main(int argc, char* argv[])
   helib::Ctxt ctxt(publicKey);
 
   // Encrypt `data` into the ciphertext
-  publicKey.Encrypt(ctxt, ptxt);
+  ptxt.encrypt(ctxt);
 
   std::ofstream outCtxtFile;
   outCtxtFile.open("ctxt.json", std::ios::out);

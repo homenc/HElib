@@ -2144,6 +2144,12 @@ void runningSums(const EncryptedArray& ea, PlaintextArray& pa);
 class PtxtArray
 {
 public:
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "PtxtArray";
+
   // These two data fields should really be private, but there are
   // a lot of internal functions that need to access them
   const EncryptedArray& ea;
@@ -2188,6 +2194,8 @@ public:
 
   const EncryptedArray& getView() const { return ea; }
   const EncryptedArray& getEA() const { return ea; }
+
+  long size() const { return ea.size(); }
 
   // direct encode, encrypt, and decrypt methods
   void encode(EncodedPtxt& eptxt,
@@ -2256,6 +2264,7 @@ public:
   void random() { helib::random(ea, pa); }
 
   //======== load ========
+  // Puts vector or scalar data into a PtxtArray
 
   void load(const std::vector<int>& array)
   {
@@ -2349,6 +2358,7 @@ public:
   }
 
   //============== store ============
+  // Puts data into a std::vector aka `unload`
 
   void store(std::vector<long>& array) const { decode(ea, array, pa); }
 
@@ -2362,12 +2372,23 @@ public:
 
   // this is here for consistency with Ctxt class
   void negate() { helib::negate(ea, pa); }
-};
 
-inline std::ostream& operator<<(std::ostream& s, const PtxtArray& a)
-{
-  return s << a.pa;
-}
+  void writeToJSON(std::ostream& os) const;
+
+  JsonWrapper writeToJSON() const;
+
+  static PtxtArray readFromJSON(std::istream& is, const Context& context);
+
+  static PtxtArray readFromJSON(const JsonWrapper& jw, const Context& context);
+
+  void readJSON(std::istream& is);
+
+  void readJSON(const JsonWrapper& jw);
+
+  friend std::istream& operator>>(std::istream& is, PtxtArray& pa);
+
+  friend std::ostream& operator<<(std::ostream& os, const PtxtArray& pa);
+};
 
 inline void rotate(PtxtArray& a, long k) { rotate(a.ea, a.pa, k); }
 
