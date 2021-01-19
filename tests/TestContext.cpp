@@ -64,7 +64,12 @@ protected:
       m(GetParam().m),
       p(GetParam().p),
       r(GetParam().r),
-      context(std::make_shared<helib::Context>(m, p, r))
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .buildModChain(false)
+                  .buildPtr())
   {}
 
   const unsigned long m;
@@ -80,12 +85,15 @@ protected:
   TestContextCKKS() :
       m(GetParam().m),
       r(GetParam().r),
-      context(std::make_shared<helib::Context>(m, /*p=*/-1, r))
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(m)
+                  .precision(r)
+                  .buildModChain(false)
+                  .buildPtr())
   {}
 
   const unsigned long m;
   const unsigned long r;
-
   const std::shared_ptr<helib::Context> context;
 };
 
@@ -97,17 +105,23 @@ TEST_P(TestContextBGV,
 
 TEST_P(TestContextBGV, contextEquals)
 {
-  helib::Context someOtherContext(/*m=*/17, /*p=*/2, /*r=*/1);
-  buildModChain(*context, /*bits=*/100, /*c=*/2);
-  buildModChain(someOtherContext, /*bits=*/100, /*c=*/2);
+  helib::Context someOtherContext = helib::ContextBuilder<helib::BGV>()
+                                        .m(17)
+                                        .p(2)
+                                        .r(1)
+                                        .bits(100)
+                                        .c(2)
+                                        .build();
+
+  context->buildModChain(/*bits=*/100, /*c=*/2);
 
   EXPECT_EQ(*context, *context);
   EXPECT_EQ(*context, someOtherContext);
 
-  EXPECT_EQ(context->zMStar.getM(), 17); // m
-  EXPECT_EQ(context->zMStar.getP(), 2);  // p
-  EXPECT_EQ(context->alMod.getR(), 1);   // r
-  EXPECT_EQ(context->digits.size(), 2);  // c
+  EXPECT_EQ(context->getM(), 17);            // m
+  EXPECT_EQ(context->getP(), 2);             // p
+  EXPECT_EQ(context->getAlMod().getR(), 1);  // r
+  EXPECT_EQ(context->getDigits().size(), 2); // c
   EXPECT_GT(context->numPrimes(), 0);
   EXPECT_EQ(context->numPrimes(), someOtherContext.numPrimes());
   for (long i = 0; i < context->numPrimes(); i++) {
@@ -115,32 +129,32 @@ TEST_P(TestContextBGV, contextEquals)
     const helib::Cmodulus& m2 = someOtherContext.ithModulus(i);
     EXPECT_EQ(m1.getQ(), m2.getQ()) << " index: " << i;
   }
-  EXPECT_EQ(context->smallPrimes, someOtherContext.smallPrimes);
-  EXPECT_EQ(context->ctxtPrimes, someOtherContext.ctxtPrimes);
-  EXPECT_EQ(context->specialPrimes, someOtherContext.specialPrimes);
-  for (std::size_t i = 0; i < context->digits.size(); ++i) {
-    EXPECT_EQ(context->digits[i], someOtherContext.digits[i])
+  EXPECT_EQ(context->getSmallPrimes(), someOtherContext.getSmallPrimes());
+  EXPECT_EQ(context->getCtxtPrimes(), someOtherContext.getCtxtPrimes());
+  EXPECT_EQ(context->getSpecialPrimes(), someOtherContext.getSpecialPrimes());
+  for (std::size_t i = 0; i < context->getDigits().size(); ++i) {
+    EXPECT_EQ(context->getDigit(i), someOtherContext.getDigit(i))
         << " index: " << i;
   }
-  EXPECT_EQ(context->stdev, someOtherContext.stdev);
-  EXPECT_EQ(context->scale, someOtherContext.scale);
-  EXPECT_EQ(context->rcData, someOtherContext.rcData);
+  EXPECT_EQ(context->getStdev(), someOtherContext.getStdev());
+  EXPECT_EQ(context->getScale(), someOtherContext.getScale());
+  EXPECT_EQ(context->getRcData(), someOtherContext.getRcData());
 }
 
 TEST_P(TestContextBGV, contextNotEquals)
 {
-  helib::Context someOtherContext(/*m=*/13, /*p=*/3, /*r=*/2);
-  buildModChain(*context, /*bits=*/100, /*c=*/3);
-  buildModChain(someOtherContext,
-                /*bits=*/200,
-                /*c=*/2,
-                /*willBeBootstrappable =*/true);
-  someOtherContext.scale = 6;
-  someOtherContext.stdev = 3.0;
-  NTL::Vec<long> mvec;
-  mvec.SetLength(1);
-  mvec[0] = 13;
-  someOtherContext.enableBootStrapping(mvec);
+  helib::Context someOtherContext = helib::ContextBuilder<helib::BGV>()
+                                        .m(13)
+                                        .p(3)
+                                        .r(2)
+                                        .scale(6)
+                                        .stdev(3.0)
+                                        .bits(200)
+                                        .c(2)
+                                        .bootstrappable()
+                                        .mvec({13})
+                                        .build();
+  context->buildModChain(/*bits=*/100, /*c=*/3);
 
   EXPECT_NE(*context, someOtherContext);
   EXPECT_NE(context->numPrimes(), someOtherContext.numPrimes());
@@ -155,43 +169,43 @@ TEST_P(TestContextBGV, contextNotEquals)
   }
   EXPECT_TRUE(atLeastOneDoesNotEqual);
   // This only checks the handles, not the primes themselves.
-  EXPECT_EQ(context->smallPrimes, someOtherContext.smallPrimes);
-  EXPECT_NE(context->ctxtPrimes, someOtherContext.ctxtPrimes);
-  EXPECT_NE(context->specialPrimes, someOtherContext.specialPrimes);
-  for (std::size_t i = 0; i < context->digits.size(); ++i) {
-    EXPECT_NE(context->digits[i], someOtherContext.digits[i])
+  EXPECT_EQ(context->getSmallPrimes(), someOtherContext.getSmallPrimes());
+  EXPECT_NE(context->getCtxtPrimes(), someOtherContext.getCtxtPrimes());
+  EXPECT_NE(context->getSpecialPrimes(), someOtherContext.getSpecialPrimes());
+  for (std::size_t i = 0; i < context->getDigits().size(); ++i) {
+    EXPECT_NE(context->getDigit(i), someOtherContext.getDigit(i))
         << " index: " << i;
   }
-  EXPECT_NE(context->stdev, someOtherContext.stdev);
-  EXPECT_NE(context->scale, someOtherContext.scale);
-  EXPECT_NE(context->rcData, someOtherContext.rcData);
+  EXPECT_NE(context->getStdev(), someOtherContext.getStdev());
+  EXPECT_NE(context->getScale(), someOtherContext.getScale());
+  EXPECT_NE(context->getRcData(), someOtherContext.getRcData());
 }
 
 TEST_P(TestContextBGV, ContextCalculatingSecurityAfterModchainBuilt)
 {
-  buildModChain(*context, /*bits=*/100, /*c=*/2);
+  context->buildModChain(/*bits=*/100, /*c=*/2);
   double result = context->securityLevel();
   EXPECT_FALSE(std::isinf(result));
 }
 
 TEST_P(TestContextBGV, hasCorrectSlotRingWhenConstructed)
 {
-  EXPECT_EQ(context->slotRing->p, p);
-  EXPECT_EQ(context->slotRing->r, r);
-  EXPECT_EQ(context->slotRing->p2r, pow(p, r));
-  EXPECT_EQ(context->slotRing->G, helib::getG(*(context->ea)));
+  EXPECT_EQ(context->getSlotRing()->p, p);
+  EXPECT_EQ(context->getSlotRing()->r, r);
+  EXPECT_EQ(context->getSlotRing()->p2r, pow(p, r));
+  EXPECT_EQ(context->getSlotRing()->G, helib::getG(context->getEA()));
 }
 
 TEST_P(TestContextBGV, buildModChainThrowsWhenBitsIsZero)
 {
-  EXPECT_THROW(helib::buildModChain(*context, /*bits=*/0, /*c=*/2),
+  EXPECT_THROW(context->buildModChain(/*bits=*/0, /*c=*/2),
                helib::InvalidArgument);
 }
 
 TEST_P(TestContextBGV, calculateBitSizeOfQ)
 {
   long bits = 1016;
-  buildModChain(*context, bits, /*c=*/2);
+  context->buildModChain(bits, /*c=*/2);
   long bitsize = context->bitSizeOfQ();
 
   // Get the primes used by HElib.
@@ -200,7 +214,7 @@ TEST_P(TestContextBGV, calculateBitSizeOfQ)
       ceil(context->logOfProduct(fullPrimes) / log(2.0));
 
   long calcCtxtPrimesBitSize =
-      ceil(context->logOfProduct(context->ctxtPrimes) / log(2.0));
+      ceil(context->logOfProduct(context->getCtxtPrimes()) / log(2.0));
 
   // Check if the ctxtPrimes are the bits we asked for.
   // Will be close but not exact.
@@ -236,14 +250,15 @@ TEST(TestContextBGV, contextBuilderWithDefaultArguments)
 {
   helib::Context context_built = helib::ContextBuilder<helib::BGV>().build();
 
-  helib::Context expected_default_context(/*m=*/3, /*p=*/2, /*r=*/1);
-  buildModChain(expected_default_context, /*bits=*/300, /*c=*/3);
+  helib::Context expected_default_context =
+      helib::ContextBuilder<helib::BGV>().m(3).p(2).r(1).bits(300).c(3).build();
 
   // Making sure the number of columns is not clipped.
-  EXPECT_GT(expected_default_context.ctxtPrimes.card(),
-            expected_default_context.digits.size());
-  EXPECT_GT(context_built.ctxtPrimes.card(), context_built.digits.size());
-  EXPECT_EQ(context_built.digits.size(), 3);
+  EXPECT_GT(expected_default_context.getCtxtPrimes().card(),
+            expected_default_context.getDigits().size());
+  EXPECT_GT(context_built.getCtxtPrimes().card(),
+            context_built.getDigits().size());
+  EXPECT_EQ(context_built.getDigits().size(), 3);
 
   EXPECT_FALSE(context_built.isBootstrappable());
   EXPECT_GT(context_built.numPrimes(), 0);
@@ -255,14 +270,15 @@ TEST(TestContextBGV, contextBuilderBuildsPointer)
   std::unique_ptr<helib::Context> context_built{
       helib::ContextBuilder<helib::BGV>().buildPtr()};
 
-  helib::Context expected_default_context(/*m=*/3, /*p=*/2, /*r=*/1);
-  buildModChain(expected_default_context, /*bits=*/300, /*c=*/3);
+  helib::Context expected_default_context =
+      helib::ContextBuilder<helib::BGV>().m(3).p(2).r(1).bits(300).c(3).build();
 
   // Making sure the number of columns is not clipped.
-  EXPECT_GT(expected_default_context.ctxtPrimes.card(),
-            expected_default_context.digits.size());
-  EXPECT_GT(context_built->ctxtPrimes.card(), context_built->digits.size());
-  EXPECT_EQ(context_built->digits.size(), 3);
+  EXPECT_GT(expected_default_context.getCtxtPrimes().card(),
+            expected_default_context.getDigits().size());
+  EXPECT_GT(context_built->getCtxtPrimes().card(),
+            context_built->getDigits().size());
+  EXPECT_EQ(context_built->getDigits().size(), 3);
 
   EXPECT_FALSE(context_built->isBootstrappable());
   EXPECT_GT(context_built->numPrimes(), 0);
@@ -276,7 +292,7 @@ TEST(TestContextBGV, contextBuilderClipsDigitsSizeWithSmallBits)
       helib::ContextBuilder<helib::BGV>().bits(100).c(c).build();
 
   // Because bits is small, c gets clipped automatically.
-  EXPECT_LT(context_built.digits.size(), c);
+  EXPECT_LT(context_built.getDigits().size(), c);
 }
 
 TEST(TestContextBGV, contextBuilderDoesNotClipDigitsSize)
@@ -286,7 +302,7 @@ TEST(TestContextBGV, contextBuilderDoesNotClipDigitsSize)
       helib::ContextBuilder<helib::BGV>().bits(500).c(c).build();
 
   // Should have sufficient number of bits to have c columns.
-  EXPECT_EQ(context_built.digits.size(), c);
+  EXPECT_EQ(context_built.getDigits().size(), c);
 }
 
 TEST_P(TestContextBGV, contextBuilderWithBasicParams)
@@ -299,7 +315,7 @@ TEST_P(TestContextBGV, contextBuilderWithBasicParams)
                                .build();   
   // clang-format off
 
-  buildModChain(*context, /*bits*/300, /*c=*/3);
+  context->buildModChain( /*bits*/300, /*c=*/3);
   EXPECT_EQ(context_built, *context);
   EXPECT_GT(context_built.numPrimes(), 0);
 }
@@ -316,7 +332,7 @@ TEST_P(TestContextBGV, contextBuilderWithGensOrdsToo)
                                  .build();   
   // clang-format off
 
-  buildModChain(*context, /*bits*/300, /*c=*/3);
+  context->buildModChain( /*bits*/300, /*c=*/3);
   EXPECT_EQ(context_built, *context);
   EXPECT_GT(context_built.numPrimes(), 0);
 }
@@ -349,81 +365,23 @@ TEST_P(TestContextBGV, contextBuilderBootstrappableContext)
   EXPECT_TRUE(context_built.isBootstrappable());
 }
 
-TEST_P(TestContextBGV, contextBuilderLogsCorrectly)
-{
-  NTL::Vec<long> mvec;
-  mvec.SetLength(1);
-  mvec[0] = 3;
-
-  long c = 3;
-  std::vector<long> gens = {3};
-  std::vector<long> ords = {-2};
-  bool buildModChainFlag = false;
-  long bits = 2;
-  long skHwt = 64;
-  long resolution = 1;
-  long bitsInSpecialPrimes = 15;
-  bool bootstrappableFlag = true;
-  bool buildCacheFlag = true;
-  bool thickFlag = true;
-
-  // clang-format off
-  auto cb = helib::ContextBuilder<helib::BGV>()
-                          .m(m)
-                          .p(p)
-                          .r(r)
-                          .c(c)
-                          .gens(gens)
-                          .ords(ords)
-                          .buildModChain(buildModChainFlag)
-                          .bits(bits)
-                          .skHwt(skHwt)
-                          .resolution(resolution)
-                          .bitsInSpecialPrimes(bitsInSpecialPrimes)
-                          .bootstrappable(bootstrappableFlag)
-                          .mvec(mvec)
-                          .buildCache(buildCacheFlag)
-                          .thickboot();
-  // clang-format off
-
-  std::stringstream expected_ss;
-  expected_ss << "{\n"
-              << "  scheme: BGV\n"
-              << "  m: " << m << "\n"
-              << "  p: " << p << "\n"
-              << "  r: " << r << "\n"
-              << "  c: " << c << "\n"
-              << "  gens: " << helib::vecToStr(gens) << "\n"
-              << "  ords: " << helib::vecToStr(ords) << "\n"
-              << "  buildModChainFlag: " << buildModChainFlag << "\n"
-              << "  bits: " << bits << "\n"
-              << "  skHwt: " << skHwt << "\n"
-              << "  resolution: " << resolution << "\n"
-              << "  bitsInSpecialPrimes: " << bitsInSpecialPrimes << "\n"
-              << "  bootstrappableFlag: " << bootstrappableFlag << "\n"
-              << "  mvec: " << mvec << "\n"
-              << "  buildCacheFlag: " << buildCacheFlag << "\n"
-              << "  thickFlag: " << thickFlag << "\n"
-              << "}" << std::endl;
-  
-  std::stringstream actual_ss;
-  actual_ss << cb;
-
-  EXPECT_EQ(expected_ss.str(), actual_ss.str());
-}
-
 TEST(TestContextCKKS, contextBuilderWithDefaultArguments)
 {
-  helib::Context context_built { helib::ContextBuilder<helib::CKKS>().build() };
+  helib::Context context_built = helib::ContextBuilder<helib::CKKS>().build();
 
-  helib::Context expected_default_context(/*m=*/4, /*p=*/-1, /*r=*/20);
-  buildModChain(expected_default_context, /*bits=*/300, /*c=*/3);
+  helib::Context expected_default_context = helib::ContextBuilder<helib::CKKS>()
+                                                .m(4)
+                                                .bits(300)
+                                                .c(3)
+                                                .precision(20)
+                                                .build();
 
   // Making sure columns is not clipped.
-  EXPECT_GT(expected_default_context.ctxtPrimes.card(),
-            expected_default_context.digits.size());
-  EXPECT_GT(context_built.ctxtPrimes.card(), context_built.digits.size());
-  EXPECT_EQ(context_built.digits.size(), 3);
+  EXPECT_GT(expected_default_context.getCtxtPrimes().card(),
+            expected_default_context.getDigits().size());
+  EXPECT_GT(context_built.getCtxtPrimes().card(),
+            context_built.getDigits().size());
+  EXPECT_EQ(context_built.getDigits().size(), 3);
 
   EXPECT_FALSE(context_built.isBootstrappable());
   EXPECT_GT(context_built.numPrimes(), 0);
@@ -437,7 +395,7 @@ TEST(TestContextCKKS, contextBuilderClipsDigitsSizeWithSmallBits)
       helib::ContextBuilder<helib::CKKS>().bits(100).c(c).build();
 
   // Because bits is small, c gets clipped automatically.
-  EXPECT_LT(context_built.digits.size(), c);
+  EXPECT_LT(context_built.getDigits().size(), c);
 }
 
 TEST(TestContextCKKS, contextBuilderDoesNotClipDigitsSize)
@@ -447,7 +405,7 @@ TEST(TestContextCKKS, contextBuilderDoesNotClipDigitsSize)
       helib::ContextBuilder<helib::CKKS>().bits(500).c(c).build();
 
   // Should have sufficient number of bits to have c columns.
-  EXPECT_EQ(context_built.digits.size(), c);
+  EXPECT_EQ(context_built.getDigits().size(), c);
 }
 
 TEST_P(TestContextCKKS, contextBuilderWithBasicParams)
@@ -459,7 +417,7 @@ TEST_P(TestContextCKKS, contextBuilderWithBasicParams)
                                .build();   
   // clang-format off
 
-  buildModChain(*context, /*bits*/300, /*c=*/3);
+  context->buildModChain( /*bits*/300, /*c=*/3);
   EXPECT_EQ(context_built, *context);
   EXPECT_GT(context_built.numPrimes(), 0);
 }
@@ -475,7 +433,7 @@ TEST_P(TestContextCKKS, contextBuilderWithGensOrdsToo)
                                .build();   
   // clang-format off
 
-  buildModChain(*context, /*bits*/300, /*c=*/3);
+  context->buildModChain( /*bits*/300, /*c=*/3);
   EXPECT_EQ(context_built, *context);
   EXPECT_GT(context_built.numPrimes(), 0);
 }
@@ -490,57 +448,6 @@ TEST_P(TestContextCKKS, contextBuilderNoModChain)
                                .build();   
   // clang-format off
   EXPECT_EQ(context_built.numPrimes(), 0);
-}
-
-TEST_P(TestContextCKKS, contextBuilderLogsCorrectly)
-{
-  NTL::Vec<long> mvec;
-  mvec.SetLength(1);
-  mvec[0] = 3;
-
-  long precision = r;
-  long c = 3;
-  std::vector<long> gens = {3};
-  std::vector<long> ords = {-2};
-  bool buildModChainFlag = false;
-  long bits = 2;
-  long skHwt = 64;
-  long resolution = 1;
-  long bitsInSpecialPrimes = 15;
-
-  // clang-format off
-  auto cb = helib::ContextBuilder<helib::CKKS>()
-                          .m(m)
-                          .precision(precision)
-                          .c(c)
-                          .gens(gens)
-                          .ords(ords)
-                          .buildModChain(buildModChainFlag)
-                          .bits(bits)
-                          .skHwt(skHwt)
-                          .resolution(resolution)
-                          .bitsInSpecialPrimes(bitsInSpecialPrimes);
-  // clang-format off
-
-  std::stringstream expected_ss;
-  expected_ss << "{\n"
-              << "  scheme: CKKS\n"
-              << "  m: " << m << ",\n"
-              << "  precision: " << precision << ",\n"
-              << "  c: " << c << ",\n"
-              << "  gens: " << helib::vecToStr(gens) << ",\n"
-              << "  ords: " << helib::vecToStr(ords) << ",\n"
-              << "  buildModChainFlag: " << buildModChainFlag << ",\n"
-              << "  bits: " << bits << ",\n"
-              << "  skHwt: " << skHwt << ",\n"
-              << "  resolution: " << resolution << ",\n"
-              << "  bitsInSpecialPrimes: " << bitsInSpecialPrimes << "\n"
-              << "}" << std::endl;
-  
-  std::stringstream actual_ss;
-  actual_ss << cb;
-
-  EXPECT_EQ(expected_ss.str(), actual_ss.str());
 }
 
 // Just checking manually if the printout works as expected

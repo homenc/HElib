@@ -373,83 +373,12 @@ TEST(TestPolyMod, canBeSerializedAndDeserialized)
 
   std::stringstream ss;
   ss << pre_serialized_poly;
-  std::string serialized = "[1, 2]";
+  std::string serialized = "[1,2]";
   EXPECT_EQ(ss.str(), serialized);
   helib::PolyMod deserialized(ring);
   ss >> deserialized;
 
   EXPECT_EQ(pre_serialized_poly, deserialized);
-}
-
-TEST(TestPolyMod, deserializeFunctionThrowsIfMoreElementsThanDegree)
-{
-  const long p2r = 7;
-  NTL::ZZX G;
-  NTL::SetX(G);
-  G *= G;
-  // G = x^2
-  auto ring = std::make_shared<helib::PolyModRing>(p2r, 1, G);
-  helib::PolyMod dest(ring);
-
-  std::stringstream ss;
-  ss << "[1, 2, 3, 4]";
-
-  EXPECT_THROW(deserialize(ss, dest), helib::IOError);
-}
-
-TEST(TestPolyMod, rightShiftOperatorThrowsIfMoreElementsThanDegree)
-{
-  const long p2r = 7;
-  NTL::ZZX G;
-  NTL::SetX(G);
-  G *= G;
-  // G = x^2
-  auto ring = std::make_shared<helib::PolyModRing>(p2r, 1, G);
-  helib::PolyMod dest(ring);
-
-  std::stringstream ss;
-  ss << "[1, 2, 3, 4]";
-
-  EXPECT_THROW(ss >> dest, helib::IOError);
-}
-
-TEST(TestPolyMod, serializeFunctionSerializesCorrectly)
-{
-  const long p2r = 7;
-  NTL::ZZX G;
-  NTL::SetX(G);
-  G *= G; // G^2
-  auto ring = std::make_shared<helib::PolyModRing>(p2r, 1, G);
-  NTL::ZZX data;
-  NTL::SetCoeff(data, 0, 3);
-  NTL::SetCoeff(data, 1, 1);
-  helib::PolyMod poly(data, ring);
-
-  std::stringstream ss;
-  serialize(ss, poly);
-  std::string expected_string = "[3, 1]";
-
-  EXPECT_EQ(ss.str(), expected_string);
-}
-
-TEST(TestPolyMod, deserializeFunctionDeserializesCorrectly)
-{
-  const long p2r = 7;
-  NTL::ZZX G;
-  NTL::SetX(G);
-  G *= G; // G^2
-  auto ring = std::make_shared<helib::PolyModRing>(p2r, 1, G);
-  NTL::ZZX data;
-  NTL::SetCoeff(data, 0, 3);
-  NTL::SetCoeff(data, 1, 1);
-  helib::PolyMod expected_result(data, ring);
-
-  std::string string_poly = "[3, 1]";
-  helib::PolyMod deserialized_poly(ring);
-  std::stringstream str(string_poly);
-  deserialize(str, deserialized_poly);
-
-  EXPECT_EQ(deserialized_poly, expected_result);
 }
 
 TEST(TestPolyMod, minusOperatorCorrectlyNegates)

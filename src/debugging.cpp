@@ -16,7 +16,6 @@
 #include <helib/Context.h>
 #include <helib/Ctxt.h>
 #include <helib/EncryptedArray.h>
-//#include <helib/powerful.h>
 
 namespace helib {
 
@@ -59,7 +58,7 @@ NTL::xdouble embeddingLargestCoeff(const Ctxt& ctxt, const SecKey& sk)
   const Context& context = ctxt.getContext();
   NTL::ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
-  return embeddingLargestCoeff(pp, context.zMStar);
+  return embeddingLargestCoeff(pp, context.getZMStar());
 }
 
 void decryptAndPrint(std::ostream& s,
@@ -75,7 +74,7 @@ void decryptAndPrint(std::ostream& s,
 
   NTL::xdouble modulus = NTL::xexp(context.logOfProduct(ctxt.getPrimeSet()));
   NTL::xdouble actualNoise =
-      embeddingLargestCoeff(pp, ctxt.getContext().zMStar);
+      embeddingLargestCoeff(pp, ctxt.getContext().getZMStar());
   NTL::xdouble noiseEst = ctxt.totalNoiseBound();
 
   s << "plaintext space mod " << ctxt.getPtxtSpace()

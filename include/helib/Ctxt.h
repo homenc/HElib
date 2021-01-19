@@ -186,14 +186,70 @@ public:
   friend std::istream& operator>>(std::istream& s, SKHandle& handle);
 
   // Raw IO
-  void read(std::istream& str);
-  void write(std::ostream& str) const;
+
+  /**
+   * @brief Write out the `SKHandle` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `SKHandle` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `SKHandle` object.
+   **/
+  static SKHandle readFrom(std::istream& str);
+
+  /**
+   * @brief Write out the secret key handle (`SKHandle`) object to the output
+   * stream using JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the secret key handle (`SKHandle`) object to a
+   * `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized secret key handle (`SKHandle`)
+   * object using JSON format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `SKHandle` object.
+   **/
+  static SKHandle readFromJSON(std::istream& str);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized secret key handle
+   * (`SKHandle`) object.
+   * @param j The `JsonWrapper` containing the serialized `SKHandle` object.
+   * @return The deserialized `SKHandle` object.
+   **/
+  static SKHandle readFromJSON(const JsonWrapper& j);
+
+  /**
+   * @brief Read from the stream the serialized secret key handle (`SKHandle`)
+   * object using JSON format.
+   * @param str Input `std::istream`.
+   **/
+  void readJSON(std::istream& str);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized secret key handle
+   * (`SKHandle`) object.
+   * @param j The `JsonWrapper` containing the serialized `SKHandle` object.
+   **/
+  void readJSON(const JsonWrapper& j);
 };
 
 inline std::ostream& operator<<(std::ostream& s, const SKHandle& handle)
 {
-  return s << "[" << handle.getPowerOfS() << " " << handle.getPowerOfX() << " "
-           << handle.getSecretKeyID() << "]";
+  handle.writeToJSON(s);
+  return s;
 }
 
 /**
@@ -235,8 +291,72 @@ public:
       DoubleCRT(other), skHandle(otherHandle)
   {}
 
+  /**
+   * @brief Write out the `CtxtPart` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `CtxtPart` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `CtxtPart` object.
+   **/
+  static CtxtPart readFrom(std::istream& str, const Context& context);
+
+  /**
+   * @brief In-place read from the stream the serialized `CtxtPart` object in
+   * binary format.
+   * @param str Input `std::istream`.
+   **/
   void read(std::istream& str);
-  void write(std::ostream& str) const;
+
+  /**
+   * @brief Write out the ciphertext part (`CtxtPart`) object to the output
+   * stream using JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the ciphertext part (`CtxtPart`) object to a
+   * `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized ciphertext part (`CtxtPart`)
+   * object using JSON format.
+   * @param str Input `std::istream`.
+   * @param context The `Context` to be used.
+   * @return The deserialized `CtxtPart` object.
+   **/
+  static CtxtPart readFromJSON(std::istream& str, const Context& context);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized ciphertext part
+   *(`CtxtPart`) object.
+   * @param j The `JsonWrapper` containing the serialized `CtxtPart` object.
+   * @param context The `Context` to be used.
+   * @return The deserialized `CtxtPart` object.
+   **/
+  static CtxtPart readFromJSON(const JsonWrapper& j, const Context& context);
+
+  /**
+   * @brief Read from the stream the serialized ciphertext part (`CtxtPart`)
+   * object using JSON format.
+   * @param str Input `std::istream`.
+   **/
+  void readJSON(std::istream& str);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized ciphertext part
+   *(`CtxtPart`) object.
+   * @param j The `JsonWrapper` containing the serialized `SKHandle` object.
+   **/
+  void readJSON(const JsonWrapper& j);
 };
 
 std::istream& operator>>(std::istream& s, CtxtPart& p);
@@ -381,6 +501,12 @@ class Ctxt
   void mulIntFactor(long e);
 
 public:
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "Ctxt";
+
   // Default copy-constructor
   Ctxt(const Ctxt& other) = default;
 
@@ -528,7 +654,7 @@ public:
   void addConstantCKKS(double x)
   { // FIXME: not enough precision when x is large
     addConstantCKKS(
-        rationalApprox(x, /*denomBound=*/1 << getContext().alMod.getR()));
+        rationalApprox(x, /*denomBound=*/1 << getContext().getAlMod().getR()));
   }
 
   // [[deprecated]]
@@ -1031,7 +1157,7 @@ public:
   //! the side-effect of increasing the plaintext space to p^{r+e}.
   void multByP(long e = 1)
   {
-    long p2e = NTL::power_long(context.zMStar.getP(), e);
+    long p2e = NTL::power_long(context.getP(), e);
     ptxtSpace *= p2e;
     multByConstant(NTL::to_ZZ(p2e));
   }
@@ -1163,7 +1289,7 @@ public:
   void clear()
   { // set as an empty ciphertext
     parts.clear();
-    primeSet = context.ctxtPrimes;
+    primeSet = context.getCtxtPrimes();
     noiseBound = 0.0;
     intFactor = 1;
     ratFactor = ptxtMag = 1.0;
@@ -1202,7 +1328,7 @@ public:
   // Return r such that p^r = ptxtSpace
   long effectiveR() const
   {
-    long p = context.zMStar.getP();
+    long p = context.getP();
     for (long r = 1, p2r = p; r < NTL_SP_NBITS; r++, p2r *= p) {
       if (p2r == ptxtSpace)
         return r;
@@ -1228,8 +1354,71 @@ public:
   friend std::ostream& operator<<(std::ostream& str, const Ctxt& ctxt);
 
   // Raw IO
-  void write(std::ostream& str) const;
+
+  /**
+   * @brief Write out the `Ctxt` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeTo(std::ostream& str) const;
+
+  /**
+   * @brief Read from the stream the serialized `Ctxt` object in binary format.
+   * @param str Input `std::istream`.
+   * @return The deserialized `Ctxt` object.
+   **/
+  static Ctxt readFrom(std::istream& str, const PubKey& pubKey);
+
+  /**
+   * @brief In-place read from the stream the serialized `Ctxt` object in binary
+   * format.
+   * @param str Input `std::istream`.
+   **/
   void read(std::istream& str);
+
+  /**
+   * @brief Write out the ciphertext (`Ctxt`) object to the output
+   * stream using JSON format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeToJSON(std::ostream& str) const;
+
+  /**
+   * @brief Write out the ciphertext (`Ctxt`) object to a `JsonWrapper`.
+   * @return The `JsonWrapper`.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
+   * @brief Read from the stream the serialized ciphertext (`Ctxt`) object using
+   * JSON format.
+   * @param str Input `std::istream`.
+   * @param pubKey The `PubKey` to be used.
+   * @return The deserialized `Ctxt` object.
+   **/
+  static Ctxt readFromJSON(std::istream& str, const PubKey& pubKey);
+
+  /**
+   * @brief Read from the `JsonWrapper` the serialized ciphertext (`Ctxt`)
+   * object.
+   * @param j The `JsonWrapper` containing the serialized `Ctxt` object.
+   * @param pubKey The `PubKey` to be used.
+   * @return The deserialized `Ctxt` object.
+   **/
+  static Ctxt readFromJSON(const JsonWrapper& j, const PubKey& pubKey);
+
+  /**
+   * @brief In-place read from the `str` `std::istream` the serialized
+   * ciphertext (`Ctxt`) object.
+   * @param j The `JsonWrapper` containing the serialized `Ctxt` object.
+   **/
+  void readJSON(std::istream& str);
+
+  /**
+   * @brief In-place read from the `JsonWrapper` the serialized ciphertext
+   * (`Ctxt`) object.
+   * @param j The `JsonWrapper` containing the serialized `Ctxt` object.
+   **/
+  void readJSON(const JsonWrapper& j);
 
   // scale up c1, c2 so they have the same ratFactor
   static void equalizeRationalFactors(Ctxt& c1, Ctxt& c2);

@@ -261,7 +261,7 @@ public:
 
     RBak bak;
     bak.save();
-    ea.getContext().alMod.restoreContext();
+    ea.getContext().getAlMod().restoreContext();
     data.resize(n);
     for (long i : range(n)) {
       data[i].resize(n);
@@ -300,7 +300,7 @@ public:
 
     RBak bak;
     bak.save();
-    ea.getContext().alMod.restoreContext();
+    ea.getContext().getAlMod().restoreContext();
     data.resize(n);
     for (long i : range(n)) {
       data[i].resize(n);

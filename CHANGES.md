@@ -1,3 +1,17 @@
+Release Changes
+===============
+
+HElib 2.0.0, January 2021
+=========================
+(tagged as v2.0.0)
+
+* Contains API changes that are not backwards compatible with v1.x.x
+  * Changes to Context API
+  * Must use ContextBuilder to build context
+  * New serialization APIs: binary and JSON
+* CKKS coding tutorials
+* Bug fixes
+
 HElib 1.3.1, December 2020
 =========================
 (tagged as v1.3.1)

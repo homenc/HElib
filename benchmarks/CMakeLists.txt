@@ -47,14 +47,21 @@ endif (NOT CMAKE_BUILD_TYPE)
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
-find_package(helib 1.3.1 EXACT REQUIRED)
+# STRINGS avoids having the 2 newline characters at the end of the string.
+# Alternatively it's possible to use file(READ ...) and then
+# string(REGEX REPLACE "\n$" "" HELIB_VERSION "${HELIB_VERSION}")
+file(STRINGS "../VERSION" HELIB_VERSION)
+
+find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
+
 find_package(benchmark REQUIRED)
 
 # Targets are simply associated with their source files.
 set(TRGTS bgv_basic
           bgv_thinboot
           bgv_fatboot
-          ckks_basic)
+          ckks_basic
+          IO)
 
 # Sources derived from their targets.
 set(SRCS "")

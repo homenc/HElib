@@ -15,13 +15,15 @@
 #include <helib/timing.h>
 #include <helib/EncryptedArray.h>
 #include <helib/Ptxt.h>
-#include <helib/binio.h>
+#include "binio.h"
 #include <helib/sample.h>
 #include <helib/norms.h>
 #include <helib/apiAttributes.h>
 #include <helib/fhe_stats.h>
 #include <helib/log.h>
 #include "internal_symbols.h" // DECRYPT_ON_PWFL_BASIS
+
+#include "io.h"
 
 namespace helib {
 
@@ -38,10 +40,10 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT& s, long p)
       "Cannot generate RLWE instance with nonpositive p"); // Used with p=1 for
                                                            // CKKS, p>=2 for BGV
   const Context& context = s.getContext();
-  const PAlgebra& palg = context.zMStar;
+  const PAlgebra& palg = context.getZMStar();
 
   // choose a short error e
-  double stdev = to_double(context.stdev);
+  double stdev = to_double(context.getStdev());
   if (palg.getPow2() == 0) // not power of two
     stdev *= sqrt(palg.getM());
   double bound = c0.sampleGaussianBounded(stdev);
@@ -78,12 +80,6 @@ double RLWE(DoubleCRT& c0,
 /******************** PubKey implementation **********************/
 /********************************************************************/
 // Computes the keySwitchMap pointers, using breadth-first search (BFS)
-
-PubKey::PubKey() :
-    context(*activeContext), pubEncrKey(*this), recryptEkey(*this)
-{
-  recryptKeyID = -1;
-}
 
 PubKey::PubKey(const Context& _context) :
     context(_context), pubEncrKey(*this), recryptEkey(*this)
@@ -123,7 +119,7 @@ void PubKey::setKeySwitchMap(long keyId)
                 0l,
                 (long)skBounds.size(),
                 "No such key found"); // Sanity-check, do we have such a key?
-  long m = context.zMStar.getM();
+  long m = context.getM();
 
   // Initialize an array of "edges" (this is easier than searching through
   // all the matrices for every step). This is a list of all the powers n
@@ -395,8 +391,8 @@ long PubKey::Encrypt(Ctxt& ctxt,
   //  that the coefficients of the ciphertext are uniformly
   //  and independently chosen from the interval [-p/2, p/2].
 
-  DoubleCRT e(context, context.ctxtPrimes);
-  DoubleCRT r(context, context.ctxtPrimes);
+  DoubleCRT e(context, context.getCtxtPrimes());
+  DoubleCRT r(context, context.getCtxtPrimes());
   double r_bound = r.sampleSmallBounded();
 
   ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
@@ -404,9 +400,9 @@ long PubKey::Encrypt(Ctxt& ctxt,
   // std::cerr << "*** r_bound*pubEncrKey.noiseBound " << r_bound *
   // pubEncrKey.noiseBound << "\n";
 
-  double stdev = to_double(context.stdev);
-  if (context.zMStar.getPow2() == 0) // not power of two
-    stdev *= sqrt(context.zMStar.getM());
+  double stdev = to_double(context.getStdev());
+  if (context.getZMStar().getPow2() == 0) // not power of two
+    stdev *= sqrt(context.getM());
 
   for (size_t i = 0; i < ctxt.parts.size(); i++) { // add noise to all the parts
     ctxt.parts[i] *= r;
@@ -417,7 +413,7 @@ long PubKey::Encrypt(Ctxt& ctxt,
       // [-Q/(8*ptxtSpace)..Q/(8*ptxtSpace)]
 
       NTL::ZZ B;
-      B = context.productOfPrimes(context.ctxtPrimes);
+      B = context.productOfPrimes(context.getCtxtPrimes());
       B /= (ptxtSpace * 8);
 
       e_bound = e.sampleUniform(B);
@@ -454,14 +450,13 @@ long PubKey::Encrypt(Ctxt& ctxt,
   // NOTE: this is a heuristic, as the ptxt is not really random.
   // although, when ptxtSpace == 2, the balanced_MulMod will
   // randomize it
-  double ptxt_bound =
-      context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+  double ptxt_bound = context.noiseBoundForMod(ptxtSpace, context.getPhiM());
 
   // FIXME: for now, we print out a warning, but we can consider
   // implementing a more robust randomization and rejection sampling
   // strategy.
   double ptxt_sz =
-      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.getZMStar()));
 
   if (ptxt_sz > ptxt_bound) {
     Warning("noise bound exceeded in encryption");
@@ -509,10 +504,10 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   if (ptxtSize <= 0)
     ptxtSize = 1.0;
   if (scaling <= 0) // assume the default scaling factor
-    scaling = getContext().ea->getCx().encodeScalingFactor() / ptxtSize;
+    scaling = getContext().getEA().getCx().encodeScalingFactor() / ptxtSize;
 
-  long m = context.zMStar.getM();
-  long prec = getContext().alMod.getPPowR();
+  long m = context.getM();
+  long prec = getContext().getAlMod().getPPowR();
 
   // generate a random encryption of zero from the public encryption key
   ctxt = pubEncrKey; // already an encryption of zero, just not a random one
@@ -535,16 +530,16 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   // factor. The extra factor ef is set as ceil(error_bound*prec/f),
   // so that we have ef*f >= error_bound*prec.
 
-  DoubleCRT e(context, context.ctxtPrimes);
-  DoubleCRT r(context, context.ctxtPrimes);
+  DoubleCRT e(context, context.getCtxtPrimes());
+  DoubleCRT r(context, context.getCtxtPrimes());
 
   double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
 
   NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
   // VJS-NOTE: why don't the error bounds include the encoding error?
 
-  double stdev = to_double(context.stdev);
-  if (context.zMStar.getPow2() == 0) // not power of two
+  double stdev = to_double(context.getStdev());
+  if (context.getZMStar().getPow2() == 0) // not power of two
     stdev *= sqrt(m);
 
   for (size_t i = 0; i < ctxt.parts.size(); i++) {
@@ -561,6 +556,7 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
     }
     error_bound += e_bound;
   }
+
   // Compute the extra scaling factor, if needed
   long ef = NTL::conv<long>(ceil(error_bound * prec / (scaling * ptxtSize)));
   if (ef > 1) { // scale up some more
@@ -569,6 +565,7 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   } else { // no need for extra scaling
     ctxt.parts[0] += ptxt;
   }
+
   // Round size to next power of two so as not to leak too much
   ctxt.ptxtMag = EncryptedArrayCx::roundedSize(ptxtSize);
   ctxt.ratFactor = scaling;
@@ -593,6 +590,7 @@ long PubKey::Encrypt(Ctxt& ciphertxt,
 {
   return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false);
 }
+
 long PubKey::Encrypt(Ctxt& ciphertxt, const zzX& plaintxt, long ptxtSpace) const
 {
   return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false);
@@ -680,8 +678,8 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
   //  that the coefficients of the ciphertext are uniformly
   //  and independently chosen from the interval [-p/2, p/2].
 
-  DoubleCRT e(context, context.ctxtPrimes);
-  DoubleCRT r(context, context.ctxtPrimes);
+  DoubleCRT e(context, context.getCtxtPrimes());
+  DoubleCRT r(context, context.getCtxtPrimes());
   double r_bound = r.sampleSmallBounded();
 
   ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
@@ -689,9 +687,9 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
   // std::cerr << "*** r_bound*pubEncrKey.noiseBound " << r_bound *
   // pubEncrKey.noiseBound << "\n";
 
-  double stdev = to_double(context.stdev);
-  if (context.zMStar.getPow2() == 0) // not power of two
-    stdev *= sqrt(context.zMStar.getM());
+  double stdev = to_double(context.getStdev());
+  if (context.getZMStar().getPow2() == 0) // not power of two
+    stdev *= sqrt(context.getM());
 
   for (size_t i = 0; i < ctxt.parts.size(); i++) { // add noise to all the parts
     ctxt.parts[i] *= r;
@@ -726,14 +724,13 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
   // NOTE: this is a heuristic, as the ptxt is not really random.
   // although, when ptxtSpace == 2, the balanced_MulMod will
   // randomize it
-  double ptxt_bound =
-      context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+  double ptxt_bound = context.noiseBoundForMod(ptxtSpace, context.getPhiM());
 
   // FIXME: for now, we print out a warning, but we can consider
   // implementing a more robust randomization and rejection sampling
   // strategy.
   double ptxt_sz =
-      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.getZMStar()));
 
   if (ptxt_sz > ptxt_bound) {
     Warning("noise bound exceeded in encryption");
@@ -772,7 +769,7 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
   assertTrue(scale > 0, "CKKS encryption: scale <= 0");
   assertTrue(err > 0, "CKKS encryption: err <= 0");
 
-  long m = context.zMStar.getM();
+  long m = context.getM();
 
   // generate a random encryption of zero from the public encryption key
   ctxt = pubEncrKey; // already an encryption of zero, just not a random one
@@ -797,17 +794,17 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
   // the scaled noise added by encryption is less than the scaled
   // noise already present in the encoded ptxt.
 
-  DoubleCRT e(context, context.ctxtPrimes);
-  DoubleCRT r(context, context.ctxtPrimes);
+  DoubleCRT e(context, context.getCtxtPrimes());
+  DoubleCRT r(context, context.getCtxtPrimes());
 
   double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
 
   NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
 
-  double stdev = to_double(context.stdev);
+  double stdev = to_double(context.getStdev());
 
   // VJS-NOTE: this should never happen for CKKS
-  if (context.zMStar.getPow2() == 0) // not power of two
+  if (context.getZMStar().getPow2() == 0) // not power of two
     stdev *= sqrt(m);
 
   for (size_t i = 0; i < ctxt.parts.size(); i++) {
@@ -860,7 +857,7 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const
 
 bool PubKey::isCKKS() const
 {
-  return (getContext().alMod.getTag() == PA_cx_tag);
+  return (getContext().getAlMod().getTag() == PA_cx_tag);
 }
 // NOTE: Is taking the alMod from the context the right thing to do?
 
@@ -868,101 +865,23 @@ bool PubKey::isBootstrappable() const { return (recryptKeyID >= 0); }
 
 std::ostream& operator<<(std::ostream& str, const PubKey& pk)
 {
-  str << "[";
-  writeContextBase(str, pk.getContext());
-
-  // output the public encryption key itself
-  str << pk.pubEncrKey << std::endl;
-
-  // output skBounds in the same format as vec_double
-  str << "[";
-  for (long i = 0; i < (long)pk.skBounds.size(); i++)
-    str << pk.skBounds[i] << " ";
-  str << "]\n";
-
-  // output the key-switching matrices
-  str << pk.keySwitching.size() << std::endl;
-  for (long i = 0; i < (long)pk.keySwitching.size(); i++)
-    str << pk.keySwitching[i] << std::endl;
-
-  // output keySwitchMap in the same format as vec_vec_long
-  str << "[";
-  for (long i = 0; i < (long)pk.keySwitchMap.size(); i++) {
-    str << "[";
-    for (long j = 0; j < (long)pk.keySwitchMap[i].size(); j++)
-      str << pk.keySwitchMap[i][j] << " ";
-    str << "]\n ";
-  }
-  str << "]\n";
-
-  str << pk.KS_strategy << "\n";
-
-  // output the bootstrapping key, if any
-  str << pk.recryptKeyID << " ";
-  if (pk.recryptKeyID >= 0)
-    str << pk.recryptEkey << std::endl;
-  return str << "]";
+  pk.writeToJSON(str);
+  return str;
 }
 
 std::istream& operator>>(std::istream& str, PubKey& pk)
 {
   pk.clear();
-  //  std::cerr << "PubKey[";
-  seekPastChar(str, '['); // defined in NumbTh.cpp
 
-  // sanity check, verify that basic context parameters are correct
-  unsigned long m, p, r;
-  std::vector<long> gens, ords;
-  readContextBase(str, m, p, r, gens, ords);
-  assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords),
-             "PAlgebra mismatch");
+  pk.readJSON(str);
 
-  // Get the public encryption key itself
-  str >> pk.pubEncrKey;
-
-  // Get the vector of secret-key Hamming-weights
-  NTL::Vec<double> vl;
-  str >> vl;
-  pk.skBounds.resize(vl.length());
-  for (long i = 0; i < (long)pk.skBounds.size(); i++)
-    pk.skBounds[i] = vl[i];
-
-  // Get the key-switching matrices
-  long nMatrices;
-  str >> nMatrices;
-  pk.keySwitching.resize(nMatrices);
-  for (long i = 0; i < nMatrices; i++) // read the matrix from input str
-    pk.keySwitching[i].readMatrix(str, pk.getContext());
-
-  // Get the key-switching map
-  NTL::Vec<NTL::Vec<long>> vvl;
-  str >> vvl;
-  pk.keySwitchMap.resize(vvl.length());
-  for (long i = 0; i < (long)pk.keySwitchMap.size(); i++) {
-    pk.keySwitchMap[i].resize(vvl[i].length());
-    for (long j = 0; j < (long)pk.keySwitchMap[i].size(); j++)
-      pk.keySwitchMap[i][j] = vvl[i][j];
-  }
-
-  // build the key-switching map for all keys
-  for (long i = pk.skBounds.size() - 1; i >= 0; i--)
-    pk.setKeySwitchMap(i);
-
-  str >> pk.KS_strategy;
-
-  // Get the bootstrapping key, if any
-  str >> pk.recryptKeyID;
-  if (pk.recryptKeyID >= 0)
-    str >> pk.recryptEkey;
-
-  seekPastChar(str, ']');
   return str;
 }
 
-void writePubKeyBinary(std::ostream& str, const PubKey& pk)
+void PubKey::writeTo(std::ostream& str) const
 {
-
-  writeEyeCatcher(str, BINIO_EYE_PK_BEGIN);
+  SerializeHeader<PubKey>().writeTo(str);
+  writeEyeCatcher(str, EyeCatcher::PK_BEGIN);
 
   // Write out for PubKey
   //  1. Context Base
@@ -974,64 +893,170 @@ void writePubKeyBinary(std::ostream& str, const PubKey& pk)
   //  7. long recryptKeyID;
   //  8. Ctxt recryptEkey;
 
-  writeContextBaseBinary(str, pk.getContext());
-  pk.pubEncrKey.write(str);
-  write_raw_vector(str, pk.skBounds);
+  this->getContext().writeTo(str);
+  this->pubEncrKey.writeTo(str);
+  write_raw_vector(str, this->skBounds);
 
   // Keyswitch Matrices
-  write_raw_vector(str, pk.keySwitching);
+  write_raw_vector(str, this->keySwitching);
 
-  long sz = pk.keySwitchMap.size();
+  long sz = this->keySwitchMap.size();
   write_raw_int(str, sz);
-  for (auto v : pk.keySwitchMap)
+  for (auto v : this->keySwitchMap)
     write_raw_vector(str, v);
 
-  write_ntl_vec_long(str, pk.KS_strategy);
+  write_ntl_vec_long(str, this->KS_strategy);
 
-  write_raw_int(str, pk.recryptKeyID);
-  pk.recryptEkey.write(str);
+  write_raw_int(str, this->recryptKeyID);
+  this->recryptEkey.writeTo(str);
 
-  writeEyeCatcher(str, BINIO_EYE_PK_END);
+  writeEyeCatcher(str, EyeCatcher::PK_END);
 }
 
-void readPubKeyBinary(std::istream& str, PubKey& pk)
+PubKey PubKey::readFrom(std::istream& str, const Context& context)
 {
-  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_BEGIN);
-  assertEq(eyeCatcherFound, 0, "Could not find pre-public key eyecatcher");
+  const auto header = SerializeHeader<PubKey>::readFrom(str);
+  assertEq<IOError>(header.version,
+                    Binio::VERSION_0_0_1_0,
+                    "Header: version " + header.versionString() +
+                        " not supported");
+
+  bool eyeCatcherFound = readEyeCatcher(str, EyeCatcher::PK_BEGIN);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find pre-public key eyecatcher");
 
   // TODO code to check context object is what it should be same as the text IO.
   // May be worth putting it in helper func.
   // std::unique_ptr<Context> dummy = buildContextFromBinary(str);
-  unsigned long m, p, r;
-  std::vector<long> gens, ords;
-  readContextBaseBinary(str, m, p, r, gens, ords);
-  assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords),
-             "PAlgebra mismatch");
+
+  Context ser_context = Context::readFrom(str);
+  assertEq(context, ser_context, "Context mismatch");
+
+  PubKey ret(context);
 
   // Read in the rest
-  pk.pubEncrKey.read(str);
-  read_raw_vector(str, pk.skBounds);
+  ret.pubEncrKey.read(str); // Using in-place ctxt read function for performance
+  read_raw_vector(str, ret.skBounds); // Using in-place function for performance
 
   // Keyswitch Matrices
-  read_raw_vector(str, pk.keySwitching, pk.getContext());
+  ret.keySwitching = read_raw_vector<KeySwitch, Context>(str, context);
 
   long sz = read_raw_int(str);
-  pk.keySwitchMap.clear();
-  pk.keySwitchMap.resize(sz);
-  for (auto& v : pk.keySwitchMap)
+  ret.keySwitchMap.clear();
+  ret.keySwitchMap.resize(sz);
+  for (auto& v : ret.keySwitchMap) {
     read_raw_vector(str, v);
+  }
 
-  read_ntl_vec_long(str, pk.KS_strategy);
+  // TODO: Check with VJS if the following loop is really needed
+  for (long i = ret.skBounds.size() - 1; i >= 0; i--) {
+    ret.setKeySwitchMap(i);
+  }
 
-  pk.recryptKeyID = read_raw_int(str);
-  pk.recryptEkey.read(str);
+  read_ntl_vec_long(str, ret.KS_strategy);
 
-  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_END);
-  assertEq(eyeCatcherFound, 0, "Could not find post-public key eyecatcher");
+  ret.recryptKeyID = read_raw_int(str);
+  ret.recryptEkey.read(str); // Using in-place ctxt read function for
+                             // performance
+
+  eyeCatcherFound = readEyeCatcher(str, EyeCatcher::PK_END);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find post-public key eyecatcher");
+
+  return ret;
+}
+
+void PubKey::writeToJSON(std::ostream& str) const
+{
+  executeRedirectJsonError<void>([&]() { str << writeToJSON(); });
+}
+
+JsonWrapper PubKey::writeToJSON() const
+{
+  auto body = [this]() {
+    json j = {{"context", unwrap(this->getContext().writeToJSON())},
+              {"pubEncrKey", unwrap(this->pubEncrKey.writeToJSON())},
+              {"skBounds", this->skBounds},
+              {"keySwitching", writeVectorToJSON(keySwitching)},
+              {"keySwitchMap", this->keySwitchMap},
+              {"KS_strategy", this->KS_strategy},
+              {"recryptKeyID", this->recryptKeyID},
+              {"recryptEkey",
+               this->recryptKeyID >= 0 ? unwrap(this->recryptEkey.writeToJSON())
+                                       : "nullptr"}};
+    return wrap(toTypedJson<PubKey>(j));
+  };
+  return executeRedirectJsonError<JsonWrapper>(body);
+}
+
+PubKey PubKey::readFromJSON(std::istream& str, const Context& context)
+{
+  return executeRedirectJsonError<PubKey>([&]() {
+    json j;
+    str >> j;
+    return readFromJSON(wrap(j), context);
+  });
+}
+
+PubKey PubKey::readFromJSON(const JsonWrapper& jw, const Context& context)
+{
+  PubKey pk{context};
+  pk.readJSON(jw);
+  return pk;
+}
+
+void PubKey::readJSON(std::istream& str)
+{
+  executeRedirectJsonError<void>([&]() {
+    json j;
+    str >> j;
+    readJSON(wrap(j));
+  });
+}
+
+void PubKey::readJSON(const JsonWrapper& tjw)
+{
+  auto body = [&, this]() {
+    json j = fromTypedJson<PubKey>(unwrap(tjw));
+    Context ser_context = Context::readFromJSON(wrap(j.at("context")));
+    assertEq(context, ser_context, "Context mismatch");
+
+    this->clear();
+    //  std::cerr << "PubKey[";
+
+    // Get the public encryption key itself
+    this->pubEncrKey.readJSON(wrap(j.at("pubEncrKey")));
+
+    // Get the vector of secret-key Hamming-weights
+    j.at("skBounds").get_to(this->skBounds);
+
+    keySwitching = readVectorFromJSON<KeySwitch>(j.at("keySwitching"), context);
+
+    // Get the key-switching map
+    this->keySwitchMap =
+        j.at("keySwitchMap").get<std::vector<std::vector<long>>>();
+
+    // TODO: Check with VJS if the following loop is really needed
+    // build the key-switching map for all keys
+    for (long i = this->skBounds.size() - 1; i >= 0; i--)
+      this->setKeySwitchMap(i);
+
+    this->KS_strategy = j.at("KS_strategy");
+
+    // Get the bootstrapping key, if any
+    this->recryptKeyID = j.at("recryptKeyID");
+    if (this->recryptKeyID >= 0) {
+      this->recryptEkey.readJSON(wrap(j.at("recryptEkey")));
+    }
+  };
+
+  executeRedirectJsonError<void>(body);
 }
 
 /******************** SecKey implementation **********************/
 /********************************************************************/
+
+SecKey::SecKey(const PubKey& pk) : PubKey(pk) {}
 
 SecKey::SecKey(const Context& _context) : PubKey(_context) {}
 
@@ -1071,18 +1096,18 @@ long SecKey::ImportSecKey(const DoubleCRT& sKey,
 {
   if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
     if (ptxtSpace < 2)
-      ptxtSpace = isCKKS() ? 1 : context.alMod.getPPowR();
+      ptxtSpace = isCKKS() ? 1 : context.getAlMod().getPPowR();
     // default plaintext space is p^r for BGV, 1 for CKKS
 
     // allocate space, the parts are DoubleCRTs with all the ctxtPrimes
-    pubEncrKey.parts.assign(2, CtxtPart(context, context.ctxtPrimes));
+    pubEncrKey.parts.assign(2, CtxtPart(context, context.getCtxtPrimes()));
     // Choose a new RLWE instance
     pubEncrKey.noiseBound =
         RLWE(pubEncrKey.parts[0], pubEncrKey.parts[1], sKey, ptxtSpace);
     if (isCKKS()) {
       pubEncrKey.ptxtMag = 0.0;
       pubEncrKey.ratFactor = pubEncrKey.noiseBound *
-                             getContext().ea->getCx().encodeScalingFactor();
+                             getContext().getEA().getCx().encodeScalingFactor();
     }
 
     // make parts[0],parts[1] point to (1,s)
@@ -1090,7 +1115,7 @@ long SecKey::ImportSecKey(const DoubleCRT& sKey,
     pubEncrKey.parts[1].skHandle.setBase();
 
     // Set the other Ctxt bookeeping parameters in pubEncrKey
-    pubEncrKey.primeSet = context.ctxtPrimes;
+    pubEncrKey.primeSet = context.getCtxtPrimes();
     pubEncrKey.ptxtSpace = ptxtSpace;
   }
   skBounds.push_back(bound); // record the size of the new secret-key
@@ -1106,9 +1131,10 @@ long SecKey::ImportSecKey(const DoubleCRT& sKey,
 
 long SecKey::GenSecKey(long ptxtSpace, long maxDegKswitch)
 {
-  long hwt = context.hwt_param;
+  long hwt = context.getHwt();
 
-  DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes);
+  DoubleCRT newSk(context,
+                  context.getCtxtPrimes() | context.getSpecialPrimes());
 
   if (hwt > 0) {
     // sample a Hamming-weight-hwt polynomial
@@ -1155,15 +1181,17 @@ void SecKey::GenKeySWmatrix(long fromSPower,
   KeySwitch ksMatrix(fromSPower, fromXPower, fromIdx, toIdx);
   RandomBits(ksMatrix.prgSeed, 256); // a random 256-bit seed
 
-  long n = context.digits.size();
+  long n = context.getDigits().size();
 
   // size-n vector
   ksMatrix.b.resize(
       n,
-      DoubleCRT(context, context.ctxtPrimes | context.specialPrimes));
+      DoubleCRT(context, context.getCtxtPrimes() | context.getSpecialPrimes()));
 
   std::vector<DoubleCRT> a;
-  a.resize(n, DoubleCRT(context, context.ctxtPrimes | context.specialPrimes));
+  a.resize(
+      n,
+      DoubleCRT(context, context.getCtxtPrimes() | context.getSpecialPrimes()));
 
   {
     RandomState state;
@@ -1179,7 +1207,7 @@ void SecKey::GenKeySWmatrix(long fromSPower,
     if (p < 2) {
       if (context.isBootstrappable()) {
         // use larger bootstrapping plaintext space
-        p = context.rcData.alMod->getPPowR();
+        p = context.getRcData().alMod->getPPowR();
       } else {
         p = pubEncrKey.ptxtSpace; // default plaintext space from public key
       }
@@ -1200,10 +1228,10 @@ void SecKey::GenKeySWmatrix(long fromSPower,
     ksMatrix.noiseBound = RLWE1(ksMatrix.b[i], a[i], toKey, p);
   }
   // Add in the multiples of the fromKey secret key
-  fromKey *= context.productOfPrimes(context.specialPrimes);
+  fromKey *= context.productOfPrimes(context.getSpecialPrimes());
   for (long i = 0; i < n; i++) {
     ksMatrix.b[i] += fromKey;
-    fromKey *= context.productOfPrimes(context.digits[i]);
+    fromKey *= context.productOfPrimes(context.getDigit(i));
   }
 
   // Push the new matrix onto our list
@@ -1247,7 +1275,7 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt,
   assertTrue(&context == &plaintxt.getContext(),
              "Decrypt: inconsistent contexts");
 
-  const View& view = context.getDefaultView();
+  const View& view = context.getView();
   std::vector<std::complex<double>> ptxt;
   view.decrypt(ciphertxt, *this, ptxt, prec);
   plaintxt.setData(ptxt);
@@ -1308,7 +1336,8 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
 
   if (!ciphertxt.isCorrect()) {
     std::string message = "Decrypting with too much noise";
-    // TODO: Turn the following preprocessor logics into a warnOrThrow function
+
+// TODO: Turn the following preprocessor logics into a warnOrThrow function
 #ifdef HELIB_DEBUG
     Warning(message);
 #else
@@ -1348,8 +1377,8 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
   }
   // convert to coefficient representation & reduce modulo the plaintext space
 
-  if (DECRYPT_ON_PWFL_BASIS && !getContext().zMStar.getPow2()) {
-    const PowerfulDCRT& pwfl_converter = *getContext().pwfl_converter;
+  if (DECRYPT_ON_PWFL_BASIS && !getContext().getZMStar().getPow2()) {
+    const PowerfulDCRT& pwfl_converter = getContext().getPowerfulConverter();
     NTL::Vec<NTL::ZZ> pwfl;
 
     pwfl_converter.dcrtToPowerful(pwfl, ptxt);
@@ -1411,9 +1440,9 @@ long SecKey::skEncrypt(Ctxt& ctxt,
   }
   ctxt.ptxtSpace = ptxtSpace;
 
-  ctxt.primeSet = context.ctxtPrimes; // initialize the primeSet
+  ctxt.primeSet = context.getCtxtPrimes(); // initialize the primeSet
   {
-    CtxtPart tmpPart(context, context.ctxtPrimes);
+    CtxtPart tmpPart(context, context.getCtxtPrimes());
     ctxt.parts.assign(2, tmpPart);
   } // allocate space
 
@@ -1435,8 +1464,8 @@ long SecKey::skEncrypt(Ctxt& ctxt,
 
   if (isCKKS()) {
 
-    double f = getContext().ea->getCx().encodeScalingFactor() / ptxtSize;
-    long prec = getContext().alMod.getPPowR();
+    double f = getContext().getEA().getCx().encodeScalingFactor() / ptxtSize;
+    long prec = getContext().getAlMod().getPPowR();
     long ef = NTL::conv<long>(ceil(prec * ctxt.noiseBound / (f * ptxtSize)));
     if (ef > 1) { // scale up some more
       ctxt.parts[0] += ptxt * ef;
@@ -1470,14 +1499,13 @@ long SecKey::skEncrypt(Ctxt& ctxt,
     // NOTE: this is a heuristic, as the ptxt is not really random,
     // although, when ptxtSpace == 2, the balanced_MulMod will
     // randomize it
-    double ptxt_bound =
-        context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+    double ptxt_bound = context.noiseBoundForMod(ptxtSpace, context.getPhiM());
 
     // FIXME: for now, we print out a warning, but we can consider
     // implementing a more robust randomization and rejection sampling
     // strategy.
-    double ptxt_sz =
-        NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+    double ptxt_sz = NTL::conv<double>(
+        embeddingLargestCoeff(ptxt_fixed, context.getZMStar()));
 
     if (ptxt_sz > ptxt_bound) {
       Warning("noise bound exceeded in encryption");
@@ -1541,10 +1569,10 @@ void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
   long skIdx = 0; // in case we eventually want to generalize
 
   ctxt.ptxtSpace = ptxtSpace;
-  ctxt.primeSet = context.ctxtPrimes;
+  ctxt.primeSet = context.getCtxtPrimes();
   ctxt.intFactor = 1;
   ctxt.ratFactor = ctxt.ptxtMag = 1.0;
-  ctxt.parts.assign(2, CtxtPart(context, context.ctxtPrimes));
+  ctxt.parts.assign(2, CtxtPart(context, context.getCtxtPrimes()));
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();
@@ -1571,14 +1599,13 @@ void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
   // NOTE: this is a heuristic, as the ptxt is not really random,
   // although, when ptxtSpace == 2, the balanced_MulMod will
   // randomize it
-  double ptxt_bound =
-      context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+  double ptxt_bound = context.noiseBoundForMod(ptxtSpace, context.getPhiM());
 
   // FIXME: for now, we print out a warning, but we can consider
   // implementing a more robust randomization and rejection sampling
   // strategy.
   double ptxt_sz =
-      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.getZMStar()));
 
   if (ptxt_sz > ptxt_bound) {
     Warning("noise bound exceeded in encryption");
@@ -1606,7 +1633,7 @@ void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
 
   long skIdx = 0; // in case we eventually want to generalize
 
-  ctxt.parts.assign(2, CtxtPart(context, context.ctxtPrimes));
+  ctxt.parts.assign(2, CtxtPart(context, context.getCtxtPrimes()));
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();
@@ -1630,7 +1657,7 @@ void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
 
   // VJS-NOTE: we no longer round to the next power of two:
   // Then encoding routine should take care of setting mag correctly.
-  ctxt.primeSet = context.ctxtPrimes;
+  ctxt.primeSet = context.getCtxtPrimes();
   ctxt.ptxtMag = mag;
   ctxt.ratFactor = scale;
   ctxt.noiseBound = error_bound + err;
@@ -1650,15 +1677,17 @@ long SecKey::genRecryptData()
   assertTrue(context.isBootstrappable(),
              "Cannot generate recrypt data for non-bootstrappable context");
 
-  long p2ePr = context.rcData.alMod->getPPowR(); // p^{e-e'+r}
-  long p2r = context.alMod.getPPowR();           // p^r
+  long p2ePr = context.getRcData().alMod->getPPowR(); // p^{e-e'+r}
+  long p2r = context.getAlMod().getPPowR();           // p^r
 
   // Generate a new bootstrapping key
   zzX keyPoly;
-  long hwt = context.rcData.skHwt;
+  long hwt = context.getRcData().skHwt;
   double bound = sampleHWtBounded(keyPoly, context, hwt);
 
-  DoubleCRT newSk(keyPoly, context, context.ctxtPrimes | context.specialPrimes);
+  DoubleCRT newSk(keyPoly,
+                  context,
+                  context.getCtxtPrimes() | context.getSpecialPrimes());
   // defined relative to all primes
 
   long keyID = ImportSecKey(newSk, bound, p2r, /*maxDegKswitch=*/1);
@@ -1678,13 +1707,11 @@ long SecKey::genRecryptData()
 
 std::ostream& operator<<(std::ostream& str, const SecKey& sk)
 {
-  str << "[" << ((const PubKey&)sk) << std::endl
-      << sk.sKeys.size() << std::endl;
-  for (long i = 0; i < (long)sk.sKeys.size(); i++)
-    str << sk.sKeys[i] << std::endl;
-  return str << "]";
+  sk.writeToJSON(str);
+  return str;
 }
 
+// FIXME: For consistency we should change this to write in json format too.
 std::ostream& SecKey::writeSecKeyDerivedASCII(std::ostream& str) const
 {
   str << "[" << sKeys.size() << std::endl;
@@ -1695,49 +1722,104 @@ std::ostream& SecKey::writeSecKeyDerivedASCII(std::ostream& str) const
 
 std::istream& operator>>(std::istream& str, SecKey& sk)
 {
-  sk.clear();
-  //  std::cerr << "SecKey[";
-  seekPastChar(str, '['); // defined in NumbTh.cpp
-  str >> (PubKey&)sk;
-
-  long nKeys;
-  str >> nKeys;
-  sk.sKeys.resize(nKeys, DoubleCRT(sk.getContext(), IndexSet::emptySet()));
-  for (long i = 0; i < nKeys; i++)
-    str >> sk.sKeys[i];
-  seekPastChar(str, ']');
-  //  std::cerr << "]\n";
+  sk.readJSON(str);
   return str;
 }
 
-void writeSecKeyBinary(std::ostream& str, const SecKey& sk)
+void SecKey::writeTo(std::ostream& str) const
 {
-  writeEyeCatcher(str, BINIO_EYE_SK_BEGIN);
+  SerializeHeader<SecKey>().writeTo(str);
+  writeEyeCatcher(str, EyeCatcher::SK_BEGIN);
 
   // Write out the public key part first.
-  writePubKeyBinary(str, sk);
+  this->PubKey::writeTo(str);
 
   // Write out
   // 1. vector<DoubleCRT> sKeys
 
-  write_raw_vector<DoubleCRT>(str, sk.sKeys);
+  write_raw_vector<DoubleCRT>(str, this->sKeys);
 
-  writeEyeCatcher(str, BINIO_EYE_SK_END);
+  writeEyeCatcher(str, EyeCatcher::SK_END);
 }
 
-void readSecKeyBinary(std::istream& str, SecKey& sk)
+SecKey SecKey::readFrom(std::istream& str, const Context& context)
 {
-  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
-  assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
+  const auto header = SerializeHeader<SecKey>::readFrom(str);
+  assertEq<IOError>(header.version,
+                    Binio::VERSION_0_0_1_0,
+                    "Header: version " + header.versionString() +
+                        " not supported");
 
-  // Read in the public key part first.
-  readPubKeyBinary(str, sk);
+  bool eyeCatcherFound = readEyeCatcher(str, EyeCatcher::SK_BEGIN);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find pre-secret key eyecatcher");
 
-  DoubleCRT blankDCRT(sk.getContext(), IndexSet::emptySet());
-  read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
+  // Create a secret key from its public part.
+  SecKey ret(PubKey::readFrom(str, context));
 
-  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_END);
-  assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
+  // Set the secret part of the secret key.
+  ret.sKeys = read_raw_vector<DoubleCRT>(str, context);
+
+  eyeCatcherFound = readEyeCatcher(str, EyeCatcher::SK_END);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find post-secret key eyecatcher");
+
+  return ret;
+}
+
+void SecKey::writeToJSON(std::ostream& str) const
+{
+  executeRedirectJsonError<void>([&]() { str << writeToJSON(); });
+}
+
+JsonWrapper SecKey::writeToJSON() const
+{
+  auto body = [this]() {
+    json j = {{"PubKey", unwrap(this->PubKey::writeToJSON())},
+              {"sKeys", writeVectorToJSON(this->sKeys)}};
+    return wrap(toTypedJson<SecKey>(j));
+  };
+
+  return executeRedirectJsonError<JsonWrapper>(body);
+}
+
+SecKey SecKey::readFromJSON(std::istream& str, const Context& context)
+{
+  auto body = [&]() {
+    json j;
+    str >> j;
+    return SecKey::readFromJSON(wrap(j), context);
+  };
+
+  return executeRedirectJsonError<SecKey>(body);
+}
+
+SecKey SecKey::readFromJSON(const JsonWrapper& jw, const Context& context)
+{
+  SecKey ret{context};
+  ret.readJSON(jw);
+  return ret;
+}
+
+void SecKey::readJSON(std::istream& str)
+{
+  executeRedirectJsonError<void>([&]() {
+    json j;
+    str >> j;
+    this->readJSON(wrap(j));
+  });
+}
+
+void SecKey::readJSON(const JsonWrapper& tjw)
+{
+  executeRedirectJsonError<void>([&]() {
+    json j = fromTypedJson<SecKey>(unwrap(tjw));
+    this->clear();
+
+    this->PubKey::readJSON(wrap(j.at("PubKey")));
+
+    this->sKeys = readVectorFromJSON<DoubleCRT>(j.at("sKeys"), context);
+  });
 }
 
 } // namespace helib

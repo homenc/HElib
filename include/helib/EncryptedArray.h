@@ -176,7 +176,7 @@ public:
   // CKKS only
   // mag: defaults to Norm(array).
   // prec: defaults to r=getAlMod().getR(), which
-  // is usually the same as context.getDefaultPrecision().
+  // is usually the same as context.getPrecision().
 
   // mag should be an upper bound on Norm(array).
   // If an encoding will be encrypted, the user may wish
@@ -896,7 +896,7 @@ public:
   double encodei(zzX& ptxt, long precision = -1) const; // encode i in all slots
 
   explicit EncryptedArrayDerived(const Context& _context) :
-      context(_context), alMod(context.alMod.getCx())
+      context(_context), alMod(context.getAlMod().getCx())
   {
     clear(iEncoded);
   }
@@ -1275,7 +1275,7 @@ public:
   double encodeRoundingError() const
   {
     const Context& context = getContext();
-    long phim = context.zMStar.getPhiM();
+    long phim = context.getPhiM();
 
     // VJS-NOTE: I changed m to phi(m).
     // VJS-FIXME: for the power of two case, noiseBoundForUniform
@@ -1303,7 +1303,7 @@ public:
   virtual double defaultErr() const override
   {
     const Context& context = getContext();
-    long phim = context.zMStar.getPhiM();
+    long phim = context.getPhiM();
 
     // VJS-FIXME: For the power of two case, noiseBoundForUniform
     // is a bit too pessimistic, as this is the circularly symmetric
@@ -1572,7 +1572,8 @@ private:
 public:
   //! constructor: G defaults to the monomial X, PAlgebraMod from context
   EncryptedArray(const Context& context, const NTL::ZZX& G = NTL::ZZX(1, 1)) :
-      alMod(context.alMod), rep(buildEncryptedArray(context, context.alMod, G))
+      alMod(context.getAlMod()),
+      rep(buildEncryptedArray(context, context.getAlMod(), G))
   {}
   //! constructor: G defaults to F0, PAlgebraMod explicitly given
   EncryptedArray(const Context& context, const PAlgebraMod& _alMod) :
@@ -1951,22 +1952,22 @@ public:
 
 inline void rotate(Ctxt& ctxt, long k)
 {
-  ctxt.getContext().getDefaultView().rotate(ctxt, k);
+  ctxt.getContext().getView().rotate(ctxt, k);
 }
 
 inline void shift(Ctxt& ctxt, long k)
 {
-  ctxt.getContext().getDefaultView().shift(ctxt, k);
+  ctxt.getContext().getView().shift(ctxt, k);
 }
 
 inline void rotate1D(Ctxt& ctxt, long i, long k, bool dc = false)
 {
-  ctxt.getContext().getDefaultView().rotate1D(ctxt, i, k, dc);
+  ctxt.getContext().getView().rotate1D(ctxt, i, k, dc);
 }
 
 inline void shift1D(Ctxt& ctxt, long i, long k)
 {
-  ctxt.getContext().getDefaultView().shift1D(ctxt, i, k);
+  ctxt.getContext().getView().shift1D(ctxt, i, k);
 }
 
 // PlaintextArray
@@ -2143,13 +2144,20 @@ void runningSums(const EncryptedArray& ea, PlaintextArray& pa);
 class PtxtArray
 {
 public:
+  /**
+   * @brief Class label to be added to JSON serialization as object type
+   * information.
+   */
+  static constexpr std::string_view typeName = "PtxtArray";
+
   // These two data fields should really be private, but there are
   // a lot of internal functions that need to access them
   const EncryptedArray& ea;
   PlaintextArray pa;
 
   explicit PtxtArray(const EncryptedArray& ea_) : ea(ea_), pa(ea) {}
-  explicit PtxtArray(const Context& context) : ea(*context.ea), pa(ea) {}
+
+  explicit PtxtArray(const Context& context) : ea(context.getView()), pa(ea) {}
 
   // copy constructor: default
   PtxtArray(const PtxtArray&) = default;
@@ -2186,6 +2194,8 @@ public:
 
   const EncryptedArray& getView() const { return ea; }
   const EncryptedArray& getEA() const { return ea; }
+
+  long size() const { return ea.size(); }
 
   // direct encode, encrypt, and decrypt methods
   void encode(EncodedPtxt& eptxt,
@@ -2254,6 +2264,7 @@ public:
   void random() { helib::random(ea, pa); }
 
   //======== load ========
+  // Puts vector or scalar data into a PtxtArray
 
   void load(const std::vector<int>& array)
   {
@@ -2347,6 +2358,7 @@ public:
   }
 
   //============== store ============
+  // Puts data into a std::vector aka `unload`
 
   void store(std::vector<long>& array) const { decode(ea, array, pa); }
 
@@ -2360,12 +2372,23 @@ public:
 
   // this is here for consistency with Ctxt class
   void negate() { helib::negate(ea, pa); }
-};
 
-inline std::ostream& operator<<(std::ostream& s, const PtxtArray& a)
-{
-  return s << a.pa;
-}
+  void writeToJSON(std::ostream& os) const;
+
+  JsonWrapper writeToJSON() const;
+
+  static PtxtArray readFromJSON(std::istream& is, const Context& context);
+
+  static PtxtArray readFromJSON(const JsonWrapper& jw, const Context& context);
+
+  void readJSON(std::istream& is);
+
+  void readJSON(const JsonWrapper& jw);
+
+  friend std::istream& operator>>(std::istream& is, PtxtArray& pa);
+
+  friend std::ostream& operator<<(std::ostream& os, const PtxtArray& pa);
+};
 
 inline void rotate(PtxtArray& a, long k) { rotate(a.ea, a.pa, k); }
 
@@ -2485,7 +2508,7 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 inline void runningSums(Ctxt& ctxt)
 {
-  runningSums(ctxt.getContext().getDefaultView(), ctxt);
+  runningSums(ctxt.getContext().getView(), ctxt);
 }
 
 //! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
@@ -2494,7 +2517,7 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 inline void totalSums(Ctxt& ctxt)
 {
-  totalSums(ctxt.getContext().getDefaultView(), ctxt);
+  totalSums(ctxt.getContext().getView(), ctxt);
 }
 
 //! @brief Map all non-zero slots to 1, leaving zero slots as zero.

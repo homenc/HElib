@@ -13,11 +13,15 @@
 
 import argparse
 import sys
-import ast
+import json
 import math
 import operator
 from enum import Enum
 from functools import reduce
+
+def getVersion():
+    with open("../../../../VERSION") as f:
+        return f.readline().replace('\n', '')
 
 def modCoeffsInSlots(listOfLists, p):
     return list([coeff % p for coeff in slot ] for slot in listOfLists)
@@ -106,7 +110,7 @@ def parseHeader(line):
 def readRecord(data, p):
     nrecords, ncols = parseHeader(data.readline())
     for _ in range(nrecords):
-        record = [ ast.literal_eval(data.readline()) for _ in range(ncols) ]
+        record = [ json.loads(data.readline())['content']['slots'] for _ in range(ncols) ]
         if p > 0:
             record = modRecord(record, p)
         yield record
@@ -132,7 +136,9 @@ def main():
         records = tuple(readRecord(db, args.mod_p))
         print(len(records))
         for record in records:
-            print(testFn(record, querydata))
+            print(f'{{"HElibVersion":"{getVersion()}","content":{{"scheme":"BGV","slots":', end='')
+            print(testFn(record, querydata).__str__().replace(', ', ','), end='')
+            print(f'}},"serializationVersion":"0.0.1","type":"Ptxt"}}')
 
 if __name__ == "__main__":
     main()

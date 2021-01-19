@@ -74,7 +74,7 @@ void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r)
   if (r <= 0 || r > rr)
     r = rr; // how many digits to extract
 
-  long p = context.zMStar.getP();
+  long p = context.getP();
 
   NTL::ZZX x2p;
   if (p > 3) {
@@ -229,7 +229,7 @@ void extendExtractDigits(std::vector<Ctxt>& digits,
 {
   const Context& context = c.getContext();
 
-  long p = context.zMStar.getP();
+  long p = context.getP();
   NTL::ZZX x2p;
   if (p > 3) {
     buildDigitPolynomial(x2p, p, r);

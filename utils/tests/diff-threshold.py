@@ -15,6 +15,7 @@ import argparse
 import sys
 import ast
 import math
+import json
 
 def diff_float(na, nb, threshold):
     for a, b in zip(na, nb):
@@ -40,7 +41,6 @@ def parseCorrectly(la, lb, decrypt):
     error_msg = "Type mismatch. {0}({1}) and {2}({3}) type do not match."
     if decrypt:
         for a, b in zip(la, lb):
-            a, b = ast.literal_eval(a), ast.literal_eval(b)
             if type(a) is not type(b):
                 raise TypeError(error_msg.format(a, type(a), b, type(b)))
             yield a, b
@@ -63,17 +63,29 @@ def main():
     args = parser.parse_args()
 
     with open(args.firstfile, 'r') as f1, open(args.secondfile, 'r') as f2:
-        l1, l2 = list(f1), list(f2)
+        header1 = f1.readline()
+        header2 = f2.readline()
+        ptxt1 = []
+        ptxt2 = []
+        if args.decrypt:
+            for line in f1:
+                data1 = json.loads(line)
+                ptxt1.append(data1['content']['slots'])
+            for line in f2:
+                data2 = json.loads(line)
+                ptxt2.append(data2['content']['slots'])
+        else:
+            ptxt1, ptxt2 = list(f1), list(f2)
 
-    if len(l1) != len(l2):
+    if len(ptxt1) != len(ptxt2):
         sys.exit(f"Different number of lines. "
-                 f"First contains {len(l1)} second contains {len(l2)}.")
+                 f"First contains {len(ptxt1)} second contains {len(ptxt2)}.")
 
-    if l1[0] != l2[0]:
-        sys.exit(f"File headers differ. {l1[0]} {l2[0]}.")
+    if header1 != header2:
+        sys.exit(f"File headers differ. {header1} {header2}.")
 
     try:
-        for a, b in parseCorrectly(l1[1:], l2[1:], args.decrypt):
+        for a, b in parseCorrectly(ptxt1, ptxt2, args.decrypt):
             for sa, sb in zip(a, b):
                 sa, sb = makeSameSize(sa, sb, 2)
                 diff_float(sa, sb, args.threshold)

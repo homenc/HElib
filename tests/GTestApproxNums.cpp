@@ -212,13 +212,18 @@ protected:
       L(GetParam().L),
       epsilon(GetParam().epsilon),
       seed(GetParam().seed),
-      context(m, /*p=*/-1, r),
-      secretKey((context.scale = 4, buildModChain(context, L), context)),
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(m)
+                  .precision(r)
+                  .scale(4)
+                  .bits(L)
+                  .build()),
+      secretKey(context),
       publicKey((secretKey.GenSecKey(),
                  addSome1DMatrices(secretKey),
                  addSomeFrbMatrices(secretKey),
                  secretKey)),
-      ea(context.ea->getCx())
+      ea(context.getEA().getCx())
   {}
 
   virtual void SetUp() override
@@ -228,13 +233,13 @@ protected:
     }
     if (helib_test::verbose) {
       ea.getPAlgebra().printout();
-      std::cout << "r = " << context.alMod.getR() << std::endl;
-      std::cout << "ctxtPrimes=" << context.ctxtPrimes
-                << ", specialPrimes=" << context.specialPrimes << std::endl
+      std::cout << "r = " << context.getAlMod().getR() << std::endl;
+      std::cout << "ctxtPrimes=" << context.getCtxtPrimes()
+                << ", specialPrimes=" << context.getSpecialPrimes() << "\n"
                 << std::endl;
       helib::fhe_stats = true;
     }
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   }
 
   virtual void TearDown() override
@@ -627,7 +632,7 @@ TEST_P(GTestApproxNums, generalOpsWorkWithNewAPI)
     debugCompare(secretKey, p2, c2);
     debugCompare(secretKey, p3, c3);
 
-    long nslots = context.zMStar.getNSlots();
+    long nslots = context.getNSlots();
 
     // Random number in [-(nslots-1)..nslots-1]
     long rotamt = NTL::RandomBnd(2 * nslots - 1) - (nslots - 1);

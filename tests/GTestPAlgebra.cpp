@@ -64,7 +64,15 @@ protected:
       r(GetParam().r),
       gens(GetParam().gens),
       ords(GetParam().ords),
-      context(m, p, r, gens, ords){};
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .gens(gens)
+                  .ords(ords)
+                  .buildModChain(false)
+                  .build())
+  {}
 
   const long m;
   const long p;
@@ -81,13 +89,13 @@ protected:
     for (const auto& factor : f)
       std::cout << factor << " ";
     std::cout << "]" << std::endl;
-    context.zMStar.printout();
+    context.printout();
     std::cout << std::endl;
   }
 
   virtual void SetUp() override
   {
-    helib::buildModChain(context, 5, 2);
+    context.buildModChain(5, 2);
     if (!helib_test::noPrint) {
       printPrimeFactors(m, context);
     }
@@ -99,7 +107,6 @@ protected:
 TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)
 {
   std::stringstream s1;
-  helib::writeContextBase(s1, context);
   s1 << context;
 
   std::string s2 = s1.str();
@@ -110,12 +117,7 @@ TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)
 
   std::stringstream s3(s2);
 
-  unsigned long m1, p1, r1;
-  std::vector<long> gens, ords;
-  helib::readContextBase(s3, m1, p1, r1, gens, ords);
-
-  helib::Context c1(m1, p1, r1, gens, ords);
-  s3 >> c1;
+  helib::Context c1 = helib::Context::readFromJSON(s3);
 
   EXPECT_EQ(context, c1);
 }

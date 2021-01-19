@@ -78,14 +78,15 @@ void writeKeyToFile(std::string& pathPrefix,
   }
 
   // write the context
-  helib::writeContextBaseBinary(keysFile, context);
-  helib::writeContextBinary(keysFile, context);
+  context.writeTo(keysFile);
 
   // write the keys
-  if (pkNotSk)
-    helib::writePubKeyBinary(keysFile, secretKey);
-  else
-    helib::writeSecKeyBinary(keysFile, secretKey);
+  if (pkNotSk) {
+    const helib::PubKey& pk = secretKey;
+    pk.writeTo(keysFile);
+  } else {
+    secretKey.writeTo(keysFile);
+  }
 }
 
 int main(int argc, char* argv[])
@@ -208,34 +209,37 @@ int main(int argc, char* argv[])
   }
 
   try {
-    helib::Context context(paramsOpts.m,
-                           p,
-                           paramsOpts.r,
-                           helib::convert<std::vector<long>>(paramsOpts.gens),
-                           helib::convert<std::vector<long>>(paramsOpts.ords));
-    if (cmdLineOpts.bootstrappable == "NONE") {
-      helib::buildModChain(context, paramsOpts.Qbits, paramsOpts.c);
-    } else {
-      context.zMStar.set_cM(paramsOpts.c_m / 100.0);
-      helib::buildModChain(context,
-                           paramsOpts.Qbits,
-                           paramsOpts.c,
-                           /*willBeBootstrappable=*/true);
-      if (cmdLineOpts.bootstrappable == "THICK")
-        context.enableBootStrapping(paramsOpts.mvec,
-                                    /*build_cache=*/false,
-                                    /*alsoThick=*/true);
-      else if (cmdLineOpts.bootstrappable == "THIN")
-        context.enableBootStrapping(paramsOpts.mvec,
-                                    /*build_cache=*/false,
-                                    /*alsoThick=*/false);
+    helib::Context* contextp;
+
+    if (cmdLineOpts.scheme == "BGV") {
+      helib::ContextBuilder<helib::BGV> cb;
+      cb.m(paramsOpts.m)
+          .p(p)
+          .r(paramsOpts.r)
+          .gens(helib::convert<std::vector<long>>(paramsOpts.gens))
+          .ords(helib::convert<std::vector<long>>(paramsOpts.ords))
+          .bits(paramsOpts.Qbits)
+          .c(paramsOpts.c);
+
+      if (cmdLineOpts.bootstrappable != "NONE") {
+        cb.bootstrappable(true).mvec(paramsOpts.mvec);
+        if (cmdLineOpts.bootstrappable == "THICK")
+          cb.thickboot();
+        else if (cmdLineOpts.bootstrappable == "THIN")
+          cb.thinboot();
+      }
+      contextp = cb.buildPtr();
+    } else if (cmdLineOpts.scheme == "CKKS") {
+      contextp = helib::ContextBuilder<helib::CKKS>()
+                     .m(paramsOpts.m)
+                     .precision(paramsOpts.r)
+                     .bits(paramsOpts.Qbits)
+                     .scale(paramsOpts.scale)
+                     .buildPtr();
     }
 
-    if (p == -1)
-      context.scale = paramsOpts.scale;
-
     // and a new secret/public key
-    helib::SecKey secretKey(context);
+    helib::SecKey secretKey(*contextp);
     secretKey.GenSecKey(); // A +-1/0 secret key
 
     // compute key-switching matrices
@@ -267,13 +271,13 @@ int main(int argc, char* argv[])
         throw std::runtime_error("Cannot write keys to file at '" + path +
                                  "'.");
       }
-      printoutToStream(context,
+      printoutToStream(*contextp,
                        out,
                        cmdLineOpts.noSKM,
                        cmdLineOpts.frobSKM,
                        cmdLineOpts.bootstrappable != "NONE");
     } else {
-      printoutToStream(context,
+      printoutToStream(*contextp,
                        std::cout,
                        cmdLineOpts.noSKM,
                        cmdLineOpts.frobSKM,
@@ -283,7 +287,7 @@ int main(int argc, char* argv[])
     NTL::SetNumThreads(2);
 
     NTL_EXEC_INDEX(2, skOrPk)
-    writeKeyToFile(cmdLineOpts.outputPrefixPath, context, secretKey, skOrPk);
+    writeKeyToFile(cmdLineOpts.outputPrefixPath, *contextp, secretKey, skOrPk);
     NTL_EXEC_INDEX_END
 
   } catch (const std::invalid_argument& e) {

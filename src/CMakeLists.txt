@@ -13,7 +13,7 @@
 cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 
 project(helib
-        VERSION 1.3.1
+        VERSION "${HELIB_VERSION}"
         LANGUAGES CXX)
 
 # Globals HELIB_CMAKE_EXTRA_DIR, HELIB_INCLUDE_DIR, HELIB_HEADER_DIR,
@@ -90,6 +90,7 @@ set(HELIB_SRCS
     "binaryArith.cpp"
     "binaryCompare.cpp"
     "binio.cpp"
+    "io.cpp"
     "bluestein.cpp"
     "CModulus.cpp"
     "Context.cpp"
@@ -105,6 +106,7 @@ set(HELIB_SRCS
     "hypercube.cpp"
     "IndexSet.cpp"
     "intraSlot.cpp"
+    "JsonWrapper.cpp"
     "keys.cpp"
     "keySwitching.cpp"
     "log.cpp"
@@ -139,7 +141,6 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/ArgMap.h"
     "${HELIB_HEADER_DIR}/binaryArith.h"
     "${HELIB_HEADER_DIR}/binaryCompare.h"
-    "${HELIB_HEADER_DIR}/binio.h"
     "${HELIB_HEADER_DIR}/bluestein.h"
     "${HELIB_HEADER_DIR}/ClonedPtr.h"
     "${HELIB_HEADER_DIR}/CModulus.h"
@@ -158,6 +159,7 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/IndexMap.h"
     "${HELIB_HEADER_DIR}/IndexSet.h"
     "${HELIB_HEADER_DIR}/intraSlot.h"
+    "${HELIB_HEADER_DIR}/JsonWrapper.h"
     "${HELIB_HEADER_DIR}/matching.h"
     "${HELIB_HEADER_DIR}/matmul.h"
     "${HELIB_HEADER_DIR}/Matrix.h"
@@ -195,11 +197,16 @@ set(HELIB_HEADERS
     "${CMAKE_CURRENT_BINARY_DIR}/helib/version.h" # version.h is auto-generated in CMAKE_CURRENT_BINARY_DIR
     )
 
+set(HELIB_PRIVATE_HEADERS
+    "io.h")
+
 # Add helib target as a shared/static library
 if (BUILD_SHARED)
-  add_library(helib SHARED ${HELIB_SRCS} ${HELIB_HEADERS})
+  add_library(helib 
+              SHARED ${HELIB_SRCS} ${HELIB_HEADERS} ${HELIB_PRIVATE_HEADERS})
 else (BUILD_SHARED)
-  add_library(helib STATIC ${HELIB_SRCS} ${HELIB_HEADERS})
+  add_library(helib 
+              STATIC ${HELIB_SRCS} ${HELIB_HEADERS} ${HELIB_PRIVATE_HEADERS})
 endif (BUILD_SHARED)
 
 # Set HElib's properties.  In this case we ask to build HElib with
@@ -253,6 +260,7 @@ endif (PACKAGE_BUILD)
 target_include_directories(
     helib
     PRIVATE
+           "$<BUILD_INTERFACE:${HELIB_DEPENDENCIES_DIR}/json>"
     PUBLIC # NOTE: The includes must be kept in this order to avoid cmake
            # looking for HElib in /usr/local/include
            # Headers used from source/build location:

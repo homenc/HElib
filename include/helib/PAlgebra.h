@@ -194,7 +194,6 @@ public:
   const NTL::ZZX& getPhimX() const { return PhimX; }
 
   //! The "ring constant" cM
-  void set_cM(double c) { cM = c; }
   double get_cM() const { return cM; }
 
   //! The prime-power factorization of m
@@ -264,6 +263,7 @@ public:
   {
     return cube.breakIndexByDim(idx, dim);
   }
+
   //! The inverse of breakIndexByDim
   long assembleIndexByDim(std::pair<long, long> idx, long dim) const
   {

@@ -73,8 +73,8 @@ long setThreads = []() -> long {
 // TODO: Should be a member of EncryptedArray?
 bool hasBadDimension(const helib::Context& context)
 {
-  for (int i = 0; i < context.zMStar.numOfGens(); ++i)
-    if (!context.ea->nativeDimension(i))
+  for (int i = 0; i < context.getZMStar().numOfGens(); ++i)
+    if (!context.getEA().nativeDimension(i))
       return true;
   return false;
 }
@@ -114,7 +114,8 @@ std::vector<std::pair<long, long>> getParams(bool good,
   for (auto p : p_vals)
     for (auto m : m_vals) {
       if (m % p != 0) {
-        helib::Context context(m, p, 1L);
+        helib::Context context =
+            helib::ContextBuilder<helib::BGV>().m(m).p(p).r(1L).build();
         if (good ^ hasBadDimension(context)) {
           params.emplace_back(m, p);
         }

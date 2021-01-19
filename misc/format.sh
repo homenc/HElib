@@ -47,6 +47,7 @@ previous_dir=""
 for file in $(find -E . -type f -regex '.*\.(c|h|cpp|hpp)' \
               ! -path '*/misc/*' \
               ! -path '*/build/*' \
+              ! -path '*/dependencies/*' \
               ! -name "PGFFT.*"); do
   current_dir=$(dirname $file)
   if [ "$current_dir" != "$previous_dir" ]; then

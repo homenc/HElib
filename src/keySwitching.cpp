@@ -19,7 +19,9 @@
 #include <NTL/ZZ.h>
 #include <helib/permutations.h>
 
-#include <helib/binio.h>
+#include "binio.h"
+#include "io.h"
+
 #include <helib/keySwitching.h>
 #include <helib/keys.h>
 #include <helib/apiAttributes.h>
@@ -102,13 +104,13 @@ void KeySwitch::verify(SecKey& sk)
       std::cout << "KeySwitch::verify: bad context " << i << "\n";
   }
 
-  std::cout << "context.ctxtPrimes = " << context.ctxtPrimes << "\n";
-  std::cout << "context.specialPrimes = " << context.specialPrimes << "\n";
+  std::cout << "context.ctxtPrimes = " << context.getCtxtPrimes() << "\n";
+  std::cout << "context.specialPrimes = " << context.getSpecialPrimes() << "\n";
   IndexSet fullPrimes = context.fullPrimes(); // ctxtPrimes | specialPrimes;
 
   std::cout << "digits: ";
   for (long i = 0; i < n; i++)
-    std::cout << context.digits[i] << " ";
+    std::cout << context.getDigit(i) << " ";
   std::cout << "\n";
 
   std::cout << "IndexSets of b: ";
@@ -151,9 +153,9 @@ void KeySwitch::verify(SecKey& sk)
   _toKey.toPoly(ToKey, fullPrimes);
 
   NTL::ZZ Q = context.productOfPrimes(fullPrimes);
-  NTL::ZZ prod = context.productOfPrimes(context.specialPrimes);
+  NTL::ZZ prod = context.productOfPrimes(context.getSpecialPrimes());
   NTL::ZZX C, D;
-  NTL::ZZX PhimX = context.zMStar.getPhimX();
+  NTL::ZZX PhimX = context.getZMStar().getPhimX();
 
   long nb = 0;
   for (long i = 0; i < n; i++) {
@@ -166,7 +168,7 @@ void KeySwitch::verify(SecKey& sk)
         if (NumBits(coeff(D, j)) > nb)
           nb = NumBits(coeff(D, j));
     }
-    prod *= context.productOfPrimes(context.digits[i]);
+    prod *= context.productOfPrimes(context.getDigit(i));
   }
 
   std::cout << "error ratio: " << ((double)nb) / ((double)NumBits(Q)) << "\n";
@@ -180,11 +182,7 @@ const KeySwitch& KeySwitch::dummy()
 
 std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix)
 {
-  str << "[" << matrix.fromKey << " " << matrix.toKeyID << " "
-      << matrix.ptxtSpace << " " << matrix.b.size() << std::endl;
-  for (long i = 0; i < (long)matrix.b.size(); i++)
-    str << matrix.b[i] << std::endl;
-  str << matrix.prgSeed << " " << matrix.noiseBound << "]";
+  matrix.writeToJSON(str);
   return str;
 }
 
@@ -192,24 +190,12 @@ std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix)
 // matrix)
 void KeySwitch::readMatrix(std::istream& str, const Context& context)
 {
-  seekPastChar(str, '['); // defined in NumbTh.cpp
-  str >> fromKey;
-  str >> toKeyID;
-  str >> ptxtSpace;
-
-  long nDigits;
-  str >> nDigits;
-  b.resize(nDigits, DoubleCRT(context, IndexSet::emptySet()));
-  for (long i = 0; i < nDigits; i++)
-    str >> b[i];
-  str >> prgSeed;
-  str >> noiseBound;
-  seekPastChar(str, ']');
+  this->readJSON(str, context);
 }
 
-void KeySwitch::write(std::ostream& str) const
+void KeySwitch::writeTo(std::ostream& str) const
 {
-  writeEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
+  writeEyeCatcher(str, EyeCatcher::SKM_BEGIN);
   /*
       Write out raw
       1. SKHandle fromKey;
@@ -220,7 +206,7 @@ void KeySwitch::write(std::ostream& str) const
       6. xdouble noiseBound;
   */
 
-  fromKey.write(str);
+  fromKey.writeTo(str);
   write_raw_int(str, toKeyID);
   write_raw_int(str, ptxtSpace);
 
@@ -229,24 +215,83 @@ void KeySwitch::write(std::ostream& str) const
   write_raw_ZZ(str, prgSeed);
   write_raw_xdouble(str, noiseBound);
 
-  writeEyeCatcher(str, BINIO_EYE_SKM_END);
+  writeEyeCatcher(str, EyeCatcher::SKM_END);
 }
 
-void KeySwitch::read(std::istream& str, const Context& context)
+KeySwitch KeySwitch::readFrom(std::istream& str, const Context& context)
 {
-  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
-  assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
+  bool eyeCatcherFound = readEyeCatcher(str, EyeCatcher::SKM_BEGIN);
+  assertTrue(eyeCatcherFound, "Could not find pre-secret key eyecatcher");
 
-  fromKey.read(str);
-  toKeyID = read_raw_int(str);
-  ptxtSpace = read_raw_int(str);
-  DoubleCRT blankDCRT(context, IndexSet::emptySet());
-  read_raw_vector(str, b, blankDCRT);
-  read_raw_ZZ(str, prgSeed);
-  noiseBound = read_raw_xdouble(str);
+  KeySwitch ret;
 
-  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_END);
-  assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
+  ret.fromKey = SKHandle::readFrom(str);
+  ret.toKeyID = read_raw_int(str);
+  ret.ptxtSpace = read_raw_int(str);
+  ret.b = read_raw_vector<DoubleCRT>(str, context);
+  read_raw_ZZ(str, ret.prgSeed);
+  ret.noiseBound = read_raw_xdouble(str);
+
+  eyeCatcherFound = readEyeCatcher(str, EyeCatcher::SKM_END);
+  assertTrue(eyeCatcherFound, "Could not find post-secret key eyecatcher");
+
+  return ret;
+}
+
+void KeySwitch::writeToJSON(std::ostream& str) const { str << writeToJSON(); }
+
+JsonWrapper KeySwitch::writeToJSON() const
+{
+  /*
+   * Write out raw
+   * 1. SKHandle fromKey;
+   * 2. long     toKeyID;
+   * 3. long     ptxtSpace;
+   * 4. vector<DoubleCRT> b;
+   * 5. ZZ prgSeed;
+   * 6. xdouble noiseBound;
+   */
+  json j = {{"fromKey", unwrap(this->fromKey.writeToJSON())},
+            {"toKeyID", this->toKeyID},
+            {"ptxtSpace", this->ptxtSpace},
+            {"b", writeVectorToJSON(b)},
+            {"prgSeed", prgSeed},
+            {"noiseBound", noiseBound}};
+
+  return wrap(toTypedJson<KeySwitch>(j));
+}
+
+KeySwitch KeySwitch::readFromJSON(std::istream& str, const Context& context)
+{
+  json j;
+  str >> j;
+  return KeySwitch::readFromJSON(wrap(j), context);
+}
+
+KeySwitch KeySwitch::readFromJSON(const JsonWrapper& jw, const Context& context)
+{
+  KeySwitch res;
+  res.readJSON(jw, context);
+  return res;
+}
+
+void KeySwitch::readJSON(std::istream& str, const Context& context)
+{
+  json j;
+  str >> j;
+  this->readJSON(wrap(j), context);
+}
+
+void KeySwitch::readJSON(const JsonWrapper& jw, const Context& context)
+{
+  json j = fromTypedJson<KeySwitch>(unwrap(jw));
+
+  this->fromKey = SKHandle::readFromJSON(wrap(j.at("fromKey")));
+  this->toKeyID = j.at("toKeyID");
+  this->ptxtSpace = j.at("ptxtSpace");
+  this->b = readVectorFromJSON<DoubleCRT>(j.at("b"), context);
+  this->prgSeed = j.at("prgSeed").get<NTL::ZZ>();
+  this->noiseBound = j.at("noiseBound").get<NTL::xdouble>();
 }
 
 long KSGiantStepSize(long D)
@@ -262,11 +307,11 @@ long KSGiantStepSize(long D)
 void addAllMatrices(SecKey& sKey, long keyID)
 {
   const Context& context = sKey.getContext();
-  long m = context.zMStar.getM();
+  long m = context.getM();
 
   // key-switching matrices for the automorphisms
   for (long i = 0; i < m; i++) {
-    if (!context.zMStar.inZmStar(i))
+    if (!context.getZMStar().inZmStar(i))
       continue;
     sKey.GenKeySWmatrix(1, i, keyID, keyID);
   }
@@ -303,7 +348,7 @@ void addAllMatrices(SecKey& sKey, long keyID)
 static void add1Dmats4dim(SecKey& sKey, long i, long keyID)
 {
   const Context &context = sKey.getContext();
-  long m = context.zMStar.getM();
+  long m = context.getM();
   computeParams(context,m,i); // defines vars: native, ord, gi, g2md, giminv, g2mdminv
 
   /* MAUTO std::vector<long> vals; */
@@ -335,7 +380,7 @@ static void add1Dmats4dim(SecKey& sKey, long i, long keyID)
 //   so it is best to avoid that).
 static void add1Dmats4dim(SecKey& sKey, long i, long keyID)
 {
-  const PAlgebra& zMStar = sKey.getContext().zMStar;
+  const PAlgebra& zMStar = sKey.getContext().getZMStar();
   long ord;
   bool native;
 
@@ -485,7 +530,7 @@ static void addSome1Dmats4dim(SecKey& sKey,
                               UNUSED long bound,
                               long keyID)
 {
-  const PAlgebra& zMStar = sKey.getContext().zMStar;
+  const PAlgebra& zMStar = sKey.getContext().getZMStar();
   long ord;
   bool native;
 
@@ -530,9 +575,9 @@ void addSome1DMatrices(SecKey& sKey, long bound, long keyID)
   const Context& context = sKey.getContext();
 
   // key-switching matrices for the automorphisms
-  for (long i : range(context.zMStar.numOfGens())) {
+  for (long i : range(context.getZMStar().numOfGens())) {
     // For generators of small order, add all the powers
-    if (bound >= context.zMStar.OrderOf(i))
+    if (bound >= context.getZMStar().OrderOf(i))
       add1Dmats4dim(sKey, i, keyID);
     else // For generators of large order, add only some of the powers
       addSome1Dmats4dim(sKey, i, bound, keyID);
@@ -554,7 +599,7 @@ void addBSGS1DMatrices(SecKey& sKey, long keyID)
 void addSomeFrbMatrices(SecKey& sKey, long bound, long keyID)
 {
   const Context& context = sKey.getContext();
-  if (bound >= LONG(context.zMStar.getOrdP()))
+  if (bound >= LONG(context.getOrdP()))
     add1Dmats4dim(sKey, -1, keyID);
   else // For generators of large order, add only some of the powers
     addSome1Dmats4dim(sKey, -1, bound, keyID);
@@ -574,7 +619,7 @@ void addBSGSFrbMatrices(SecKey& sKey, long keyID)
 
 static void addMinimal1Dmats4dim(SecKey& sKey, long i, long keyID)
 {
-  const PAlgebra& zMStar = sKey.getContext().zMStar;
+  const PAlgebra& zMStar = sKey.getContext().getZMStar();
   long ord;
   bool native;
 
@@ -605,7 +650,7 @@ void addMinimal1DMatrices(SecKey& sKey, long keyID)
   const Context& context = sKey.getContext();
 
   // key-switching matrices for the automorphisms
-  for (long i : range(context.zMStar.numOfGens())) {
+  for (long i : range(context.getZMStar().numOfGens())) {
     addMinimal1Dmats4dim(sKey, i, keyID);
   }
   sKey.setKeySwitchMap(); // re-compute the key-switching map
@@ -622,12 +667,12 @@ void addMinimalFrbMatrices(SecKey& sKey, long keyID)
 void addMatrices4Network(SecKey& sKey, const PermNetwork& net, long keyID)
 {
   const Context& context = sKey.getContext();
-  long m = context.zMStar.getM();
+  long m = context.getM();
 
   for (long i = 0; i < net.depth(); i++) {
     long e = net.getLayer(i).getE();
     long gIdx = net.getLayer(i).getGenIdx();
-    long g = context.zMStar.ZmStarGen(gIdx);
+    long g = context.getZMStar().ZmStarGen(gIdx);
     long g2e = NTL::PowerMod(g, e, m); // g^e mod m
     const NTL::Vec<long>& shamts = net.getLayer(i).getShifts();
     for (long j = 0; j < shamts.length(); j++) {

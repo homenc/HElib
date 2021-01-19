@@ -96,7 +96,7 @@ public:
     }
     addedNoise *= max_ks_noise;
 
-    double logProd = context.logOfProduct(context.specialPrimes);
+    double logProd = context.logOfProduct(context.getSpecialPrimes());
     noise = ctxt.getNoiseBound() * NTL::xexp(logProd);
 
     double ratio = NTL::conv<double>(addedNoise / noise);
@@ -133,19 +133,19 @@ public:
     result->noiseBound = noise; // noise estimate
     result->intFactor = ctxt.intFactor;
 
-    result->primeSet = ctxt.primeSet | context.specialPrimes;
+    result->primeSet = ctxt.primeSet | context.getSpecialPrimes();
     // VJS-NOTE: added this to make addPart work
 
     if (ctxt.isCKKS()) {
       result->ptxtMag = ctxt.ptxtMag;
-      double logProd = context.logOfProduct(context.specialPrimes);
+      double logProd = context.logOfProduct(context.getSpecialPrimes());
       result->ratFactor = ctxt.ratFactor * NTL::xexp(logProd);
     }
 
     if (ctxt.parts.size() == 1) { // only constant part, no need to key-switch
       CtxtPart tmpPart = ctxt.parts[0];
       tmpPart.automorph(k);
-      tmpPart.addPrimesAndScale(context.specialPrimes);
+      tmpPart.addPrimesAndScale(context.getSpecialPrimes());
       result->addPart(tmpPart, /*matchPrimeSet=*/true);
       return result;
     }
@@ -164,7 +164,7 @@ public:
     // Start by rotating the constant part, no need to key-switch it
     CtxtPart tmpPart = ctxt.parts[0];
     tmpPart.automorph(amt);
-    tmpPart.addPrimesAndScale(context.specialPrimes);
+    tmpPart.addPrimesAndScale(context.getSpecialPrimes());
     result->addPart(tmpPart, /*matchPrimeSet=*/true);
 
     // Then rotate the digits and key-switch them
@@ -174,7 +174,7 @@ public:
 
     result->keySwitchDigits(W, tmpDigits); // key-switch the digits
 
-    long m = context.zMStar.getM();
+    long m = context.getM();
     if ((amt - k) % m != 0) { // amt != k (mod m), more automorphisms to do
       k = NTL::MulMod(k, NTL::InvMod(amt, m), m); // k *= amt^{-1} mod m
       result->smartAutomorph(k);                  // call usual smartAutomorph
@@ -355,7 +355,7 @@ struct ConstMultiplier_zzX : ConstMultiplier
   std::shared_ptr<ConstMultiplier> upgrade(
       const Context& context) const override
   {
-    double sz = embeddingLargestCoeff(data, context.zMStar);
+    double sz = embeddingLargestCoeff(data, context.getZMStar());
 
     return std::make_shared<ConstMultiplier_DoubleCRT>(
         DoubleCRT(data, context, context.fullPrimes()),
@@ -939,7 +939,7 @@ void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v,
     return;
   }
 
-  const PAlgebra& zMStar = ctxt.getContext().zMStar;
+  const PAlgebra& zMStar = ctxt.getContext().getZMStar();
 
   // std::cerr << "*** STRATEGY FOR dim " << dim << " = " <<
   // ctxt.getPubKey().getKSStrategy(dim) << "\n";
@@ -2645,7 +2645,7 @@ struct mul_MatMul1D_impl
     std::vector<RX>& data = pa.getData<type>();
     for (long i : range(n)) {
       long k, j;
-      std::tie(k, j) = ea.getContext().zMStar.breakIndexByDim(i, dim);
+      std::tie(k, j) = ea.getContext().getZMStar().breakIndexByDim(i, dim);
       data1[k][j] = data[i]; // k= along dim, j = the rest of i
     }
 
@@ -2653,7 +2653,7 @@ struct mul_MatMul1D_impl
     for (long k : range(n / D)) {
       for (long j : range(D)) { // simple matrix-vector multiplication
         std::pair<long, long> p(k, j);
-        long idx = ea.getContext().zMStar.assembleIndexByDim(p, dim);
+        long idx = ea.getContext().getZMStar().assembleIndexByDim(p, dim);
 
         RX acc, val, tmp;
         acc = 0;
@@ -2865,8 +2865,8 @@ void mul(PlaintextArray& pa, const BlockMatMulFull& mat)
 void traceMap(Ctxt& ctxt)
 {
   const Context& context = ctxt.getContext();
-  const PAlgebra& zMStar = context.zMStar;
-  long d = context.zMStar.getOrdP();
+  const PAlgebra& zMStar = context.getZMStar();
+  long d = context.getOrdP();
 
   if (d == 1)
     return;

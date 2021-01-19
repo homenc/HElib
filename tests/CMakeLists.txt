@@ -40,6 +40,8 @@ if (NOT ONLY_ADD_TEST)
         "TestPolyModRing.cpp"
         "TestPtxt.cpp"
         "TestSet.cpp"
+        "TestBinIO.cpp"
+        "TestIO.cpp"
         "${CMAKE_CURRENT_BINARY_DIR}/TestVersion.cpp" # TestVersion.cpp is auto-generated in CMAKE_CURRENT_BINARY_DIR
         )
 
@@ -47,7 +49,6 @@ if (NOT ONLY_ADD_TEST)
         "GTestApproxNums.cpp"
         "GTestBinaryArith.cpp"
         "GTestBinaryCompare.cpp"
-        "GTestBinIO.cpp"
         "GTestBootstrapping.cpp"
         "GTestEaCx.cpp"
         "GTestEvalMap.cpp"
@@ -55,7 +56,6 @@ if (NOT ONLY_ADD_TEST)
         "GTestFatboot.cpp"
         "GTestGeneral.cpp"
         "GTestIntraSlot.cpp"
-        "GTestIO.cpp"
         "GTestMatmul.cpp"
         "GTestPAlgebra.cpp"
         "GTestPGFFT.cpp"
@@ -80,8 +80,15 @@ if (NOT ONLY_ADD_TEST)
     # change their running time.
     target_compile_options(runTests PRIVATE ${PRIVATE_HELIB_CXX_FLAGS})
 
-    # Adding CMAKE_CURRENT_SOURCE_DIR to include files to access test_common.h.
-    target_include_directories(runTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(
+    runTests
+    PRIVATE
+           # Adding CMAKE_CURRENT_SOURCE_DIR to include files to access
+           # test_common.h.
+           ${CMAKE_CURRENT_SOURCE_DIR}
+           # Adding HELIB_SOURCE_DIR to include local/private headers e.g. io.h
+           ${HELIB_SOURCE_DIR}
+           "$<BUILD_INTERFACE:${HELIB_DEPENDENCIES_DIR}/json>")
 
     # Dealing with test resource files (Test_Bin_IO and Test_IO)
     list(APPEND TEST_RESOURCE_FILES "test_resources/iotest_asciiBE.txt"
@@ -116,7 +123,6 @@ set(TEST_NAMES
     "GTestApproxNums"
     "GTestBinaryArith"
     "GTestBinaryCompare"
-    "GTestBinIO"
     "GTestBootstrapping"
     "GTestEaCx"
     "GTestEvalMap"
@@ -124,7 +130,6 @@ set(TEST_NAMES
     "GTestFatboot"
     "GTestGeneral"
     "GTestIntraSlot"
-    "GTestIO"
     "GTestMatmul"
     "GTestPAlgebra"
     "GTestPGFFT"
@@ -154,6 +159,8 @@ set(TEST_NAMES
     "TestPtxt"
     "TestSet"
     "TestThinBootstrappingWithMultiplications"
+    "TestBinIO"
+    "TestIO"
     "TestVersion"
     )
   message(STATUS "${CMAKE_BINARY_DIR}")

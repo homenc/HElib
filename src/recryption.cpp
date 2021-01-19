@@ -86,9 +86,9 @@ static void newMakeDivisible(NTL::ZZX& poly,
 
   assertEq<InvalidArgument>(q % p2e, 1l, "q must equal 1 modulo p2e");
 
-  long p = context.zMStar.getP();
+  long p = context.getP();
 
-  const RecryptData& rcData = context.rcData;
+  const RecryptData& rcData = context.getRcData();
   const PowerfulDCRT& p2d_conv = *rcData.p2dConv;
 
   NTL::Vec<NTL::ZZ> pwrfl;
@@ -203,9 +203,9 @@ void RecryptData::setAE(long& e, long& ePrime, const Context& context)
   // coeff_bound is ultimately a high prob bound on |w0+w1*s|,
   // the coeffs of w0, w1 are chosen uniformly on [-1/2,1/2]
 
-  long p = context.zMStar.getP();
-  long p2r = context.alMod.getPPowR();
-  long r = context.alMod.getR();
+  long p = context.getP();
+  long p2r = context.getAlMod().getPPowR();
+  long r = context.getAlMod().getR();
   long frstTerm = 2 * p2r + 2;
 
   long e_bnd = 0;
@@ -277,13 +277,16 @@ void RecryptData::init(const Context& context,
     std::cerr << "@Warning: multiple calls to RecryptData::init\n";
     return;
   }
+
+  // sanity check
   assertEq(computeProd(mvec_),
-           (long)context.zMStar.getM(),
-           "Cyclotomic polynomial mismatch"); // sanity check
+           context.getM(),
+           "Cyclotomic polynomial mismatch");
 
   // Record the arguments to this function
   mvec = mvec_;
   build_cache = build_cache_;
+  alsoThick = enableThick;
 
   bool mvec_ok = true;
   for (long i : range(mvec.length())) {
@@ -297,14 +300,14 @@ void RecryptData::init(const Context& context,
     Warning("prime power factorization recommended for bootstrapping");
   }
 
-  skHwt = context.hwt_param;
-  e = context.e_param;
-  ePrime = context.ePrime_param;
+  skHwt = context.getHwt();
+  e = context.getE();
+  ePrime = context.getEPrime();
 
-  long r = context.alMod.getR();
+  long r = context.getAlMod().getR();
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
-  alMod = std::make_shared<PAlgebraMod>(context.zMStar, e - ePrime + r);
+  alMod = std::make_shared<PAlgebraMod>(context.getZMStar(), e - ePrime + r);
   ea = std::make_shared<EncryptedArray>(context, *alMod);
   // Polynomial defaults to F0, PAlgebraMod explicitly given
 
@@ -340,8 +343,11 @@ void RecryptData::init(const Context& context,
     ea->encode(unpackSlotEncoding[j], v);
   }
   firstMap = std::make_shared<EvalMap>(*ea, minimal, mvec, true, build_cache);
-  secondMap =
-      std::make_shared<EvalMap>(*context.ea, minimal, mvec, false, build_cache);
+  secondMap = std::make_shared<EvalMap>(context.getEA(),
+                                        minimal,
+                                        mvec,
+                                        false,
+                                        build_cache);
 }
 
 /********************************************************************/
@@ -379,14 +385,14 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   // check that we have bootstrapping data
   assertTrue(recryptKeyID >= 0l, "No bootstrapping data");
 
-  long p = getContext().zMStar.getP();
-  long r = getContext().alMod.getR();
-  long p2r = getContext().alMod.getPPowR();
+  long p = getContext().getP();
+  long r = getContext().getAlMod().getR();
+  long p2r = getContext().getAlMod().getPPowR();
 
   long intFactor = ctxt.intFactor;
 
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
-  const RecryptData& rcData = getContext().rcData;
+  const RecryptData& rcData = getContext().getRcData();
   long e = rcData.e;
   long ePrime = rcData.ePrime;
   long p2ePrime = NTL::power_long(p, ePrime);
@@ -415,8 +421,8 @@ void PubKey::reCrypt(Ctxt& ctxt) const
     ctxt.reLinearize();
 
   // Mod-switch down if needed
-  IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  assertTrue(s <= context.ctxtPrimes, "prime set is messed up");
+  IndexSet s = ctxt.getPrimeSet() / context.getSpecialPrimes();
+  assertTrue(s <= context.getCtxtPrimes(), "prime set is messed up");
   if (s.card() > 3) { // leave only first three ciphertext primes
     long first = s.first();
     IndexSet s3(first, first + 2);
@@ -434,7 +440,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   // "raw mod-switch" to the bootstrapping modulus q=p^e+1.
   std::vector<NTL::ZZX> zzParts; // the mod-switched parts, in ZZX format
 
-  double mfac = ctxt.getContext().zMStar.getNormBnd();
+  double mfac = ctxt.getContext().getZMStar().getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise
   // in the pwrfl basis
@@ -462,10 +468,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext(),
-                       q);
+    checkRecryptBounds(zzParts, dbgKey->getRecryptKey(), ctxt.getContext(), q);
   }
 #endif
 
@@ -481,10 +484,10 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
+    checkRecryptBounds_v(v, dbgKey->getRecryptKey(), ctxt.getContext(), q);
     checkCriticalValue(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext().rcData,
+                       dbgKey->getRecryptKey(),
+                       ctxt.getContext().getRcData(),
                        q);
   }
 #endif
@@ -507,7 +510,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
   // Move the powerful-basis coefficients to the plaintext slots
   HELIB_NTIMER_START(AAA_LinearTransform1);
-  ctxt.getContext().rcData.firstMap->apply(ctxt);
+  ctxt.getContext().getRcData().firstMap->apply(ctxt);
   HELIB_NTIMER_STOP(AAA_LinearTransform1);
 
 #ifdef HELIB_DEBUG
@@ -520,7 +523,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
                       e - ePrime,
                       r,
                       ePrime,
-                      context.rcData.unpackSlotEncoding);
+                      context.getRcData().unpackSlotEncoding);
   HELIB_NTIMER_STOP(AAA_extractDigitsPacked);
 
 #ifdef HELIB_DEBUG
@@ -529,7 +532,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
   // Move the slots back to powerful-basis coefficients
   HELIB_NTIMER_START(AAA_LinearTransform2);
-  ctxt.getContext().rcData.secondMap->apply(ctxt);
+  ctxt.getContext().getRcData().secondMap->apply(ctxt);
   HELIB_NTIMER_STOP(AAA_LinearTransform2);
 
 #ifdef HELIB_DEBUG
@@ -557,7 +560,7 @@ void extractDigitsPacked(Ctxt& ctxt,
   ctxt.cleanUp();
 
   // Apply the d automorphisms and store them in scratch area
-  long d = ctxt.getContext().zMStar.getOrdP();
+  long d = ctxt.getContext().getOrdP();
 
   std::vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
@@ -571,9 +574,9 @@ void extractDigitsPacked(Ctxt& ctxt,
       coeff_vector[i] = std::make_shared<DoubleCRT>(unpackSlotEncoding[i],
                                                     ctxt.getContext(),
                                                     ctxt.getPrimeSet());
-      coeff_vector_sz[i] =
-          NTL::conv<double>(embeddingLargestCoeff(unpackSlotEncoding[i],
-                                                  ctxt.getContext().zMStar));
+      coeff_vector_sz[i] = NTL::conv<double>(
+          embeddingLargestCoeff(unpackSlotEncoding[i],
+                                ctxt.getContext().getZMStar()));
     }
     HELIB_NTIMER_STOP(unpack1);
 
@@ -622,7 +625,7 @@ void extractDigitsPacked(Ctxt& ctxt,
 
   // Step 3: re-pack the slots
   HELIB_NTIMER_START(repack);
-  const EncryptedArray& ea2 = *ctxt.getContext().ea;
+  const EncryptedArray& ea2 = ctxt.getContext().getEA();
   NTL::ZZX xInSlots;
   std::vector<NTL::ZZX> xVec(ea2.size());
   ctxt = unpacked[0];
@@ -653,7 +656,7 @@ void extractDigitsPacked(Ctxt& ctxt,
   ctxt.cleanUp();
 
   // Apply the d automorphisms and store them in scratch area
-  long d = ctxt.getContext().zMStar.getOrdP();
+  long d = ctxt.getContext().getOrdP();
 
   std::vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
@@ -665,9 +668,9 @@ void extractDigitsPacked(Ctxt& ctxt,
       coeff_vector[i] = std::make_shared<DoubleCRT>(unpackSlotEncoding[i],
                                                     ctxt.getContext(),
                                                     ctxt.getPrimeSet());
-      coeff_vector_sz[i] =
-          NTL::conv<double>(embeddingLargestCoeff(unpackSlotEncoding[i],
-                                                  ctxt.getContext().zMStar));
+      coeff_vector_sz[i] = NTL::conv<double>(
+          embeddingLargestCoeff(unpackSlotEncoding[i],
+                                ctxt.getContext().getZMStar()));
     }
 
     Ctxt tmp1(ZeroCtxtLike, ctxt);
@@ -776,7 +779,7 @@ void ThinRecryptData::init(const Context& context,
   RecryptData::init(context, mvec_, alsoThick, build_cache_, minimal);
   coeffToSlot =
       std::make_shared<ThinEvalMap>(*ea, minimal, mvec, true, build_cache);
-  slotToCoeff = std::make_shared<ThinEvalMap>(*context.ea,
+  slotToCoeff = std::make_shared<ThinEvalMap>(context.getEA(),
                                               minimal,
                                               mvec,
                                               false,
@@ -796,7 +799,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 
   std::vector<Ctxt> scratch;
 
-  long p = ctxt.getContext().zMStar.getP();
+  long p = ctxt.getContext().getP();
   long p2r = NTL::power_long(p, r);
   long topHigh = botHigh + r - 1;
 
@@ -956,13 +959,13 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   // check that we have bootstrapping data
   assertTrue(recryptKeyID >= 0l, "Bootstrapping data not present");
 
-  long p = ctxt.getContext().zMStar.getP();
-  long r = ctxt.getContext().alMod.getR();
-  long p2r = ctxt.getContext().alMod.getPPowR();
+  long p = ctxt.getContext().getP();
+  long r = ctxt.getContext().getAlMod().getR();
+  long p2r = ctxt.getContext().getAlMod().getPPowR();
 
   long intFactor = ctxt.intFactor;
 
-  const ThinRecryptData& trcData = ctxt.getContext().rcData;
+  const ThinRecryptData& trcData = ctxt.getContext().getRcData();
 
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
   long e = trcData.e;
@@ -987,9 +990,9 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 #ifdef DROP_BEFORE_THIN_RECRYPT
   // experimental code...we should drop down to a reasonably low level
   // before doing the first linear map.
-  long first = context.ctxtPrimes.first();
-  long last =
-      std::min(context.ctxtPrimes.last(), first + THIN_RECRYPT_NLEVELS - 1);
+  long first = context.getCtxtPrimes().first();
+  long last = std::min(context.getCtxtPrimes().last(),
+                       first + THIN_RECRYPT_NLEVELS - 1);
   ctxt.bringToSet(IndexSet(first, last));
 #endif
 
@@ -1013,8 +1016,8 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
     ctxt.reLinearize();
 
   // Mod-switch down if needed
-  IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  assertTrue(s <= context.ctxtPrimes, "prime set is messed up");
+  IndexSet s = ctxt.getPrimeSet() / context.getSpecialPrimes();
+  assertTrue(s <= context.getCtxtPrimes(), "prime set is messed up");
   if (s.card() > 3) { // leave only first three ciphertext primes
     long first = s.first();
     IndexSet s3(first, first + 2);
@@ -1032,7 +1035,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   std::vector<NTL::ZZX> zzParts; // the mod-switched parts, in ZZX format
 
-  double mfac = ctxt.getContext().zMStar.getNormBnd();
+  double mfac = ctxt.getContext().getZMStar().getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise
   // in the pwrfl basis
@@ -1060,10 +1063,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext(),
-                       q);
+    checkRecryptBounds(zzParts, dbgKey->getRecryptKey(), ctxt.getContext(), q);
   }
 #endif
 
@@ -1079,10 +1079,10 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 
 #ifdef HELIB_DEBUG
   if (dbgKey) {
-    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
+    checkRecryptBounds_v(v, dbgKey->getRecryptKey(), ctxt.getContext(), q);
     checkCriticalValue(zzParts,
-                       dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext().rcData,
+                       dbgKey->getRecryptKey(),
+                       ctxt.getContext().getRcData(),
                        q);
   }
 #endif
@@ -1160,9 +1160,9 @@ static void checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts,
                                const Context& context,
                                long q)
 {
-  const RecryptData& rcData = context.rcData;
+  const RecryptData& rcData = context.getRcData();
   double coeff_bound = context.boundForRecryption();
-  long p2r = context.alMod.getPPowR();
+  long p2r = context.getAlMod().getPPowR();
 
   NTL::ZZX ptxt;
   rawDecrypt(ptxt, zzParts, sKey); // no mod q
@@ -1196,14 +1196,14 @@ static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
                                  const Context& context,
                                  UNUSED long q)
 {
-  const RecryptData& rcData = context.rcData;
+  const RecryptData& rcData = context.getRcData();
 
-  long p = context.zMStar.getP();
+  long p = context.getP();
   long e = rcData.e;
   long p2e = NTL::power_long(p, e);
   long ePrime = rcData.ePrime;
   long p2ePrime = NTL::power_long(p, ePrime);
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   double fudge = compute_fudge(p2ePrime, p2e);
 
@@ -1264,7 +1264,7 @@ static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
 #if 0
 void fhe_stats_print(long iter, const Context& context)
 {
-   long phim = context.zMStar.getPhiM();
+   long phim = context.getPhiM();
 
    std::cerr << "||||| recryption stats ||||\n";
    std::cerr << "**** averages ****\n";

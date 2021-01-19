@@ -33,24 +33,21 @@ struct ContextAndKeys
   helib::Context context;
   helib::SecKey secretKey;
   const helib::PubKey publicKey;
-  const helib::EncryptedArrayCx& ea;
+  const helib::EncryptedArray& ea;
 
   ContextAndKeys(Params& _params) :
       params(_params),
-      context(params.m, /*p=*/-1, params.r),
-      secretKey((context.scale = 50,
-                 helib::buildModChain(context,
-                                      params.L,
-                                      /*c=*/3,
-                                      /*willBeBootstrappable=*/false,
-                                      /*hwt=*/0,
-                                      /*resolution=*/3,
-                                      /*bitsInSpecialPrime=*/0),
-                 context)),
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(params.m)
+                  .precision(params.r)
+                  .bits(params.L)
+                  .scale(10)
+                  .build()),
+      secretKey(context),
       publicKey((secretKey.GenSecKey(),
                  helib::addSome1DMatrices(secretKey),
                  secretKey)),
-      ea(context.ea->getCx())
+      ea(context.getEA())
   {
     context.printout();
   }

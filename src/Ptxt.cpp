@@ -14,58 +14,14 @@
 #include <helib/Ptxt.h>
 #include <helib/apiAttributes.h>
 
+#include "io.h"
+
 namespace helib {
-
-void deserialize(std::istream& is, std::complex<double>& num)
-{
-  std::vector<std::stringstream> parts =
-      extractTokenizeRegion(is, '[', ']', ',');
-  if (parts.empty()) {
-    // Empty section. Use default value.
-    num = 0;
-    return;
-  }
-
-  if (parts.size() > 2) {
-    // Too many elements.
-    throw IOError(
-        "CKKS expects maximum of 2 values per slot (real, imag). Got " +
-        std::to_string(parts.size()) + " instead.");
-  }
-
-  // Actual parsing and setup
-  double tmp;
-  parts[0] >> tmp;
-  num.real(tmp);
-  if (parts.size() == 2) {
-    // If more than 1 part, set also real value;
-    parts[1] >> tmp;
-    num.imag(tmp);
-  }
-}
-
-void serialize(std::ostream& os, const std::complex<double>& num)
-{
-  struct stream_modifier
-  {
-    explicit stream_modifier(std::ostream& os) : os(os), ss(os.precision())
-    {
-      os << std::setprecision(std::numeric_limits<double>::digits10);
-    };
-    ~stream_modifier() { os << std::setprecision(ss); };
-    std::ostream& os;
-    std::streamsize ss;
-  };
-
-  stream_modifier sm(os);
-
-  os << "[" << num.real() << ", " << num.imag() << "]";
-}
 
 template <>
 PolyMod Ptxt<BGV>::convertToSlot(const Context& context, long slot)
 {
-  PolyMod data(NTL::ZZX(slot), context.slotRing);
+  PolyMod data(NTL::ZZX(slot), context.getSlotRing());
   return data;
 }
 
@@ -82,14 +38,14 @@ Ptxt<Scheme>::Ptxt() : context(nullptr)
 template <typename Scheme>
 Ptxt<Scheme>::Ptxt(const Context& context) :
     context(&context),
-    slots(context.ea->size(),
+    slots(context.getEA().size(),
           SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)})
 {}
 
 template <typename Scheme>
 Ptxt<Scheme>::Ptxt(const Context& context, const SlotType& value) :
     context(std::addressof(context)),
-    slots(context.ea->size(),
+    slots(context.getEA().size(),
           SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)})
 {
   setData(value);
@@ -101,8 +57,8 @@ void Ptxt<BGV>::setData(const NTL::ZZX& value)
 {
   assertTrue<RuntimeError>(isValid(),
                            "Cannot call setData on default-constructed Ptxt");
-  PolyMod poly(value, context->slotRing);
-  std::vector<PolyMod> poly_vec(context->ea->size(), poly);
+  PolyMod poly(value, context->getSlotRing());
+  std::vector<PolyMod> poly_vec(context->getEA().size(), poly);
   setData(poly_vec);
 }
 
@@ -110,7 +66,7 @@ template <>
 template <>
 Ptxt<BGV>::Ptxt(const Context& context, const NTL::ZZX& value) :
     context(&context),
-    slots(context.ea->size(),
+    slots(context.getEA().size(),
           SlotType{Ptxt<BGV>::convertToSlot(*(this->context), 0L)})
 {
   setData(value);
@@ -119,7 +75,7 @@ Ptxt<BGV>::Ptxt(const Context& context, const NTL::ZZX& value) :
 template <typename Scheme>
 Ptxt<Scheme>::Ptxt(const Context& context, const std::vector<SlotType>& data) :
     context(std::addressof(context)),
-    slots(context.ea->size(),
+    slots(context.getEA().size(),
           SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)})
 {
   setData(data);
@@ -152,15 +108,15 @@ void Ptxt<Scheme>::setData(const std::vector<SlotType>& data)
 {
   assertTrue<RuntimeError>(isValid(),
                            "Cannot call setData on default-constructed Ptxt");
-  assertTrue<RuntimeError>(helib::lsize(data) <= context->ea->size(),
+  assertTrue<RuntimeError>(helib::lsize(data) <= context->getEA().size(),
                            "Cannot setData to Ptxt: not enough slots");
 
   // Need to verify that they all match
   assertSlotsCompatible(data);
 
   slots = data;
-  if (helib::lsize(slots) < context->ea->size()) {
-    slots.resize(context->ea->size(),
+  if (helib::lsize(slots) < context->getEA().size()) {
+    slots.resize(context->getEA().size(),
                  SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)});
   }
 }
@@ -170,7 +126,7 @@ void Ptxt<Scheme>::setData(const SlotType& value)
 {
   assertTrue<RuntimeError>(isValid(),
                            "Cannot call setData on default-constructed Ptxt");
-  setData(std::vector<SlotType>(context->ea->size(), value));
+  setData(std::vector<SlotType>(context->getEA().size(), value));
 }
 
 template <>
@@ -180,10 +136,10 @@ void Ptxt<BGV>::decodeSetData(const NTL::ZZX& data)
   assertTrue<RuntimeError>(
       isValid(),
       "Cannot call decodeSetData on default-constructed Ptxt");
-  PolyMod poly(context->slotRing);
-  std::vector<PolyMod> poly_vec(context->ea->size(), poly);
-  std::vector<NTL::ZZX> ptxt(context->ea->size());
-  context->ea->decode(ptxt, data);
+  PolyMod poly(context->getSlotRing());
+  std::vector<PolyMod> poly_vec(context->getEA().size(), poly);
+  std::vector<NTL::ZZX> ptxt(context->getEA().size());
+  context->getEA().decode(ptxt, data);
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     poly_vec[i] = ptxt[i];
   }
@@ -204,9 +160,11 @@ typename Scheme::SlotType randomSlot(const Context& context);
 template <>
 BGV::SlotType randomSlot<BGV>(const Context& context)
 {
-  std::vector<long> coeffs(context.zMStar.getOrdP());
-  NTL::VectorRandomBnd(coeffs.size(), coeffs.data(), context.slotRing->p2r);
-  return PolyMod(coeffs, context.slotRing);
+  std::vector<long> coeffs(context.getOrdP());
+  NTL::VectorRandomBnd(coeffs.size(),
+                       coeffs.data(),
+                       context.getSlotRing()->p2r);
+  return PolyMod(coeffs, context.getSlotRing());
 }
 
 template <>
@@ -250,11 +208,11 @@ NTL::ZZX Ptxt<BGV>::getPolyRepr() const
   assertTrue<LogicError>(isValid(),
                          "Cannot call getPolyRepr on default-constructed Ptxt");
   NTL::ZZX repr;
-  std::vector<NTL::ZZX> slots_data(context->ea->size());
+  std::vector<NTL::ZZX> slots_data(context->getEA().size());
   for (std::size_t i = 0; i < slots_data.size(); ++i) {
     slots_data[i] = slots[i].getData();
   }
-  context->ea->encode(repr, slots_data);
+  context->getEA().encode(repr, slots_data);
   return repr;
 }
 
@@ -267,12 +225,12 @@ void Ptxt<BGV>::encode(EncodedPtxt& eptxt, double mag, OptLong prec) const
   assertTrue<LogicError>(mag < 0 && !prec.isDefined(),
                          "mag,prec must be defaulted for BGV");
 
-  std::vector<NTL::ZZX> slots_data(context->ea->size());
+  std::vector<NTL::ZZX> slots_data(context->getEA().size());
   for (std::size_t i = 0; i < slots_data.size(); ++i) {
     slots_data[i] = slots[i].getData();
   }
 
-  context->ea->encode(eptxt, slots_data);
+  context->getEA().encode(eptxt, slots_data);
 }
 
 /**
@@ -285,7 +243,7 @@ void Ptxt<CKKS>::encode(EncodedPtxt& eptxt, double mag, OptLong prec) const
 {
   assertTrue<LogicError>(isValid(),
                          "Cannot call encode on default-constructed Ptxt");
-  context->ea->encode(eptxt, slots, mag, prec);
+  context->getEA().encode(eptxt, slots, mag, prec);
 }
 
 template <typename Scheme>
@@ -604,7 +562,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate1D(long dim, long amount)
                            "Cannot call rotate1D on default-constructed Ptxt");
   if (slots.size() == 1)
     return *this; // Nothing to do (only one slot)
-  const PAlgebra& zMStar = context->zMStar;
+  const PAlgebra& zMStar = context->getZMStar();
   long num_gens = zMStar.numOfGens();
   assertInRange<LogicError>(dim,
                             0l,
@@ -613,7 +571,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate1D(long dim, long amount)
                             "number of generators");
   // Copying in slots to avoid default PolyMod issues.
   std::vector<SlotType> new_slots(slots);
-  long ord = context->ea->sizeOfDimension(dim);
+  long ord = context->getEA().sizeOfDimension(dim);
   amount = mcMod(amount, ord); // Make amount smallest positive integer < ord
   if (amount == 0)
     return *this; // Nothing to do
@@ -668,12 +626,12 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
   if (amount == 0)
     return *this;
   if (slots.size() == 1 ||
-      std::abs(amount) >= context->ea->sizeOfDimension(dim)) {
+      std::abs(amount) >= context->getEA().sizeOfDimension(dim)) {
     clear();
     return *this;
   }
   // NOTE: There is some code duplication here and in rotate1D
-  const PAlgebra& zMStar = context->zMStar;
+  const PAlgebra& zMStar = context->getZMStar();
   long num_gens = zMStar.numOfGens();
   assertInRange<LogicError>(dim,
                             0l,
@@ -682,7 +640,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
                             "number of generators");
   // Copying in slots to avoid default PolyMod issues.
   std::vector<SlotType> new_slots(slots);
-  long ord = context->ea->sizeOfDimension(dim);
+  long ord = context->getEA().sizeOfDimension(dim);
 
   // This for loop performs similar logic in rotate1D to obtain the new index
   // post shift via the conversion to and from the corresponding coordinate
@@ -713,10 +671,10 @@ Ptxt<BGV>& Ptxt<BGV>::automorph(long k)
 {
   assertTrue<RuntimeError>(isValid(),
                            "Cannot call automorph on default-constructed Ptxt");
-  assertTrue<RuntimeError>(context->zMStar.inZmStar(k),
+  assertTrue<RuntimeError>(context->getZMStar().inZmStar(k),
                            "k must be an element in Zm*");
   NTL::ZZX poly;
-  switch (context->ea->getTag()) {
+  switch (context->getEA().getTag()) {
   case PA_GF2_tag: {
     decodeSetData(automorph_internal<PA_GF2>(k));
     break;
@@ -736,9 +694,9 @@ Ptxt<CKKS>& Ptxt<CKKS>::automorph(long k)
 {
   assertTrue<RuntimeError>(isValid(),
                            "Cannot call automorph on default-constructed Ptxt");
-  assertTrue<RuntimeError>(context->zMStar.inZmStar(k),
+  assertTrue<RuntimeError>(context->getZMStar().inZmStar(k),
                            "k must be an element in Zm*");
-  return rotate(context->zMStar.indexOfRep(k));
+  return rotate(context->getZMStar().indexOfRep(k));
 }
 
 template <>
@@ -748,11 +706,12 @@ Ptxt<BGV>& Ptxt<BGV>::frobeniusAutomorph(long j)
   assertTrue<RuntimeError>(isValid(),
                            "Cannot call frobeniusAutomorph on "
                            "default-constructed Ptxt");
-  long d = context->zMStar.getOrdP();
+  long d = context->getOrdP();
   if (d == 1)
     return *this; // Nothing to do.
-  long exponent =
-      NTL::PowerMod(context->slotRing->p, mcMod(j, d), context->zMStar.getM());
+  long exponent = NTL::PowerMod(context->getSlotRing()->p,
+                                mcMod(j, d),
+                                context->getZMStar().getM());
   return automorph(exponent);
 }
 
@@ -880,7 +839,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::mapTo01()
 template <typename Scheme>
 long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)
 {
-  const PAlgebra& zMStar = context->zMStar;
+  const PAlgebra& zMStar = context->getZMStar();
   assertEq<LogicError>(coords.size(),
                        static_cast<std::size_t>(zMStar.numOfGens()),
                        "Coord must have same size as hypercube structure");
@@ -903,7 +862,7 @@ long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)
 template <typename Scheme>
 std::vector<long> Ptxt<Scheme>::indexToCoord(long index)
 {
-  const PAlgebra& zMStar = context->zMStar;
+  const PAlgebra& zMStar = context->getZMStar();
   long num_gens = zMStar.numOfGens();
   assertInRange<LogicError>(index, 0l, lsize(), "Index out of range");
   std::vector<long> coords(num_gens);
@@ -929,7 +888,7 @@ template <>
 template <>
 PA_GF2::RX Ptxt<BGV>::slotsToRX<PA_GF2>() const
 {
-  assertEq<LogicError>(context->alMod.getPPowR(),
+  assertEq<LogicError>(context->getAlMod().getPPowR(),
                        2l,
                        "Plaintext modulus p^r must be equal to 2^1");
   return NTL::conv<NTL::GF2X>(getPolyRepr());
@@ -939,7 +898,7 @@ template <>
 template <>
 PA_zz_p::RX Ptxt<BGV>::slotsToRX<PA_zz_p>() const
 {
-  assertNeq<LogicError>(context->alMod.getPPowR(),
+  assertNeq<LogicError>(context->getAlMod().getPPowR(),
                         2l,
                         "Plaintext modulus p^r must not be equal to 2^1");
   return NTL::conv<NTL::zz_pX>(getPolyRepr());
@@ -949,9 +908,9 @@ template <>
 void Ptxt<BGV>::assertSlotsCompatible(const std::vector<SlotType>& slots) const
 {
   for (const auto& slot : slots) {
-    if (slot.getp2r() != context->slotRing->p2r)
+    if (slot.getp2r() != context->getSlotRing()->p2r)
       throw RuntimeError("Mismatching p^r found");
-    if (slot.getG() != context->slotRing->G)
+    if (slot.getG() != context->getSlotRing()->G)
       throw RuntimeError("Mismatching G found");
   }
 }
@@ -968,69 +927,135 @@ NTL::ZZX Ptxt<BGV>::automorph_internal(long k)
 {
   NTL::zz_pContext pContext;
   pContext.save();
-  NTL::zz_p::init(context->slotRing->p2r);
-  long m = context->zMStar.getM();
+  NTL::zz_p::init(context->getSlotRing()->p2r);
+  long m = context->getM();
   auto old_slots = slotsToRX<type>();
   decltype(old_slots) new_slots;
   plaintextAutomorph(new_slots,
                      old_slots,
                      k,
                      m,
-                     context->alMod.getDerived(type()).getPhimXMod());
+                     context->getAlMod().getDerived(type()).getPhimXMod());
   NTL::ZZX ret = NTL::conv<NTL::ZZX>(new_slots);
   pContext.restore();
   return ret;
 }
 
 template <typename Scheme>
-void deserialize(std::istream& is, Ptxt<Scheme>& ptxt)
+void Ptxt<Scheme>::writeToJSON(std::ostream& os) const
 {
-  assertTrue<RuntimeError>(ptxt.isValid(),
+  // TODO: add JSON try-catch wrapper
+  assertTrue<RuntimeError>(this->isValid(),
                            "Cannot operate on invalid "
                            "(default constructed) Ptxt");
-  std::vector<std::stringstream> parts =
-      extractTokenizeRegion(is, '[', ']', ',');
 
-  if (helib::lsize(parts) > ptxt.context->ea->size()) {
-    std::stringstream err_msg;
-    err_msg << "Cannot deserialize to Ptxt: not enough slots.  "
-            << "Trying to deserialize " << parts.size() << " elements.  "
-            << "Got " << ptxt.context->ea->size() << " slots.";
-    throw IOError(err_msg.str());
-  }
-
-  std::vector<typename Scheme::SlotType> data(parts.size());
-  for (std::size_t i = 0; i < parts.size(); ++i) {
-    typename Scheme::SlotType slot(
-        Ptxt<Scheme>::convertToSlot(*ptxt.context, 0L));
-    deserialize(parts[i], slot);
-    data[i] = std::move(slot);
-  }
-
-  is.clear();
-  ptxt.setData(data);
+  executeRedirectJsonError<void>([&]() { os << this->writeToJSON(); });
 }
-
-// Explicit function instantiation
-template void deserialize<BGV>(std::istream& is, Ptxt<BGV>& ptxt);
-template void deserialize<CKKS>(std::istream& is, Ptxt<CKKS>& ptxt);
 
 template <typename Scheme>
-void serialize(std::ostream& os, const Ptxt<Scheme>& ptxt)
+JsonWrapper Ptxt<Scheme>::writeToJSON() const
 {
-  os << "[";
-  for (std::size_t i = 0; i < ptxt.slots.size(); ++i) {
-    serialize(os, ptxt.slots[i]);
-    if (i != ptxt.slots.size() - 1) {
-      os << ", ";
+  assertTrue<RuntimeError>(this->isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+  auto body = [this]() {
+    json jslots;
+
+    if constexpr (std::is_same_v<Scheme, CKKS>) {
+      jslots = slots;
+    } else {
+      jslots = writeVectorToJSON(slots);
     }
-  }
-  os << "]";
+
+    json j{{"scheme", Scheme::schemeName}, {"slots", jslots}};
+
+    return wrap(toTypedJson<Ptxt<Scheme>>(j));
+  };
+
+  return executeRedirectJsonError<JsonWrapper>(body);
 }
 
-// Explicit function instantiation
-template void serialize<BGV>(std::ostream& os, const Ptxt<BGV>& ptxt);
-template void serialize<CKKS>(std::ostream& os, const Ptxt<CKKS>& ptxt);
+template <typename Scheme>
+Ptxt<Scheme> Ptxt<Scheme>::readFromJSON(std::istream& is,
+                                        const Context& context)
+{
+  Ptxt<Scheme> ret{context};
+  ret.readJSON(is);
+  return ret;
+}
+
+template <typename Scheme>
+Ptxt<Scheme> Ptxt<Scheme>::readFromJSON(const JsonWrapper& tjw,
+                                        const Context& context)
+{
+  Ptxt<Scheme> ret{context};
+  ret.readJSON(tjw);
+  return ret;
+}
+
+template <typename Scheme>
+void Ptxt<Scheme>::readJSON(std::istream& is)
+{
+  assertTrue<RuntimeError>(this->isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+  executeRedirectJsonError<void>([&]() {
+    json j;
+    is >> j;
+    this->readJSON(wrap(j));
+  });
+}
+
+template <typename Scheme>
+void Ptxt<Scheme>::readJSON(const JsonWrapper& tjw)
+{
+  assertTrue<RuntimeError>(this->isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+  auto body = [&]() {
+    json tj = unwrap(tjw);
+    json jslots;
+    // if the input is just an array short-circuit to slot deserialization
+    // (assuming there is no type-header).
+    if (tj.is_array()) {
+      jslots = tj;
+
+    } else {
+      json j = fromTypedJson<Ptxt<Scheme>>(tj);
+
+      std::string expected_scheme{j.at("scheme").get<std::string>()};
+      assertTrue<IOError>(
+          Scheme::schemeName == expected_scheme,
+          "Scheme mismatch in deserialization.\nExpected: " + expected_scheme +
+              ", actual: " + std::string(Scheme::schemeName) + ".");
+
+      jslots = j.at("slots");
+
+      if (!jslots.is_array()) {
+        throw IOError("Slot content is not a JSON array");
+      }
+    }
+
+    if (static_cast<long>(jslots.size()) > this->context->getEA().size()) {
+      std::stringstream err_msg;
+      err_msg << "Cannot deserialize to Ptxt: not enough slots.  "
+              << "Trying to deserialize " << jslots.size() << " elements.  "
+              << "Got " << this->context->getEA().size() << " slots.";
+      throw IOError(err_msg.str());
+    }
+
+    if constexpr (std::is_same_v<Scheme, CKKS>) {
+      // Scheme is CKKS
+      this->setData(jslots.get<std::vector<std::complex<double>>>());
+    } else {
+      // Scheme is BGV
+      this->setData(
+          readVectorFromJSON<PolyMod>(jslots, context->getSlotRing()));
+    }
+  };
+
+  executeRedirectJsonError<void>(body);
+}
 
 template <typename Scheme>
 std::istream& operator>>(std::istream& is, Ptxt<Scheme>& ptxt)
@@ -1038,7 +1063,7 @@ std::istream& operator>>(std::istream& is, Ptxt<Scheme>& ptxt)
   assertTrue<RuntimeError>(ptxt.isValid(),
                            "Cannot operate on invalid "
                            "(default constructed) Ptxt");
-  deserialize(is, ptxt);
+  ptxt.readJSON(is);
   return is;
 }
 
@@ -1053,7 +1078,7 @@ std::ostream& operator<<(std::ostream& os, const Ptxt<Scheme>& ptxt)
                            "Cannot operate on invalid "
                            "(default constructed) Ptxt");
 
-  serialize(os, ptxt);
+  ptxt.writeToJSON(os);
   return os;
 }
 

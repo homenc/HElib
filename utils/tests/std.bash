@@ -15,6 +15,7 @@ function random-char-string {
 }
 
 utils_dir=${utils_dir:-"../.."}
+helib_root="../.."
 
 diff_threshold="../diff-threshold.py"
 generate_data="$utils_dir/tests/gen-data.py"
@@ -45,6 +46,10 @@ function assert {
     techo "Status: $status"
     return 1
   fi
+}
+
+function helib_version {
+  cat "${helib_root}/VERSION"
 }
 
 function print-info-location {

@@ -19,22 +19,30 @@ struct Params
   const long m, p, r, L;
   const std::vector<long> gens;
   const std::vector<long> ords;
+  const std::vector<long> mvec;
   Params(long _m,
          long _p,
          long _r,
          long _L,
          const std::vector<long>& _gens = {},
-         const std::vector<long>& _ords = {}) :
-      m(_m), p(_p), r(_r), L(_L), gens(_gens), ords(_ords)
+         const std::vector<long>& _ords = {},
+         const std::vector<long>& _mvec = {}) :
+      m(_m), p(_p), r(_r), L(_L), gens(_gens), ords(_ords), mvec(_mvec)
   {}
   Params(const Params& other) :
-      Params(other.m, other.p, other.r, other.L, other.gens, other.ords)
+      Params(other.m,
+             other.p,
+             other.r,
+             other.L,
+             other.gens,
+             other.ords,
+             other.mvec)
   {}
   bool operator!=(Params& other) const { return !(*this == other); }
   bool operator==(Params& other) const
   {
     return m == other.m && p == other.p && r == other.r && L == other.L &&
-           gens == other.gens && ords == other.ords;
+           gens == other.gens && ords == other.ords && mvec == other.mvec;
   }
 };
 
@@ -49,12 +57,21 @@ struct ContextAndKeys
 
   ContextAndKeys(Params& _params) :
       params(_params),
-      context(params.m, params.p, params.r, params.gens, params.ords),
-      secretKey((helib::buildModChain(context, params.L, /*c=*/2), context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(params.m)
+                  .p(params.p)
+                  .r(params.r)
+                  .bits(params.L)
+                  .gens(params.gens)
+                  .ords(params.ords)
+                  .bootstrappable(!params.mvec.empty())
+                  .mvec(params.mvec)
+                  .build()),
+      secretKey(context),
       publicKey((secretKey.GenSecKey(),
                  helib::addSome1DMatrices(secretKey),
                  secretKey)),
-      ea(*(context.ea))
+      ea(context.getEA())
   {
     context.printout();
   }

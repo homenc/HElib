@@ -29,15 +29,23 @@ def nSlotsFromParamsOutFile(filename):
                 return int(match.group(1))
         return None
 
+def getVersion():
+    with open("../../../VERSION") as f:
+        return f.readline().replace('\n', '')
+
 def printEmptyPtxts(amount, nslots, scheme):
     filler = [0] if scheme == "BGV" else [0.0]
     for _ in range(amount):
-        print([filler] * nslots)
+        print(f'{{"HElibVersion":"{getVersion()}","content":{{"scheme":"{scheme}","slots":', end='')
+        print(f'{[filler] * nslots}'.replace(', ', ','), end='')
+        print(f'}},"serializationVersion":"0.0.1","type":"Ptxt"}}')
 
-def printPtxts(ptxts, header):
+def printPtxts(ptxts, header, scheme):
     print(str(header))
     for ptxt in ptxts:
-        print(ptxt)
+        print(f'{{"HElibVersion":"{getVersion()}","content":{{"scheme":"{scheme}","slots":', end='')
+        print(f'{ptxt}'.replace(', ', ','), end='')
+        print(f'}},"serializationVersion":"0.0.1","type":"Ptxt"}}')
 
 def genSlot(csv, scheme):
     fn = int if scheme == "BGV" else float
@@ -98,10 +106,10 @@ def main():
         ptxts = list(genPtxt(csv_reader, nslots, args.scheme))
 
     if args.dims:
-        printPtxts(ptxts, args.dims)
+        printPtxts(ptxts, args.dims, args.scheme)
         printEmptyPtxts(totalPtxts - lenPtxts, nslots, args.scheme)
     else:
-        printPtxts(ptxts, len(ptxts))
+        printPtxts(ptxts, len(ptxts), args.scheme)
 
 if __name__ == '__main__':
     main()

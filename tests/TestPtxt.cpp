@@ -20,6 +20,8 @@
 #include "test_common.h"
 #include "gtest/gtest.h"
 
+#include <io.h>
+
 namespace {
 
 struct BGVParameters
@@ -45,12 +47,15 @@ protected:
   TestPtxtCKKS() :
       // Only relevant parameter is m for a CKKS plaintext
       m(GetParam()),
-      context(m, -1, 40)
+      context(helib::ContextBuilder<helib::CKKS>()
+                  .m(m)
+                  .precision(40)
+                  .buildModChain(false)
+                  .build())
   // VJS_NOTE: I changed r=50 to r=40.
   // I find setting r so large can cause problems,
   // and the test was not passing.
-  // This may be somethng that needs further investigation,
-  // but later...
+  // This may be somethng that needs further investigation.
   // This probably has something to do with the slightly
   // different logic in the new encoding functions
   {}
@@ -93,12 +98,12 @@ TEST_P(TestPtxtCKKS, reportsWhetherItIsValid)
 TEST_P(TestPtxtCKKS, hasSameNumberOfSlotsAsContext)
 {
   helib::Ptxt<helib::CKKS> ptxt(context);
-  EXPECT_EQ(ptxt.size(), context.ea->size());
+  EXPECT_EQ(ptxt.size(), context.getEA().size());
 }
 
 TEST_P(TestPtxtCKKS, preservesDataPassedIntoConstructor)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i)
     data[i] = i / 10.0;
   helib::Ptxt<helib::CKKS> ptxt(context, data);
@@ -108,9 +113,9 @@ TEST_P(TestPtxtCKKS, preservesDataPassedIntoConstructor)
 
 TEST_P(TestPtxtCKKS, hasSameNumberOfSlotsAsContextWhenCreatedWithData)
 {
-  std::vector<std::complex<double>> data(context.ea->size() - 1);
+  std::vector<std::complex<double>> data(context.getEA().size() - 1);
   helib::Ptxt<helib::CKKS> ptxt(context, data);
-  EXPECT_EQ(ptxt.size(), context.ea->size());
+  EXPECT_EQ(ptxt.size(), context.getEA().size());
 }
 
 TEST_P(TestPtxtCKKS, replicateValueWhenPassingASingleSlotTypeNumber)
@@ -137,7 +142,7 @@ TEST_P(TestPtxtCKKS, replicateValueWhenPassingASingleNonSlotTypeNumber)
 
 TEST_P(TestPtxtCKKS, atMethodThrowsOrReturnsCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i)
     data[i] = i / 10.0;
   helib::Ptxt<helib::CKKS> ptxt(context, data);
@@ -156,7 +161,7 @@ TEST_P(TestPtxtCKKS, atMethodThrowsOrReturnsCorrectly)
 
 TEST_P(TestPtxtCKKS, padsWithZerosWhenPassingInSmallDataVector)
 {
-  std::vector<std::complex<double>> data(context.ea->size() - 1);
+  std::vector<std::complex<double>> data(context.getEA().size() - 1);
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {(i - 1) / 10.0, (i - 1) / 10.0};
   }
@@ -173,7 +178,7 @@ TEST_P(TestPtxtCKKS, padsWithZerosWhenPassingInSmallDataVector)
 
 TEST_P(TestPtxtCKKS, preservesDataPassedIntoConstructorAsDouble)
 {
-  std::vector<double> data(context.ea->size() - 1);
+  std::vector<double> data(context.getEA().size() - 1);
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = (i - 1) / 10.0;
   }
@@ -188,255 +193,9 @@ TEST_P(TestPtxtCKKS, preservesDataPassedIntoConstructorAsDouble)
   }
 }
 
-TEST_P(TestPtxtCKKS, writesDataCorrectlyToOstream)
-{
-  std::vector<std::complex<double>> data(context.ea->size());
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-  }
-  helib::Ptxt<helib::CKKS> ptxt(context, data);
-  std::stringstream ss;
-  ss << "[";
-  ss << std::setprecision(std::numeric_limits<double>::digits10);
-  for (auto it = data.begin(); it != data.end(); it++) {
-    ss << "[" << it->real() << ", " << it->imag() << "]";
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-  std::string expected = ss.str();
-  std::ostringstream os;
-  os << ptxt;
-
-  EXPECT_EQ(os.str(), expected);
-}
-
-TEST_P(TestPtxtCKKS, readsDataCorrectlyFromIstream)
-{
-  std::vector<std::complex<double>> data(context.ea->size());
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-  }
-  helib::Ptxt<helib::CKKS> ptxt(context);
-  std::stringstream ss;
-  ss << "[";
-  ss << std::setprecision(std::numeric_limits<double>::digits10);
-  for (auto it = data.begin(); it != data.end(); it++) {
-    helib::serialize(ss, *it);
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-  std::istringstream is(ss.str());
-  is >> ptxt;
-
-  for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_NEAR(std::abs(ptxt[i] - data[i]), 0, pre_encryption_epsilon);
-  }
-}
-
-TEST_P(TestPtxtCKKS, readsSquareBracketsDataCorrectly)
-{
-  std::vector<std::complex<double>> data(context.ea->size());
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-  }
-  helib::Ptxt<helib::CKKS> ptxt(context);
-  std::stringstream ss;
-  ss << "[";
-  ss << std::setprecision(std::numeric_limits<double>::digits10);
-  for (auto it = data.begin(); it != data.end(); it++) {
-    ss << "[" << it->real() << ", " << it->imag() << "]";
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-  std::istringstream is(ss.str());
-  is >> ptxt;
-
-  for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_NEAR(std::abs(ptxt[i] - data[i]), 0, pre_encryption_epsilon);
-  }
-}
-
-TEST_P(TestPtxtCKKS, serializeFunctionSerializesStdComplexCorrectly)
-{
-  // TODO: This test may be removed from the fixture and put as standalone
-  std::stringstream ss;
-  std::complex<double> num;
-
-  num = 0.0;
-  helib::serialize(ss, num);
-  EXPECT_EQ(ss.str(), "[0, 0]");
-  ss.str("");
-
-  num = 10.3;
-  helib::serialize(ss, num);
-  EXPECT_EQ(ss.str(), "[10.3, 0]");
-  ss.str("");
-
-  num = {0, 10.3};
-  helib::serialize(ss, num);
-  EXPECT_EQ(ss.str(), "[0, 10.3]");
-  ss.str("");
-
-  num = {3.3, 16.6};
-  helib::serialize(ss, num);
-  EXPECT_EQ(ss.str(), "[3.3, 16.6]");
-  ss.str("");
-}
-
-TEST_P(TestPtxtCKKS, deserializeFunctionDeserializesStdComplexCorrectly)
-{
-  // TODO: This test may be removed from the fixture and put as standalone
-  std::complex<double> num, expected;
-  std::stringstream ss;
-
-  num = 0.0;
-  ss << "[1,2,3]";
-  expected = 0.0;
-  EXPECT_THROW(helib::deserialize(ss, num), helib::IOError);
-  ss.str("");
-
-  num = 0.0;
-  ss << "[]";
-  expected = 0.0;
-  helib::deserialize(ss, num);
-  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
-  ss.str("");
-
-  num = 0.0;
-  ss << "[0.0]";
-  expected = 0.0;
-  helib::deserialize(ss, num);
-  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
-  ss.str("");
-
-  num = 0.0;
-  ss << "[0.0,0.0]";
-  expected = 0.0;
-  helib::deserialize(ss, num);
-  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
-  ss.str("");
-
-  num = 0.0;
-  ss << "[5.3,0]";
-  expected = 5.3;
-  helib::deserialize(ss, num);
-  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
-  ss.str("");
-
-  num = 0.0;
-  ss << "[0,8.16]";
-  expected = {0.0, 8.16};
-  helib::deserialize(ss, num);
-  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
-  ss.str("");
-
-  num = 0.0;
-  ss << "[3.4,9.99]";
-  expected = {3.4, 9.99};
-  helib::deserialize(ss, num);
-  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
-  ss.str("");
-}
-
-TEST_P(TestPtxtCKKS, serializeFunctionSerializesCorrectly)
-{
-  std::vector<std::complex<double>> data(context.ea->size());
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-  }
-  helib::Ptxt<helib::CKKS> ptxt(context, data);
-  std::stringstream ss;
-  ss << "[";
-  ss << std::setprecision(std::numeric_limits<double>::digits10);
-  for (auto it = data.begin(); it != data.end(); it++) {
-    ss << "[" << it->real() << ", " << it->imag() << "]";
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-  std::stringstream serialized_ptxt;
-  helib::serialize(serialized_ptxt, ptxt);
-
-  EXPECT_EQ(serialized_ptxt.str(), ss.str());
-}
-
-TEST_P(TestPtxtCKKS, deserializeWorksCorrectly)
-{
-  std::vector<std::complex<double>> data(context.ea->size());
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-  }
-  helib::Ptxt<helib::CKKS> ptxt(context);
-  std::stringstream ss;
-  ss << "[";
-  ss << std::setprecision(std::numeric_limits<double>::digits10);
-  for (auto it = data.begin(); it != data.end(); it++) {
-    ss << "[" << it->real() << ", " << it->imag() << "]";
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-  std::istringstream is(ss.str());
-  is >> ptxt;
-
-  for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_NEAR(std::abs(ptxt[i] - data[i]), 0, pre_encryption_epsilon);
-  }
-}
-
-TEST_P(TestPtxtCKKS, deserializeFunctionThrowsIfMoreElementsThanSlots)
-{
-  std::vector<std::complex<double>> data(context.ea->size() + 1);
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-  }
-  helib::Ptxt<helib::CKKS> ptxt(context);
-  std::stringstream ss;
-  ss << "[";
-  ss << std::setprecision(std::numeric_limits<double>::digits10);
-  for (auto it = data.begin(); it != data.end(); it++) {
-    ss << "[" << it->real() << ", " << it->imag() << "]";
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-  std::istringstream is(ss.str());
-  EXPECT_THROW(helib::deserialize(is, ptxt), helib::IOError);
-}
-
-TEST_P(TestPtxtCKKS, rightShiftOperatorThrowsIfMoreElementsThanSlots)
-{
-  std::vector<std::complex<double>> data(context.ea->size() + 1);
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-  }
-  helib::Ptxt<helib::CKKS> ptxt(context);
-  std::stringstream ss;
-  ss << "[";
-  ss << std::setprecision(std::numeric_limits<double>::digits10);
-  for (auto it = data.begin(); it != data.end(); it++) {
-    ss << "[" << it->real() << ", " << it->imag() << "]";
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-  std::istringstream is(ss.str());
-  EXPECT_THROW(is >> ptxt, helib::IOError);
-}
-
 TEST_P(TestPtxtCKKS, deserializeIsInverseOfSerialize)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
   }
@@ -453,53 +212,14 @@ TEST_P(TestPtxtCKKS, deserializeIsInverseOfSerialize)
   }
 }
 
-TEST_P(TestPtxtCKKS, readsManyPtxtsFromStream)
-{
-  std::vector<std::complex<double>> data1(context.ea->size());
-  std::vector<std::complex<double>> data2(context.ea->size());
-  std::vector<std::complex<double>> data3(context.ea->size());
-  for (std::size_t i = 0; i < data1.size(); ++i) {
-    data1[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
-    data2[i] = data1[i] * 2.0;
-    data3[i] = data1[i] * 3.5;
-  }
-  helib::Ptxt<helib::CKKS> ptxt1(context, data1);
-  helib::Ptxt<helib::CKKS> ptxt2(context, data2);
-  helib::Ptxt<helib::CKKS> ptxt3(context, data3);
-
-  std::stringstream ss;
-  ss << ptxt1 << std::endl;
-  ss << ptxt2 << std::endl;
-  ss << ptxt3 << std::endl;
-
-  helib::Ptxt<helib::CKKS> deserialized1(context);
-  helib::Ptxt<helib::CKKS> deserialized2(context);
-  helib::Ptxt<helib::CKKS> deserialized3(context);
-  ss >> deserialized1;
-  ss >> deserialized2;
-  ss >> deserialized3;
-
-  for (std::size_t i = 0; i < ptxt1.size(); ++i) {
-    EXPECT_NEAR(std::abs(ptxt1[i] - deserialized1[i]),
-                0,
-                pre_encryption_epsilon);
-    EXPECT_NEAR(std::abs(ptxt2[i] - deserialized2[i]),
-                0,
-                pre_encryption_epsilon);
-    EXPECT_NEAR(std::abs(ptxt3[i] - deserialized3[i]),
-                0,
-                pre_encryption_epsilon);
-  }
-}
-
 TEST_P(TestPtxtCKKS, getSlotReprReturnsData)
 {
-  std::vector<std::complex<double>> data(context.ea->size() - 1);
+  std::vector<std::complex<double>> data(context.getEA().size() - 1);
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {(i - 1) / 10.0, (i - 1) / 10.0};
   }
   helib::Ptxt<helib::CKKS> ptxt(context, data);
-  std::vector<std::complex<double>> expected_repr(context.ea->size());
+  std::vector<std::complex<double>> expected_repr(context.getEA().size());
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     expected_repr[i] = i < data.size() ? data[i] : 0;
   }
@@ -508,7 +228,7 @@ TEST_P(TestPtxtCKKS, getSlotReprReturnsData)
 
 TEST_P(TestPtxtCKKS, runningSumsWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {i / 1.0, (i * i) / 1.0};
   }
@@ -516,7 +236,7 @@ TEST_P(TestPtxtCKKS, runningSumsWorksCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt.runningSums();
 
-  std::vector<std::complex<double>> expected_result(context.ea->size());
+  std::vector<std::complex<double>> expected_result(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i)
     expected_result[i] = {(i * (i + 1)) / 2.0,
                           (i * (i + 1) * (2 * i + 1)) / 6.0};
@@ -526,7 +246,7 @@ TEST_P(TestPtxtCKKS, runningSumsWorksCorrectly)
 
 TEST_P(TestPtxtCKKS, totalSumsWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {i / 1.0, (i * i) / 1.0};
   }
@@ -534,7 +254,7 @@ TEST_P(TestPtxtCKKS, totalSumsWorksCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt.totalSums();
 
-  std::vector<std::complex<double>> expected_result(context.ea->size());
+  std::vector<std::complex<double>> expected_result(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i)
     expected_result[i] = {
         ((data.size() - 1) * data.size()) / 2.0,
@@ -545,7 +265,7 @@ TEST_P(TestPtxtCKKS, totalSumsWorksCorrectly)
 
 TEST_P(TestPtxtCKKS, incrementalProductWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {(i + 1) / 5.0, (i * i + 1) / 10.0};
   }
@@ -562,7 +282,7 @@ TEST_P(TestPtxtCKKS, incrementalProductWorksCorrectly)
 
 TEST_P(TestPtxtCKKS, totalProductWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {(i + 1) / 10.0, (i * i + 1) / 10.0};
   }
@@ -573,7 +293,7 @@ TEST_P(TestPtxtCKKS, totalProductWorksCorrectly)
   std::complex<double> product = {1.0, 0.0};
   for (std::size_t i = 0; i < data.size(); ++i)
     product *= data[i];
-  std::vector<std::complex<double>> expected_result(context.ea->size(),
+  std::vector<std::complex<double>> expected_result(context.getEA().size(),
                                                     product);
 
   COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
@@ -581,7 +301,7 @@ TEST_P(TestPtxtCKKS, totalProductWorksCorrectly)
 
 TEST_P(TestPtxtCKKS, innerProductWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {i / 1.0, (i * i) / 1.0};
   }
@@ -606,7 +326,7 @@ TEST_P(TestPtxtCKKS, innerProductWorksCorrectly)
 
 TEST_P(TestPtxtCKKS, mapTo01MapsSlotsCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {i / 1.0, (i * i) / 1.0};
   }
@@ -615,9 +335,9 @@ TEST_P(TestPtxtCKKS, mapTo01MapsSlotsCorrectly)
   helib::Ptxt<helib::CKKS> ptxt2(context, data);
   // Should exist as a free function and a member function
   ptxt.mapTo01();
-  mapTo01(*(context.ea), ptxt2);
+  mapTo01(context.getEA(), ptxt2);
 
-  std::vector<std::complex<double>> expected_result(context.ea->size());
+  std::vector<std::complex<double>> expected_result(context.getEA().size());
   for (std::size_t i = 1; i < data.size(); ++i) {
     expected_result[i] = {1, 0};
   }
@@ -628,9 +348,9 @@ TEST_P(TestPtxtCKKS, mapTo01MapsSlotsCorrectly)
 
 TEST_P(TestPtxtCKKS, timesEqualsOtherPlaintextWorks)
 {
-  std::vector<std::complex<double>> product_data(context.ea->size(),
+  std::vector<std::complex<double>> product_data(context.getEA().size(),
                                                  {-3.14, -1.0});
-  std::vector<std::complex<double>> multiplier_data(context.ea->size());
+  std::vector<std::complex<double>> multiplier_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(multiplier_data); ++i) {
     multiplier_data[i] = {(i - 1) / 10.0, (i + 1) / 10.0};
   }
@@ -650,9 +370,9 @@ TEST_P(TestPtxtCKKS, timesEqualsOtherPlaintextWorks)
 
 TEST_P(TestPtxtCKKS, minusEqualsOtherPlaintextWorks)
 {
-  std::vector<std::complex<double>> difference_data(context.ea->size(),
+  std::vector<std::complex<double>> difference_data(context.getEA().size(),
                                                     {2.718, -1.0});
-  std::vector<std::complex<double>> subtrahend_data(context.ea->size());
+  std::vector<std::complex<double>> subtrahend_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(subtrahend_data); ++i) {
     subtrahend_data[i] = {(i - 1) / 10.0, (i + 1) / 10.0};
   }
@@ -672,7 +392,7 @@ TEST_P(TestPtxtCKKS, minusEqualsOtherPlaintextWorks)
 
 TEST_P(TestPtxtCKKS, minusEqualsComplexScalarWorks)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {(i * i - 1) / 10.0, (i * i + 1) / 10.0};
   }
@@ -691,7 +411,7 @@ TEST_P(TestPtxtCKKS, minusEqualsComplexScalarWorks)
 
 TEST_P(TestPtxtCKKS, minusEqualsNonComplexScalarWorks)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {(i * i - 1) / 2.0, (i * i + 1) / 5.0};
   }
@@ -713,13 +433,13 @@ TEST_P(TestPtxtCKKS, minusEqualsNonComplexScalarWorks)
 
 TEST_P(TestPtxtCKKS, plusEqualsOtherPlaintextWorks)
 {
-  std::vector<std::complex<double>> augend_data(context.ea->size());
-  std::vector<std::complex<double>> addend_data(context.ea->size());
+  std::vector<std::complex<double>> augend_data(context.getEA().size());
+  std::vector<std::complex<double>> addend_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(addend_data); ++i) {
     augend_data[i] = {i / 10.0, i * i / 10.0};
     addend_data[i] = {i / 20.0, i * i / 20.0};
   }
-  std::vector<std::complex<double>> expected_result(context.ea->size());
+  std::vector<std::complex<double>> expected_result(context.getEA().size());
   for (std::size_t i = 0; i < expected_result.size(); ++i)
     expected_result[i] = augend_data[i] + addend_data[i];
 
@@ -732,7 +452,7 @@ TEST_P(TestPtxtCKKS, plusEqualsOtherPlaintextWorks)
 
 TEST_P(TestPtxtCKKS, plusEqualsComplexScalarWorks)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {-i / 10.0, (3 - i) / 4.0};
   }
@@ -751,7 +471,7 @@ TEST_P(TestPtxtCKKS, plusEqualsComplexScalarWorks)
 
 TEST_P(TestPtxtCKKS, plusEqualsNonComplexScalarWorks)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {i + i / 5.0, i - i / 4.0};
   }
@@ -777,7 +497,7 @@ TEST_P(TestPtxtCKKS, plusEqualsNonComplexScalarWorks)
 
 TEST_P(TestPtxtCKKS, timesEqualsScalarWorks)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {i * i * i / 100.0, -i / 3.0};
   }
@@ -803,7 +523,7 @@ TEST_P(TestPtxtCKKS, timesEqualsScalarWorks)
 
 TEST_P(TestPtxtCKKS, equalityWithOtherPlaintextWorks)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {i * 2.5, (i - 2) * 2.5};
   }
@@ -815,8 +535,8 @@ TEST_P(TestPtxtCKKS, equalityWithOtherPlaintextWorks)
 
 TEST_P(TestPtxtCKKS, notEqualsOperatorWithOtherPlaintextWorks)
 {
-  std::vector<std::complex<double>> data1(context.ea->size());
-  std::vector<std::complex<double>> data2(context.ea->size());
+  std::vector<std::complex<double>> data1(context.getEA().size());
+  std::vector<std::complex<double>> data2(context.getEA().size());
   for (long i = 0; i < helib::lsize(data1); ++i) {
     data1[i] = {(i + 1) * 2.5,
                 -i * 2.5}; // i+1 makes the first element differ from (0,0)
@@ -830,7 +550,7 @@ TEST_P(TestPtxtCKKS, notEqualsOperatorWithOtherPlaintextWorks)
 
 TEST_P(TestPtxtCKKS, negateNegatesCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   const double pi = std::acos(-1);
   for (long j = 0; j < helib::lsize(data); ++j) {
     // Spiral with j -> j e^{2*i*pi*j/data.size()}
@@ -850,7 +570,7 @@ TEST_P(TestPtxtCKKS, negateNegatesCorrectly)
 
 TEST_P(TestPtxtCKKS, addConstantWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i)
     data[i] = {i * 4.5, i / 2.0};
 
@@ -866,8 +586,8 @@ TEST_P(TestPtxtCKKS, addConstantWorksCorrectly)
 
 TEST_P(TestPtxtCKKS, multiplyByMultipliesCorrectly)
 {
-  std::vector<std::complex<double>> product_data(context.ea->size());
-  std::vector<std::complex<double>> multiplier_data(context.ea->size());
+  std::vector<std::complex<double>> product_data(context.getEA().size());
+  std::vector<std::complex<double>> multiplier_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(multiplier_data); ++i) {
     product_data[i] = {(2 - i) / 10.0, (1 - i) / 10.0};
     multiplier_data[i] = {std::exp(i / 100.), std::cos(i) * 12};
@@ -890,9 +610,9 @@ TEST_P(TestPtxtCKKS, multiplyByMultipliesCorrectly)
 
 TEST_P(TestPtxtCKKS, multiplyBy2MultipliesCorrectly)
 {
-  std::vector<std::complex<double>> product_data(context.ea->size());
-  std::vector<std::complex<double>> multiplier_data1(context.ea->size());
-  std::vector<std::complex<double>> multiplier_data2(context.ea->size());
+  std::vector<std::complex<double>> product_data(context.getEA().size());
+  std::vector<std::complex<double>> multiplier_data1(context.getEA().size());
+  std::vector<std::complex<double>> multiplier_data2(context.getEA().size());
   for (long i = 0; i < helib::lsize(multiplier_data1); ++i) {
     product_data[i] = static_cast<double>(i) *
                       std::exp(std::complex<double>{0, static_cast<double>(i)});
@@ -923,7 +643,7 @@ TEST_P(TestPtxtCKKS, multiplyBy2MultipliesCorrectly)
 
 TEST_P(TestPtxtCKKS, squareSquaresCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     // Lemniscate of Bernoulli
     double theta = 2. * std::acos(-1) * i / data.size();
@@ -939,7 +659,7 @@ TEST_P(TestPtxtCKKS, squareSquaresCorrectly)
 
 TEST_P(TestPtxtCKKS, cubeCubesCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     // Catenary
     data[i] = {static_cast<double>(1. * i - data.size() / 2) / data.size(),
@@ -955,7 +675,7 @@ TEST_P(TestPtxtCKKS, cubeCubesCorrectly)
 
 TEST_P(TestPtxtCKKS, powerCorrectlyRaisesToPowers)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   const double pi = std::acos(-1);
   // Spiral inside the unit disk
   for (long j = 0; j < helib::lsize(data); ++j) {
@@ -994,8 +714,8 @@ TEST_P(TestPtxtCKKS, powerCorrectlyRaisesToPowers)
 
 TEST_P(TestPtxtCKKS, shiftShiftsRightCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
-  std::vector<std::complex<double>> right_shifted_data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
+  std::vector<std::complex<double>> right_shifted_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -1015,8 +735,8 @@ TEST_P(TestPtxtCKKS, shiftShiftsRightCorrectly)
 
 TEST_P(TestPtxtCKKS, shiftShiftsLeftCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
-  std::vector<std::complex<double>> left_shifted_data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
+  std::vector<std::complex<double>> left_shifted_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -1036,8 +756,8 @@ TEST_P(TestPtxtCKKS, shiftShiftsLeftCorrectly)
 
 TEST_P(TestPtxtCKKS, shift1DShiftsRightCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
-  std::vector<std::complex<double>> right_shifted_data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
+  std::vector<std::complex<double>> right_shifted_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -1057,8 +777,8 @@ TEST_P(TestPtxtCKKS, shift1DShiftsRightCorrectly)
 
 TEST_P(TestPtxtCKKS, shift1DShiftsLeftCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
-  std::vector<std::complex<double>> left_shifted_data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
+  std::vector<std::complex<double>> left_shifted_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -1087,7 +807,7 @@ TEST_P(TestPtxtCKKS, shift1DShiftsLeftCorrectly)
 //     for(long j=0; j<2; ++j)
 //       for(long k=0; k<2; ++k)
 //         indices.push_back(ptxt.coordToIndex({i,j,k}));
-//   std::vector<long> expected_indices(context.ea->size());
+//   std::vector<long> expected_indices(context.getEA().size());
 //   std::iota(expected_indices.begin(), expected_indices.end(), 0);
 //   EXPECT_EQ(expected_indices, indices);
 // }
@@ -1109,8 +829,8 @@ TEST_P(TestPtxtCKKS, shift1DShiftsLeftCorrectly)
 
 TEST_P(TestPtxtCKKS, rotate1DRotatesCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
-  std::vector<std::complex<double>> left_rotated_data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
+  std::vector<std::complex<double>> left_rotated_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -1130,8 +850,8 @@ TEST_P(TestPtxtCKKS, rotate1DRotatesCorrectly)
 
 TEST_P(TestPtxtCKKS, rotateRotatesCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
-  std::vector<std::complex<double>> left_rotated_data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
+  std::vector<std::complex<double>> left_rotated_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -1151,8 +871,8 @@ TEST_P(TestPtxtCKKS, rotateRotatesCorrectly)
 
 TEST_P(TestPtxtCKKS, automorphWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
-  std::vector<std::complex<double>> left_rotated_data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
+  std::vector<std::complex<double>> left_rotated_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -1163,32 +883,32 @@ TEST_P(TestPtxtCKKS, automorphWorksCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   helib::Ptxt<helib::CKKS> expected_result(context, data);
 
-  long k = context.zMStar.ith_rep(1) ? context.zMStar.ith_rep(1) : 1;
+  long k = context.getZMStar().ith_rep(1) ? context.getZMStar().ith_rep(1) : 1;
   ptxt.automorph(k);
   expected_result.rotate(1);
   COMPARE_CXDOUBLE_VECS(ptxt, expected_result);
 
-  ptxt.automorph(context.zMStar.ith_rep(context.ea->size() - 1));
+  ptxt.automorph(context.getZMStar().ith_rep(context.getEA().size() - 1));
   expected_result.rotate(-1);
   COMPARE_CXDOUBLE_VECS(ptxt, expected_result);
 }
 
 TEST_P(TestPtxtCKKS, replicateReplicatesCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {i / 10.0, -i / 20.0};
   }
   helib::Ptxt<helib::CKKS> ptxt(context, data);
-  helib::replicate(*context.ea, ptxt, data.size() - 1);
-  std::vector<std::complex<double>> replicated_data(context.ea->size(),
+  helib::replicate(context.getEA(), ptxt, data.size() - 1);
+  std::vector<std::complex<double>> replicated_data(context.getEA().size(),
                                                     data[data.size() - 1]);
   COMPARE_CXDOUBLE_VECS(ptxt, replicated_data);
 }
 
 TEST_P(TestPtxtCKKS, replicateAllWorksCorrectly)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {i / 10.0, -i / 20.0};
   }
@@ -1222,7 +942,7 @@ TEST_P(TestPtxtCKKS, randomSetsDataRandomly)
 
 TEST_P(TestPtxtCKKS, complexConjCorrectlyConjugates)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   const std::complex<double> z{1, -1};
   for (long j = 0; j < helib::lsize(data); ++j) {
     // Line segment starting at 1 - i with gradient 2
@@ -1242,7 +962,7 @@ TEST_P(TestPtxtCKKS, complexConjCorrectlyConjugates)
 
 TEST_P(TestPtxtCKKS, extractRealPartIsCorrect)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   const std::complex<double> z{1, -1};
   for (long j = 0; j < helib::lsize(data); ++j) {
     // Line segment starting at 1 - i with gradient 2
@@ -1254,14 +974,14 @@ TEST_P(TestPtxtCKKS, extractRealPartIsCorrect)
     num = std::real(num);
 
   helib::Ptxt<helib::CKKS> ptxt(context, data);
-  context.ea->getCx().extractRealPart(ptxt);
+  context.getEA().getCx().extractRealPart(ptxt);
 
   COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, extractImPartIsCorrect)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   const std::complex<double> z{1, -1};
   for (long j = 0; j < helib::lsize(data); ++j) {
     // Line segment starting at 1 - i with gradient 2
@@ -1273,14 +993,14 @@ TEST_P(TestPtxtCKKS, extractImPartIsCorrect)
     num = std::imag(num);
 
   helib::Ptxt<helib::CKKS> ptxt(context, data);
-  context.ea->getCx().extractImPart(ptxt);
+  context.getEA().getCx().extractImPart(ptxt);
 
   COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, realExtractsRealPart)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   const std::complex<double> z{1, -1};
   for (long j = 0; j < helib::lsize(data); ++j) {
     // Line segment starting at 1 - i with gradient 2
@@ -1299,7 +1019,7 @@ TEST_P(TestPtxtCKKS, realExtractsRealPart)
 
 TEST_P(TestPtxtCKKS, imagExtractsImaginaryPart)
 {
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   const std::complex<double> z{1, -1};
   for (long j = 0; j < helib::lsize(data); ++j) {
     // Line segment starting at 1 - i with gradient 2
@@ -1318,12 +1038,12 @@ TEST_P(TestPtxtCKKS, imagExtractsImaginaryPart)
 
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
 {
-  helib::buildModChain(context, 100, 2);
+  context.buildModChain(100, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {(i - 3) / 5.0, i + 10.0};
   }
@@ -1344,12 +1064,12 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
 
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithKeys)
 {
-  helib::buildModChain(context, 100, 2);
+  context.buildModChain(100, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
-  std::vector<double> data(context.ea->size());
+  std::vector<double> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = (i - 3) / 10.0;
   }
@@ -1373,12 +1093,12 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithKeys)
 
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithEa)
 {
-  helib::buildModChain(context, 100, 2);
+  context.buildModChain(100, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
-  std::vector<std::complex<double>> data(context.ea->size());
+  std::vector<std::complex<double>> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {(i - 3) / 10.0, i + 5.0};
   }
@@ -1399,13 +1119,13 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithEa)
 
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithEa)
 {
-  helib::buildModChain(context, 100, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
+  context.buildModChain(100, 2);
+  const helib::EncryptedArrayCx& ea = context.getEA().getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
-  std::vector<double> data(context.ea->size());
+  std::vector<double> data(context.getEA().size());
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = (i - 3) / 10.0;
   }
@@ -1429,14 +1149,14 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithEa)
 
 TEST_P(TestPtxtCKKS, plusEqualsWithCiphertextWorks)
 {
-  helib::buildModChain(context, 150, 2);
+  context.buildModChain(150, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
-  std::vector<std::complex<double>> augend_data(context.ea->size());
-  std::vector<std::complex<double>> addend_data(context.ea->size());
+  std::vector<std::complex<double>> augend_data(context.getEA().size());
+  std::vector<std::complex<double>> addend_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(augend_data); ++i) {
     augend_data[i] = {i / 10.0, -i * i / 63.0};
     addend_data[i] = {-i / 20.0, i * i * i * 2.6};
@@ -1462,14 +1182,14 @@ TEST_P(TestPtxtCKKS, plusEqualsWithCiphertextWorks)
 
 TEST_P(TestPtxtCKKS, addConstantCKKSWithCiphertextWorks)
 {
-  helib::buildModChain(context, 150, 2);
+  context.buildModChain(150, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
-  std::vector<std::complex<double>> augend_data(context.ea->size());
-  std::vector<std::complex<double>> addend_data(context.ea->size());
+  std::vector<std::complex<double>> augend_data(context.getEA().size());
+  std::vector<std::complex<double>> addend_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(augend_data); ++i) {
     augend_data[i] = {i / 70.0, -i * 10.5};
     addend_data[i] = {-i / 10.0, i * 0.8};
@@ -1495,14 +1215,14 @@ TEST_P(TestPtxtCKKS, addConstantCKKSWithCiphertextWorks)
 
 TEST_P(TestPtxtCKKS, minusEqualsWithCiphertextWorks)
 {
-  helib::buildModChain(context, 150, 2);
+  context.buildModChain(150, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the minuend, subtrahend is plaintext
-  std::vector<std::complex<double>> minuend_data(context.ea->size());
-  std::vector<std::complex<double>> subtrahend_data(context.ea->size());
+  std::vector<std::complex<double>> minuend_data(context.getEA().size());
+  std::vector<std::complex<double>> subtrahend_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(minuend_data); ++i) {
     minuend_data[i] = {i * i / 30.0, i * i / 4.5};
     subtrahend_data[i] = {(i + 3) / 4.0, -i * i / 1.3};
@@ -1528,14 +1248,14 @@ TEST_P(TestPtxtCKKS, minusEqualsWithCiphertextWorks)
 
 TEST_P(TestPtxtCKKS, multByConstantCKKSFromCiphertextWorks)
 {
-  helib::buildModChain(context, 150, 2);
+  context.buildModChain(150, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
-  std::vector<std::complex<double>> multiplier_data(context.ea->size());
-  std::vector<std::complex<double>> multiplicand_data(context.ea->size());
+  std::vector<std::complex<double>> multiplier_data(context.getEA().size());
+  std::vector<std::complex<double>> multiplicand_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(multiplier_data); ++i) {
     multiplier_data[i] = {i * 4.5, -i * i / 12.5};
     multiplicand_data[i] = {(i - 2.5) / 3.5, i * 4.2};
@@ -1562,14 +1282,14 @@ TEST_P(TestPtxtCKKS, multByConstantCKKSFromCiphertextWorks)
 
 TEST_P(TestPtxtCKKS, timesEqualsFromCiphertextWorks)
 {
-  helib::buildModChain(context, 150, 2);
+  context.buildModChain(150, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
-  std::vector<std::complex<double>> multiplier_data(context.ea->size());
-  std::vector<std::complex<double>> multiplicand_data(context.ea->size());
+  std::vector<std::complex<double>> multiplier_data(context.getEA().size());
+  std::vector<std::complex<double>> multiplicand_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(multiplier_data); ++i) {
     multiplier_data[i] = {i * 4.5, -i * i / 3.3};
     multiplicand_data[i] = {(i - 2.5) / 3.5, i * i / 12.4};
@@ -1596,9 +1316,9 @@ TEST_P(TestPtxtCKKS, timesEqualsFromCiphertextWorks)
 
 TEST_P(TestPtxtCKKS, plusOperatorWithOtherPtxtWorks)
 {
-  std::vector<std::complex<double>> augend_data(context.ea->size());
-  std::vector<std::complex<double>> addend_data(context.ea->size());
-  std::vector<std::complex<double>> expected_sum_data(context.ea->size());
+  std::vector<std::complex<double>> augend_data(context.getEA().size());
+  std::vector<std::complex<double>> addend_data(context.getEA().size());
+  std::vector<std::complex<double>> expected_sum_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(augend_data); ++i) {
     augend_data[i] = {i / 10.0, -i * i / 3.0};
     addend_data[i] = {-i / 20.0, i * i * i * 42.6};
@@ -1615,9 +1335,9 @@ TEST_P(TestPtxtCKKS, plusOperatorWithOtherPtxtWorks)
 
 TEST_P(TestPtxtCKKS, minusOperatorWithOtherPtxtWorks)
 {
-  std::vector<std::complex<double>> minuend_data(context.ea->size());
-  std::vector<std::complex<double>> subtrahend_data(context.ea->size());
-  std::vector<std::complex<double>> expected_diff_data(context.ea->size());
+  std::vector<std::complex<double>> minuend_data(context.getEA().size());
+  std::vector<std::complex<double>> subtrahend_data(context.getEA().size());
+  std::vector<std::complex<double>> expected_diff_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(minuend_data); ++i) {
     minuend_data[i] = {i / 10.0, -i * i / 3.0};
     subtrahend_data[i] = {-i / 20.0, i * i * i * 42.6};
@@ -1634,9 +1354,10 @@ TEST_P(TestPtxtCKKS, minusOperatorWithOtherPtxtWorks)
 
 TEST_P(TestPtxtCKKS, timesOperatorWithOtherPtxtWorks)
 {
-  std::vector<std::complex<double>> multiplier_data(context.ea->size());
-  std::vector<std::complex<double>> multiplicand_data(context.ea->size());
-  std::vector<std::complex<double>> expected_product_data(context.ea->size());
+  std::vector<std::complex<double>> multiplier_data(context.getEA().size());
+  std::vector<std::complex<double>> multiplicand_data(context.getEA().size());
+  std::vector<std::complex<double>> expected_product_data(
+      context.getEA().size());
   for (long i = 0; i < helib::lsize(multiplier_data); ++i) {
     multiplier_data[i] = {i / 10.0, -i * i / 3.0};
     multiplicand_data[i] = {-i / 20.0, i * i * i * 42.6};
@@ -1659,7 +1380,12 @@ protected:
       p(GetParam().p),
       r(GetParam().r),
       ppowr(power(p, r)),
-      context(m, p, r)
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .buildModChain(false)
+                  .build())
   {}
 
   static long power(long base, unsigned long exponent)
@@ -1707,7 +1433,7 @@ TEST_P(TestPtxtBGV, reportsWhetherItIsValid)
 
 TEST_P(TestPtxtBGV, preservesLongDataPassedIntoConstructor)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> ptxt(context, data);
   EXPECT_EQ(ptxt.size(), data.size());
@@ -1718,7 +1444,7 @@ TEST_P(TestPtxtBGV, preservesLongDataPassedIntoConstructor)
 
 TEST_P(TestPtxtBGV, preservesCoefficientVectorDataPassedIntoConstructor)
 {
-  std::vector<std::vector<long>> data(context.ea->size());
+  std::vector<std::vector<long>> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = {1};
   }
@@ -1731,7 +1457,7 @@ TEST_P(TestPtxtBGV, preservesCoefficientVectorDataPassedIntoConstructor)
 
 TEST_P(TestPtxtBGV, preservesZzxDataPassedIntoConstructor)
 {
-  std::vector<NTL::ZZX> data(context.ea->size());
+  std::vector<NTL::ZZX> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> ptxt(context, data);
   EXPECT_EQ(ptxt.size(), data.size());
@@ -1740,62 +1466,10 @@ TEST_P(TestPtxtBGV, preservesZzxDataPassedIntoConstructor)
   }
 }
 
-TEST_P(TestPtxtBGV, writesDataCorrectlyToOstream)
-{
-  const long p2r = context.slotRing->p2r;
-  const long d = context.zMStar.getOrdP();
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size(), poly);
-  std::stringstream ss;
-  ss << "[";
-  for (long i = 0; i < helib::lsize(data); ++i) {
-    NTL::ZZX input;
-    NTL::SetCoeff(input, 0, i % p2r);
-    if (d != 1) {
-      NTL::SetCoeff(input, 1, (i + 2) % p2r);
-    }
-    data[i] = input;
-    // Serialisation of data[i] (i.e. PolyMod) is tested in `TestPolyMod.cpp`
-    ss << data[i] << (i != helib::lsize(data) - 1 ? ", " : "");
-  }
-  ss << "]";
-  helib::Ptxt<helib::BGV> ptxt(context, data);
-  std::string expected = ss.str();
-  std::ostringstream os;
-  os << ptxt;
-
-  EXPECT_EQ(os.str(), expected);
-}
-
-TEST_P(TestPtxtBGV, readsDataCorrectlyFromIstream)
-{
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size(), poly);
-  for (long i = 0; i < helib::lsize(data); ++i) {
-    data[i] = {i, i + 2};
-  }
-  helib::Ptxt<helib::BGV> ptxt(context);
-  std::stringstream ss;
-  ss << "[";
-  for (auto it = data.begin(); it != data.end(); it++) {
-    ss << *it;
-    if (it != data.end() - 1) {
-      ss << ", ";
-    }
-  }
-  ss << "]";
-
-  ss >> ptxt;
-
-  for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_EQ(ptxt[i], data[i]);
-  }
-}
-
 TEST_P(TestPtxtBGV, deserializeIsInverseOfSerialize)
 {
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size(), poly);
+  helib::PolyMod poly(context.getSlotRing());
+  std::vector<helib::PolyMod> data(context.getEA().size(), poly);
   for (long i = 0; i < helib::lsize(data); ++i) {
     data[i] = {i, i + 2};
   }
@@ -1810,130 +1484,10 @@ TEST_P(TestPtxtBGV, deserializeIsInverseOfSerialize)
   EXPECT_EQ(ptxt, deserialized);
 }
 
-TEST_P(TestPtxtBGV, serializeFunctionSerializesCorrectly)
-{
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size(), poly);
-  std::stringstream ptxt_string_stream;
-  ptxt_string_stream << "[";
-  for (long i = 0; i < helib::lsize(data); ++i) {
-    data[i] = 2 * i;
-    ptxt_string_stream << "[" << helib::mcMod(2 * i, ppowr) << "]";
-    if (i < helib::lsize(data) - 1)
-      ptxt_string_stream << ", ";
-  }
-  ptxt_string_stream << "]";
-  helib::Ptxt<helib::BGV> ptxt(context, data);
-
-  std::stringstream ss;
-  helib::serialize(ss, ptxt);
-
-  EXPECT_EQ(ss.str(), ptxt_string_stream.str());
-}
-
-TEST_P(TestPtxtBGV, deserializeFunctionDeserializesCorrectly)
-{
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size(), poly);
-  std::stringstream ptxt_string_stream;
-  ptxt_string_stream << "[";
-  for (long i = 0; i < helib::lsize(data); ++i) {
-    NTL::ZZX tmp;
-    ptxt_string_stream << "[";
-    for (long j = 0; j < context.zMStar.getOrdP(); ++j) {
-      NTL::SetCoeff(tmp, j, j * j);
-      ptxt_string_stream << j * j;
-      if (j < context.zMStar.getOrdP() - 1)
-        ptxt_string_stream << ",";
-    }
-    data[i] = tmp;
-    ptxt_string_stream << "]";
-    if (i < helib::lsize(data) - 1)
-      ptxt_string_stream << ", ";
-  }
-  ptxt_string_stream << "]";
-  helib::Ptxt<helib::BGV> ptxt(context, data);
-
-  helib::Ptxt<helib::BGV> deserialized_ptxt(context);
-  helib::deserialize(ptxt_string_stream, deserialized_ptxt);
-
-  EXPECT_EQ(ptxt, deserialized_ptxt);
-}
-
-TEST_P(TestPtxtBGV, deserializeFunctionThrowsIfMoreElementsThanSlots)
-{
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size() + 1, poly);
-  std::stringstream ptxt_string_stream;
-  ptxt_string_stream << "[";
-  for (long i = 0; i < helib::lsize(data); ++i) {
-    data[i] = {i, i * i};
-    ptxt_string_stream << "[" << i << ", " << i * i << "]";
-    if (i < helib::lsize(data) - 1)
-      ptxt_string_stream << ", ";
-  }
-  ptxt_string_stream << "]";
-
-  helib::Ptxt<helib::BGV> deserialized_ptxt(context);
-
-  EXPECT_THROW(helib::deserialize(ptxt_string_stream, deserialized_ptxt),
-               helib::IOError);
-}
-
-TEST_P(TestPtxtBGV, rightShiftOperatorThrowsIfMoreElementsThanSlots)
-{
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size() + 1, poly);
-  std::stringstream ptxt_string_stream;
-  ptxt_string_stream << "[";
-  for (long i = 0; i < helib::lsize(data); ++i) {
-    data[i] = {i, i * i};
-    ptxt_string_stream << "[" << i << ", " << i * i << "]";
-    if (i < helib::lsize(data) - 1)
-      ptxt_string_stream << ", ";
-  }
-  ptxt_string_stream << "]";
-
-  helib::Ptxt<helib::BGV> deserialized_ptxt(context);
-  EXPECT_THROW(ptxt_string_stream >> deserialized_ptxt, helib::IOError);
-}
-
-TEST_P(TestPtxtBGV, readsManyPtxtsFromStream)
-{
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data1(context.ea->size(), poly);
-  std::vector<helib::PolyMod> data2(context.ea->size(), poly);
-  std::vector<helib::PolyMod> data3(context.ea->size(), poly);
-  for (long i = 0; i < helib::lsize(data1); ++i) {
-    data1[i] = {i, i + 2};
-    data2[i] = {2 * i, 2 * (i + 2)};
-    data3[i] = {3 * i, 3 * (i + 2)};
-  }
-  helib::Ptxt<helib::BGV> ptxt1(context, data1);
-  helib::Ptxt<helib::BGV> ptxt2(context, data2);
-  helib::Ptxt<helib::BGV> ptxt3(context, data3);
-
-  std::stringstream ss;
-  ss << ptxt1 << std::endl;
-  ss << ptxt2 << std::endl;
-  ss << ptxt3 << std::endl;
-
-  helib::Ptxt<helib::BGV> deserialized1(context);
-  helib::Ptxt<helib::BGV> deserialized2(context);
-  helib::Ptxt<helib::BGV> deserialized3(context);
-  ss >> deserialized1;
-  ss >> deserialized2;
-  ss >> deserialized3;
-
-  EXPECT_EQ(ptxt1, deserialized1);
-  EXPECT_EQ(ptxt2, deserialized2);
-  EXPECT_EQ(ptxt3, deserialized3);
-}
-
 TEST_P(TestPtxtBGV, preservesPolyModDataPassedIntoConstructor)
 {
-  helib::PolyMod poly(context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size(), poly);
+  helib::PolyMod poly(context.getSlotRing());
+  std::vector<helib::PolyMod> data(context.getEA().size(), poly);
   helib::Ptxt<helib::BGV> ptxt(context, data);
   EXPECT_EQ(ptxt.size(), data.size());
   for (std::size_t i = 0; i < data.size(); ++i) {
@@ -1943,9 +1497,9 @@ TEST_P(TestPtxtBGV, preservesPolyModDataPassedIntoConstructor)
 
 TEST_P(TestPtxtBGV, throwsIfp2rAndGDoNotMatchThoseFromContext)
 {
-  NTL::ZZX G = context.slotRing->G;
-  long p = context.slotRing->p;
-  long r = context.slotRing->r;
+  NTL::ZZX G = context.getSlotRing()->G;
+  long p = context.getSlotRing()->p;
+  long r = context.getSlotRing()->r;
   // Non-matching p^r
   std::shared_ptr<helib::PolyModRing> badPolyModRing1(
       new helib::PolyModRing(p + 1, r, G));
@@ -1959,7 +1513,7 @@ TEST_P(TestPtxtBGV, throwsIfp2rAndGDoNotMatchThoseFromContext)
       new helib::PolyModRing(p, r, G));
   helib::PolyMod goodPolyMod(goodPolyModRing);
 
-  std::vector<helib::PolyMod> data(context.ea->size(), goodPolyMod);
+  std::vector<helib::PolyMod> data(context.getEA().size(), goodPolyMod);
 
   // Make all of them good except 1, make sure it still notices
   data.back() = badPolyMod1;
@@ -1978,21 +1532,21 @@ TEST_P(TestPtxtBGV, throwsIfp2rAndGDoNotMatchThoseFromContext)
 
 TEST_P(TestPtxtBGV, lsizeReportsCorrectSize)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   helib::Ptxt<helib::BGV> ptxt(context, data);
   EXPECT_EQ(ptxt.lsize(), data.size());
 }
 
 TEST_P(TestPtxtBGV, sizeReportsCorrectSize)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   helib::Ptxt<helib::BGV> ptxt(context, data);
   EXPECT_EQ(ptxt.size(), data.size());
 }
 
 TEST_P(TestPtxtBGV, padsWithZerosWhenPassingInSmallDataVector)
 {
-  std::vector<long> data(context.ea->size() - 1);
+  std::vector<long> data(context.getEA().size() - 1);
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> ptxt(context, data);
   for (std::size_t i = 0; i < data.size(); ++i) {
@@ -2006,7 +1560,7 @@ TEST_P(TestPtxtBGV, padsWithZerosWhenPassingInSmallDataVector)
 TEST_P(TestPtxtBGV, hasSameNumberOfSlotsAsContext)
 {
   helib::Ptxt<helib::BGV> ptxt(context);
-  EXPECT_EQ(context.ea->size(), ptxt.size());
+  EXPECT_EQ(context.getEA().size(), ptxt.size());
 }
 
 TEST_P(TestPtxtBGV, randomSetsDataRandomly)
@@ -2029,7 +1583,7 @@ TEST_P(TestPtxtBGV, randomSetsDataRandomly)
 
 TEST_P(TestPtxtBGV, runningSumsWorksCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 1);
   std::vector<long> expected_result(data.size());
   for (std::size_t i = 0; i < data.size(); ++i)
@@ -2045,7 +1599,7 @@ TEST_P(TestPtxtBGV, runningSumsWorksCorrectly)
 
 TEST_P(TestPtxtBGV, totalSumsWorksCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 1);
   std::vector<long> expected_result(data.size());
   for (std::size_t i = 0; i < data.size(); ++i)
@@ -2061,12 +1615,12 @@ TEST_P(TestPtxtBGV, totalSumsWorksCorrectly)
 
 TEST_P(TestPtxtBGV, incrementalProductWorksCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 1);
   std::vector<long> expected_result(data);
   for (std::size_t i = 1; i < data.size(); ++i)
-    expected_result[i] =
-        (expected_result[i] * expected_result[i - 1]) % context.slotRing->p2r;
+    expected_result[i] = (expected_result[i] * expected_result[i - 1]) %
+                         context.getSlotRing()->p2r;
 
   helib::Ptxt<helib::BGV> ptxt(context, data);
   ptxt.incrementalProduct();
@@ -2078,12 +1632,12 @@ TEST_P(TestPtxtBGV, incrementalProductWorksCorrectly)
 
 TEST_P(TestPtxtBGV, totalProductWorksCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 1);
   long product = 1;
   for (std::size_t i = 0; i < data.size(); ++i) {
     product *= data[i];
-    product %= context.slotRing->p2r;
+    product %= context.getSlotRing()->p2r;
   }
   std::vector<long> expected_result(data.size(), product);
 
@@ -2097,7 +1651,7 @@ TEST_P(TestPtxtBGV, totalProductWorksCorrectly)
 
 TEST_P(TestPtxtBGV, innerProductWorksCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> ptxt(context, data);
   std::vector<helib::Ptxt<helib::BGV>> first_ptxt_vector(4, ptxt);
@@ -2119,7 +1673,7 @@ TEST_P(TestPtxtBGV, innerProductWorksCorrectly)
 
 TEST_P(TestPtxtBGV, mapTo01MapsSlotsCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   std::vector<long> expected_result(data.size(), 1);
   for (std::size_t i = 0; i < data.size(); ++i)
@@ -2130,7 +1684,7 @@ TEST_P(TestPtxtBGV, mapTo01MapsSlotsCorrectly)
   helib::Ptxt<helib::BGV> ptxt(context, data);
   helib::Ptxt<helib::BGV> ptxt2(context, data);
   ptxt.mapTo01();
-  mapTo01(*(context.ea), ptxt2);
+  mapTo01(context.getEA(), ptxt2);
 
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     EXPECT_EQ(ptxt[i], expected_result[i]);
@@ -2140,10 +1694,15 @@ TEST_P(TestPtxtBGV, mapTo01MapsSlotsCorrectly)
 
 TEST(TestPtxtBGV, automorphWorksCorrectly)
 {
-  std::vector<long> gens = {11, 2};
-  std::vector<long> ords = {6, 2};
-  const helib::Context context(45, 19, 1, gens, ords);
-  std::vector<NTL::ZZX> data(context.ea->size());
+  const helib::Context context = helib::ContextBuilder<helib::BGV>()
+                                     .m(45)
+                                     .p(19)
+                                     .r(1)
+                                     .gens({11, 2})
+                                     .ords({6, 2})
+                                     .buildModChain(false)
+                                     .build();
+  std::vector<NTL::ZZX> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     NTL::SetX(data[i]);
     (data[i] += 1) *= i;
@@ -2173,11 +1732,11 @@ TEST(TestPtxtBGV, automorphWorksCorrectly)
 
 TEST_P(TestPtxtBGV, frobeniusAutomorphWithConstantsWorksCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   std::vector<long> expected_result(data);
   helib::Ptxt<helib::BGV> ptxt(context, data);
-  for (long i = 0; i <= context.zMStar.getOrdP(); ++i) {
+  for (long i = 0; i <= context.getOrdP(); ++i) {
     auto ptxtUnderTest = ptxt;
     ptxtUnderTest.frobeniusAutomorph(i);
     for (std::size_t j = 0; j < ptxtUnderTest.size(); ++j) {
@@ -2189,8 +1748,13 @@ TEST_P(TestPtxtBGV, frobeniusAutomorphWithConstantsWorksCorrectly)
 
 TEST(TestPtxtBGV, frobeniusAutomorphWithPolynomialsWorksCorrectly)
 {
-  const helib::Context context(45, 19, 1);
-  std::vector<NTL::ZZX> data(context.ea->size());
+  const helib::Context context = helib::ContextBuilder<helib::BGV>()
+                                     .m(45)
+                                     .p(19)
+                                     .r(1)
+                                     .buildModChain(false)
+                                     .build();
+  std::vector<NTL::ZZX> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     NTL::SetX(data[i]);
     (data[i] += 1) *= i;
@@ -2220,8 +1784,8 @@ TEST(TestPtxtBGV, frobeniusAutomorphWithPolynomialsWorksCorrectly)
 
 TEST_P(TestPtxtBGV, timesEqualsOtherPlaintextWorks)
 {
-  std::vector<long> product_data(context.ea->size(), 3);
-  std::vector<long> multiplier_data(context.ea->size());
+  std::vector<long> product_data(context.getEA().size(), 3);
+  std::vector<long> multiplier_data(context.getEA().size());
   std::iota(multiplier_data.begin(), multiplier_data.end(), 0);
 
   std::vector<long> expected_result(product_data);
@@ -2241,8 +1805,8 @@ TEST_P(TestPtxtBGV, timesEqualsOtherPlaintextWorks)
 
 TEST_P(TestPtxtBGV, minusEqualsOtherPlaintextWorks)
 {
-  std::vector<long> difference_data(context.ea->size(), 1);
-  std::vector<long> subtrahend_data(context.ea->size());
+  std::vector<long> difference_data(context.getEA().size(), 1);
+  std::vector<long> subtrahend_data(context.getEA().size());
   std::iota(subtrahend_data.begin(), subtrahend_data.end(), 0);
 
   std::vector<long> expected_result(difference_data);
@@ -2262,7 +1826,7 @@ TEST_P(TestPtxtBGV, minusEqualsOtherPlaintextWorks)
 
 TEST_P(TestPtxtBGV, minusEqualsScalarWorks)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
 
   const long scalar = 3;
@@ -2281,12 +1845,12 @@ TEST_P(TestPtxtBGV, minusEqualsScalarWorks)
 
 TEST_P(TestPtxtBGV, plusEqualsOtherPlaintextWorks)
 {
-  std::vector<long> augend_data(context.ea->size());
+  std::vector<long> augend_data(context.getEA().size());
   std::iota(augend_data.begin(), augend_data.end(), 0);
-  std::vector<long> addend_data(context.ea->size());
+  std::vector<long> addend_data(context.getEA().size());
   for (long i = 0; i < helib::lsize(addend_data); ++i)
     addend_data[i] = helib::mcMod(2 * i + 1, p);
-  std::vector<long> expected_result(context.ea->size());
+  std::vector<long> expected_result(context.getEA().size());
   for (long i = 0; i < helib::lsize(expected_result); ++i)
     expected_result[i] = augend_data[i] + addend_data[i];
 
@@ -2301,7 +1865,7 @@ TEST_P(TestPtxtBGV, plusEqualsOtherPlaintextWorks)
 
 TEST_P(TestPtxtBGV, plusEqualsScalarWorks)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
 
   const long scalar = 3;
@@ -2320,7 +1884,7 @@ TEST_P(TestPtxtBGV, plusEqualsScalarWorks)
 
 TEST_P(TestPtxtBGV, timesEqualsScalarWorks)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
 
   const long scalar = 3;
@@ -2339,7 +1903,7 @@ TEST_P(TestPtxtBGV, timesEqualsScalarWorks)
 
 TEST_P(TestPtxtBGV, equalityWithOtherPlaintextWorks)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
 
   helib::Ptxt<helib::BGV> ptxt1(context, data);
@@ -2349,9 +1913,9 @@ TEST_P(TestPtxtBGV, equalityWithOtherPlaintextWorks)
 
 TEST_P(TestPtxtBGV, notEqualsOperatorWithOtherPlaintextWorks)
 {
-  std::vector<long> data1(context.ea->size());
+  std::vector<long> data1(context.getEA().size());
   std::iota(data1.begin(), data1.end(), 0);
-  std::vector<long> data2(context.ea->size());
+  std::vector<long> data2(context.getEA().size());
   std::iota(data2.begin(), data2.end(), 1);
 
   helib::Ptxt<helib::BGV> ptxt1(context, data1);
@@ -2361,7 +1925,7 @@ TEST_P(TestPtxtBGV, notEqualsOperatorWithOtherPlaintextWorks)
 
 TEST_P(TestPtxtBGV, negateNegatesCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
 
   std::vector<long> expected_result(data);
@@ -2382,8 +1946,8 @@ TEST_P(TestPtxtBGV, addConstantWorksCorrectly)
   NTL::SetCoeff(input, 0, 2);
   NTL::SetCoeff(input, 1, 1);
 
-  helib::PolyMod poly(input, context.slotRing);
-  std::vector<helib::PolyMod> data(context.ea->size());
+  helib::PolyMod poly(input, context.getSlotRing());
+  std::vector<helib::PolyMod> data(context.getEA().size());
   for (std::size_t i = 0; i < data.size(); ++i)
     data[i] = poly + i;
 
@@ -2401,8 +1965,8 @@ TEST_P(TestPtxtBGV, addConstantWorksCorrectly)
 
 TEST_P(TestPtxtBGV, multiplyByMultipliesCorrectly)
 {
-  std::vector<long> product_data(context.ea->size(), 3);
-  std::vector<long> multiplier_data(context.ea->size());
+  std::vector<long> product_data(context.getEA().size(), 3);
+  std::vector<long> multiplier_data(context.getEA().size());
   std::iota(multiplier_data.begin(), multiplier_data.end(), 0);
 
   std::vector<long> expected_result(product_data);
@@ -2422,9 +1986,9 @@ TEST_P(TestPtxtBGV, multiplyByMultipliesCorrectly)
 
 TEST_P(TestPtxtBGV, multiplyBy2MultipliesCorrectly)
 {
-  std::vector<long> product_data(context.ea->size(), 3);
-  std::vector<long> multiplier_data1(context.ea->size());
-  std::vector<long> multiplier_data2(context.ea->size());
+  std::vector<long> product_data(context.getEA().size(), 3);
+  std::vector<long> multiplier_data1(context.getEA().size());
+  std::vector<long> multiplier_data2(context.getEA().size());
   std::iota(multiplier_data1.begin(), multiplier_data1.end(), 0);
   std::iota(multiplier_data2.begin(), multiplier_data2.end(), 0);
 
@@ -2447,7 +2011,7 @@ TEST_P(TestPtxtBGV, multiplyBy2MultipliesCorrectly)
 
 TEST_P(TestPtxtBGV, squareSquaresCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   std::vector<long> expected_result(data);
   for (auto& num : expected_result)
@@ -2461,7 +2025,7 @@ TEST_P(TestPtxtBGV, squareSquaresCorrectly)
 
 TEST_P(TestPtxtBGV, cubeCubesCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   std::vector<long> expected_result(data);
   for (auto& num : expected_result)
@@ -2475,10 +2039,10 @@ TEST_P(TestPtxtBGV, cubeCubesCorrectly)
 
 TEST_P(TestPtxtBGV, powerCorrectlyRaisesToPowers)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(),
             data.end(),
-            -(static_cast<long>(context.ea->size()) / 2));
+            -(static_cast<long>(context.getEA().size()) / 2));
   std::vector<long> exponents{1, 3, 4, 5, 300};
 
   const auto naive_powermod =
@@ -2510,8 +2074,8 @@ TEST_P(TestPtxtBGV, powerCorrectlyRaisesToPowers)
 
 TEST_P(TestPtxtBGV, shiftShiftsRightCorrectly)
 {
-  std::vector<long> data(context.ea->size());
-  std::vector<long> right_shifted_data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
+  std::vector<long> right_shifted_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -2531,8 +2095,8 @@ TEST_P(TestPtxtBGV, shiftShiftsRightCorrectly)
 
 TEST_P(TestPtxtBGV, shiftShiftsLeftCorrectly)
 {
-  std::vector<long> data(context.ea->size());
-  std::vector<long> left_shifted_data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
+  std::vector<long> left_shifted_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -2553,9 +2117,14 @@ TEST_P(TestPtxtBGV, shiftShiftsLeftCorrectly)
 TEST(TestPtxtBGV, shift1DShiftsRightCorrectly)
 {
   long amount = 1;
-  const helib::Context context(45, 19, 1);
-  std::vector<long> data(context.ea->size());
-  std::vector<long> right_shifted_data(context.ea->size());
+  const helib::Context context = helib::ContextBuilder<helib::BGV>()
+                                     .m(45)
+                                     .p(19)
+                                     .r(1)
+                                     .buildModChain(false)
+                                     .build();
+  std::vector<long> data(context.getEA().size());
+  std::vector<long> right_shifted_data(context.getEA().size());
   const auto shift_first_dim = [](long amount, std::vector<long>& data) {
     std::vector<long> new_data(data.size(), 0l);
     for (long i = 0; i < helib::lsize(data); ++i)
@@ -2614,9 +2183,14 @@ TEST(TestPtxtBGV, shift1DShiftsRightCorrectly)
 TEST(TestPtxtBGV, shift1DShiftsLeftCorrectly)
 {
   long amount = -1;
-  const helib::Context context(45, 19, 1);
-  std::vector<long> data(context.ea->size());
-  std::vector<long> right_shifted_data(context.ea->size());
+  const helib::Context context = helib::ContextBuilder<helib::BGV>()
+                                     .m(45)
+                                     .p(19)
+                                     .r(1)
+                                     .buildModChain(false)
+                                     .build();
+  std::vector<long> data(context.getEA().size());
+  std::vector<long> right_shifted_data(context.getEA().size());
   const auto shift_first_dim = [](long amount, std::vector<long>& data) {
     std::vector<long> new_data(data.size(), 0l);
     for (long i = 0; i < helib::lsize(data); ++i)
@@ -2675,9 +2249,14 @@ TEST(TestPtxtBGV, shift1DShiftsLeftCorrectly)
 TEST(TestPtxtBGV, rotate1DRotatesCorrectly)
 {
   long amount = 1;
-  const helib::Context context(45, 19, 1);
-  std::vector<long> data(context.ea->size());
-  std::vector<long> left_rotated_data(context.ea->size());
+  const helib::Context context = helib::ContextBuilder<helib::BGV>()
+                                     .m(45)
+                                     .p(19)
+                                     .r(1)
+                                     .buildModChain(false)
+                                     .build();
+  std::vector<long> data(context.getEA().size());
+  std::vector<long> left_rotated_data(context.getEA().size());
   const auto rotate_first_dim = [](long amount, std::vector<long>& data) {
     amount = helib::mcMod(amount, 12);
     std::vector<long> new_data(data);
@@ -2730,8 +2309,8 @@ TEST(TestPtxtBGV, rotate1DRotatesCorrectly)
 
 TEST_P(TestPtxtBGV, rotateRotatesCorrectly)
 {
-  std::vector<long> data(context.ea->size());
-  std::vector<long> left_rotated_data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
+  std::vector<long> left_rotated_data(context.getEA().size());
   const auto non_neg_mod = [](int x, int mod) {
     return ((x % mod) + mod) % mod;
   };
@@ -2754,11 +2333,12 @@ TEST_P(TestPtxtBGV, rotateRotatesCorrectly)
 
 TEST_P(TestPtxtBGV, replicateReplicatesCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> ptxt(context, data);
-  helib::replicate(*context.ea, ptxt, data.size() - 1);
-  std::vector<long> replicated_data(context.ea->size(), data[data.size() - 1]);
+  helib::replicate(context.getEA(), ptxt, data.size() - 1);
+  std::vector<long> replicated_data(context.getEA().size(),
+                                    data[data.size() - 1]);
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     EXPECT_EQ(ptxt[i], replicated_data[i]);
   }
@@ -2766,7 +2346,7 @@ TEST_P(TestPtxtBGV, replicateReplicatesCorrectly)
 
 TEST_P(TestPtxtBGV, replicateAllWorksCorrectly)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> ptxt(context, data);
   std::vector<helib::Ptxt<helib::BGV>> replicated_ptxts = ptxt.replicateAll();
@@ -2779,9 +2359,9 @@ TEST_P(TestPtxtBGV, replicateAllWorksCorrectly)
 
 TEST_P(TestPtxtBGV, clearZeroesAllSlots)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
-  std::vector<long> expected_result(context.ea->size(), 0);
+  std::vector<long> expected_result(context.getEA().size(), 0);
   helib::Ptxt<helib::BGV> ptxt(context, data);
   ptxt.clear();
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
@@ -2817,7 +2397,7 @@ TEST_P(TestPtxtBGV, defaultConstructedPtxtThrowsWhenOperatedOn)
 
 TEST_P(TestPtxtBGV, defaultConstructedContextCannotBeRightOperand)
 {
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> valid_ptxt(context, data);
   helib::Ptxt<helib::BGV> invalid_ptxt;
@@ -2834,8 +2414,13 @@ TEST_P(TestPtxtBGV, defaultConstructedContextCannotBeRightOperand)
 
 TEST_P(TestPtxtBGV, cannotOperateBetweenPtxtsWithDifferentContexts)
 {
-  helib::Context different_context(m, p, 2 * r);
-  std::vector<long> data(context.ea->size(), 1);
+  helib::Context different_context = helib::ContextBuilder<helib::BGV>()
+                                         .m(m)
+                                         .p(p)
+                                         .r(2 * r)
+                                         .buildModChain(false)
+                                         .build();
+  std::vector<long> data(context.getEA().size(), 1);
   helib::Ptxt<helib::BGV> ptxt1(context, data);
   helib::Ptxt<helib::BGV> ptxt2(different_context, data);
   EXPECT_THROW(ptxt1 *= ptxt2, helib::LogicError);
@@ -2862,14 +2447,15 @@ TEST_P(TestPtxtBGV, preservesDataPassedAsZZX)
 TEST_P(TestPtxtBGV, setDataWorksWithZZXSameOrderAsPhiMX)
 {
   NTL::ZZX phi_mx;
-  switch (context.alMod.getTag()) {
+  switch (context.getAlMod().getTag()) {
   case helib::PA_GF2_tag:
     phi_mx = NTL::conv<NTL::ZZX>(
-        context.alMod.getDerived(helib::PA_GF2()).getPhimXMod());
+        context.getAlMod().getDerived(helib::PA_GF2()).getPhimXMod());
     break;
   case helib::PA_zz_p_tag:
-    helib::convert(phi_mx,
-                   context.alMod.getDerived(helib::PA_zz_p()).getPhimXMod());
+    helib::convert(
+        phi_mx,
+        context.getAlMod().getDerived(helib::PA_zz_p()).getPhimXMod());
     break;
   case helib::PA_cx_tag:
     // CKKS: do nothing
@@ -2895,7 +2481,7 @@ TEST_P(TestPtxtBGV, decodeSetDataWorks)
   SetCoeff(input_polynomial, 1, 1);
 
   std::vector<NTL::ZZX> test_decoded;
-  context.ea->decode(test_decoded, input_polynomial);
+  context.getEA().decode(test_decoded, input_polynomial);
 
   helib::Ptxt<helib::BGV> ptxt(context);
 
@@ -2909,14 +2495,15 @@ TEST_P(TestPtxtBGV, decodeSetDataWorks)
 TEST_P(TestPtxtBGV, decodeSetDataWorksWithZZXSameOrderAsPhiMX)
 {
   NTL::ZZX phi_mx;
-  switch (context.alMod.getTag()) {
+  switch (context.getAlMod().getTag()) {
   case helib::PA_GF2_tag:
     phi_mx = NTL::conv<NTL::ZZX>(
-        context.alMod.getDerived(helib::PA_GF2()).getPhimXMod());
+        context.getAlMod().getDerived(helib::PA_GF2()).getPhimXMod());
     break;
   case helib::PA_zz_p_tag:
-    helib::convert(phi_mx,
-                   context.alMod.getDerived(helib::PA_zz_p()).getPhimXMod());
+    helib::convert(
+        phi_mx,
+        context.getAlMod().getDerived(helib::PA_zz_p()).getPhimXMod());
     break;
   case helib::PA_cx_tag:
     // CKKS: do nothing
@@ -2930,7 +2517,7 @@ TEST_P(TestPtxtBGV, decodeSetDataWorksWithZZXSameOrderAsPhiMX)
   helib::Ptxt<helib::BGV> ptxt(context, input_polynomial);
 
   std::vector<NTL::ZZX> test_decoded;
-  context.ea->decode(test_decoded, input_polynomial);
+  context.getEA().decode(test_decoded, input_polynomial);
 
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     EXPECT_EQ(ptxt[i], test_decoded[i]);
@@ -2939,12 +2526,12 @@ TEST_P(TestPtxtBGV, decodeSetDataWorksWithZZXSameOrderAsPhiMX)
 
 TEST_P(TestPtxtBGV, canEncryptAndDecryptPtxts)
 {
-  helib::buildModChain(context, 30, 2);
+  context.buildModChain(30, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
-  std::vector<long> data(context.ea->size());
+  std::vector<long> data(context.getEA().size());
   std::iota(data.begin(), data.end(), 0);
   helib::Ptxt<helib::BGV> pre_encryption(context, data);
   helib::Ctxt ctxt(public_key);
@@ -2958,14 +2545,14 @@ TEST_P(TestPtxtBGV, canEncryptAndDecryptPtxts)
 
 TEST_P(TestPtxtBGV, plusEqualsWithCiphertextWorks)
 {
-  helib::buildModChain(context, 30, 2);
+  context.buildModChain(30, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
-  std::vector<long> augend_data(context.ea->size());
-  std::vector<long> addend_data(context.ea->size());
+  std::vector<long> augend_data(context.getEA().size());
+  std::vector<long> addend_data(context.getEA().size());
   std::iota(augend_data.begin(), augend_data.end(), 0);
   std::iota(addend_data.begin(), addend_data.end(), 7);
   helib::Ptxt<helib::BGV> augend_ptxt(context, augend_data);
@@ -2986,14 +2573,14 @@ TEST_P(TestPtxtBGV, plusEqualsWithCiphertextWorks)
 
 TEST_P(TestPtxtBGV, addConstantFromCiphertextWorks)
 {
-  helib::buildModChain(context, 30, 2);
+  context.buildModChain(30, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
-  std::vector<long> augend_data(context.ea->size());
-  std::vector<long> addend_data(context.ea->size());
+  std::vector<long> augend_data(context.getEA().size());
+  std::vector<long> addend_data(context.getEA().size());
   std::iota(augend_data.begin(), augend_data.end(), 0);
   std::iota(addend_data.begin(), addend_data.end(), 7);
   helib::Ptxt<helib::BGV> augend_ptxt(context, augend_data);
@@ -3014,14 +2601,14 @@ TEST_P(TestPtxtBGV, addConstantFromCiphertextWorks)
 
 TEST_P(TestPtxtBGV, minusEqualsWithCiphertextWorks)
 {
-  helib::buildModChain(context, 30, 2);
+  context.buildModChain(30, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the minuend, subtrahend is plaintext
-  std::vector<long> minuend_data(context.ea->size());
-  std::vector<long> subtrahend_data(context.ea->size());
+  std::vector<long> minuend_data(context.getEA().size());
+  std::vector<long> subtrahend_data(context.getEA().size());
   std::iota(minuend_data.begin(), minuend_data.end(), 0);
   std::iota(subtrahend_data.begin(), subtrahend_data.end(), 7);
   helib::Ptxt<helib::BGV> minuend_ptxt(context, minuend_data);
@@ -3042,14 +2629,14 @@ TEST_P(TestPtxtBGV, minusEqualsWithCiphertextWorks)
 
 TEST_P(TestPtxtBGV, timesEqualsWithCiphertextWorks)
 {
-  helib::buildModChain(context, 30, 2);
+  context.buildModChain(30, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
-  std::vector<long> multiplier_data(context.ea->size());
-  std::vector<long> multiplicand_data(context.ea->size());
+  std::vector<long> multiplier_data(context.getEA().size());
+  std::vector<long> multiplicand_data(context.getEA().size());
   std::iota(multiplier_data.begin(), multiplier_data.end(), 0);
   std::iota(multiplicand_data.begin(), multiplicand_data.end(), 7);
   helib::Ptxt<helib::BGV> multiplier_ptxt(context, multiplier_data);
@@ -3070,14 +2657,14 @@ TEST_P(TestPtxtBGV, timesEqualsWithCiphertextWorks)
 
 TEST_P(TestPtxtBGV, multByConstantFromCiphertextWorks)
 {
-  helib::buildModChain(context, 30, 2);
+  context.buildModChain(30, 2);
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
-  std::vector<long> multiplier_data(context.ea->size());
-  std::vector<long> multiplicand_data(context.ea->size());
+  std::vector<long> multiplier_data(context.getEA().size());
+  std::vector<long> multiplicand_data(context.getEA().size());
   std::iota(multiplier_data.begin(), multiplier_data.end(), 0);
   std::iota(multiplicand_data.begin(), multiplicand_data.end(), 7);
   helib::Ptxt<helib::BGV> multiplier_ptxt(context, multiplier_data);

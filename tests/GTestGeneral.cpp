@@ -208,7 +208,7 @@ protected:
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
     if (!helib_test::noPrint) {
       helib::fhe_stats = true;
     }
@@ -230,23 +230,26 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
 
   NTL::ZZX G;
   if (d == 0)
-    G = context.alMod.getFactorsOverZZ()[0];
+    G = context.getAlMod().getFactorsOverZZ()[0];
   else
     G = helib::makeIrredPoly(p, d);
 
   if (!helib_test::noPrint) {
-    context.zMStar.printout();
+    context.getZMStar().printout();
     std::cout << std::endl;
 
     std::cout << "security=" << context.securityLevel() << std::endl;
-    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
-    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+    std::cout << "# small primes = " << context.getSmallPrimes().card() << "\n";
+    std::cout << "# ctxt primes = " << context.getCtxtPrimes().card() << "\n";
     std::cout << "# bits in ctxt primes = "
-              << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) + 0.5)
+              << long(context.logOfProduct(context.getCtxtPrimes()) / log(2.0) +
+                      0.5)
               << "\n";
-    std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
+    std::cout << "# special primes = " << context.getSpecialPrimes().card()
+              << "\n";
     std::cout << "# bits in special primes = "
-              << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+              << long(context.logOfProduct(context.getSpecialPrimes()) /
+                          log(2.0) +
                       0.5)
               << "\n";
     std::cout << "G = " << G << "\n";
@@ -466,23 +469,26 @@ TEST_P(GTestGeneral, rotate1D)
 
   NTL::ZZX G;
   if (d == 0)
-    G = context.alMod.getFactorsOverZZ()[0];
+    G = context.getAlMod().getFactorsOverZZ()[0];
   else
     G = helib::makeIrredPoly(p, d);
 
   if (!helib_test::noPrint) {
-    context.zMStar.printout();
+    context.getZMStar().printout();
     std::cout << std::endl;
 
     std::cout << "security=" << context.securityLevel() << std::endl;
-    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
-    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+    std::cout << "# small primes = " << context.getSmallPrimes().card() << "\n";
+    std::cout << "# ctxt primes = " << context.getCtxtPrimes().card() << "\n";
     std::cout << "# bits in ctxt primes = "
-              << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) + 0.5)
+              << long(context.logOfProduct(context.getCtxtPrimes()) / log(2.0) +
+                      0.5)
               << "\n";
-    std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
+    std::cout << "# special primes = " << context.getSpecialPrimes().card()
+              << "\n";
     std::cout << "# bits in special primes = "
-              << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+              << long(context.logOfProduct(context.getSpecialPrimes()) /
+                          log(2.0) +
                       0.5)
               << "\n";
     std::cout << "G = " << G << "\n";
@@ -505,7 +511,8 @@ TEST_P(GTestGeneral, rotate1D)
   random(ea, p1);
   random(ea, p2);
 
-  long dim = context.zMStar.numOfGens() > 1 ? 1 : 0; // Dimension of rotation
+  long dim =
+      context.getZMStar().numOfGens() > 1 ? 1 : 0; // Dimension of rotation
 
   helib::Ctxt c0(publicKey), c1(publicKey), c2(publicKey);
   ea.encrypt(c0, publicKey, p0);

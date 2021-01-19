@@ -189,7 +189,7 @@ function teardown {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}_invalid.ptxt"
   assert [ "$status" -ne 0 ]
   assert [ "${lines[0]}" == "Exit due to IOError thrown:" ]
-  assert [ "${lines[1]}" == "Cannot deserialize to PolyMod: Degree is too small.  Trying to deserialize 3 coefficients.  Degree is 2." ]
+  assert [ "${lines[1]}" == "Cannot deserialize to PolyMod: Degree is too small.  Trying to deserialize 3 coefficients.  Slot modulus degree is 2." ]
 }
 
 # CKKS encryption-related tests TESTS
@@ -241,5 +241,5 @@ function teardown {
   run $encrypt "${pk_file_ckks}" "${prefix_ckks}_invalid.ptxt"
   assert [ "$status" -ne 0 ]
   assert [ "${lines[0]}" == "Exit due to IOError thrown:" ]
-  assert [ "${lines[1]}" == "CKKS expects maximum of 2 values per slot (real, imag). Got 3 instead." ]
+  assert [ "${lines[1]}" == "Bad complex JSON serialization. Expected a maximum of 2 elements, recieved 3" ]
 }

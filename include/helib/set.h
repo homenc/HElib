@@ -82,7 +82,7 @@ inline TXT calculateSetIntersection(const TXT& query,
     auto lquery = std::make_unique<TXT>(query);
     Ptxt<BGV> entry(query.getContext(), server_set[i]);
     *lquery -= entry;
-    mapTo01(*query.getContext().ea, *lquery);
+    mapTo01(query.getContext().getEA(), *lquery);
     lquery->negate();
     lquery->addConstant(NTL::ZZX(1L));
     sumRegister.add(lquery);

@@ -62,19 +62,22 @@ protected:
     if (m3 > 1)
       append(mvec, m3);
     return mvec;
-  };
+  }
 
   GTestPowerful() :
       mvec(computeMvec(GetParam().m1, GetParam().m2, GetParam().m3)),
       m(helib::computeProd(mvec)),
       p(GetParam().p),
       r(GetParam().r),
-      context(m, p, r){};
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .buildModChain(false)
+                  .build())
+  {}
 
-  virtual void SetUp() override
-  {
-    helib::buildModChain(context, /*L=*/100, /*c=*/3);
-  };
+  virtual void SetUp() override { context.buildModChain(/*L=*/100, /*c=*/3); }
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };

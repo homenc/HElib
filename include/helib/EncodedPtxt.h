@@ -199,7 +199,8 @@ public:
   FatEncodedPtxt_BGV(const EncodedPtxt_BGV& eptxt, const IndexSet& s) :
       dcrt(eptxt.getPoly(), eptxt.getContext(), s),
       ptxtSpace(eptxt.getPtxtSpace()),
-      size(embeddingLargestCoeff(eptxt.getPoly(), eptxt.getContext().zMStar))
+      size(embeddingLargestCoeff(eptxt.getPoly(),
+                                 eptxt.getContext().getZMStar()))
   {}
 
   FatEncodedPtxt_BGV(const DoubleCRT& dcrt_, long ptxtSpace_, double size_) :

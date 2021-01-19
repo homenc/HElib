@@ -177,21 +177,23 @@ protected:
   helib::EncryptedArray ea;
   std::unique_ptr<typename T::MatrixType> matrixPtr;
 
-  static helib::Context& setupContext(helib::Context& context, long L)
+  static helib::Context& setupContext(helib::Context& context)
   {
-    buildModChain(context, L, /*c=*/3);
     if (helib_test::verbose) {
-      context.zMStar.printout();
-      std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
-      std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+      context.getZMStar().printout();
+      std::cout << "# small primes = " << context.getSmallPrimes().card()
+                << "\n";
+      std::cout << "# ctxt primes = " << context.getCtxtPrimes().card() << "\n";
       std::cout << "# bits in ctxt primes = "
-                << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) +
+                << long(context.logOfProduct(context.getCtxtPrimes()) /
+                            log(2.0) +
                         0.5)
                 << "\n";
-      std::cout << "# special primes = " << context.specialPrimes.card()
+      std::cout << "# special primes = " << context.getSpecialPrimes().card()
                 << "\n";
       std::cout << "# bits in special primes = "
-                << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+                << long(context.logOfProduct(context.getSpecialPrimes()) /
+                            log(2.0) +
                         0.5)
                 << "\n";
       helib::fhe_stats = true;
@@ -213,10 +215,19 @@ protected:
       gens(T::parameters.gens),
       ords(T::parameters.ords),
       ks_strategy(T::parameters.ks_strategy),
-      context((helib::setTimersOn(), m), p, r, gens, ords),
-      secretKey(setupContext(context, L)),
+      context((helib::setTimersOn(),
+               helib::ContextBuilder<helib::BGV>()
+                   .m(m)
+                   .p(p)
+                   .r(r)
+                   .gens(gens)
+                   .ords(ords)
+                   .bits(L)
+                   .c(3)
+                   .build())),
+      secretKey(setupContext(context)),
       publicKey((secretKey.GenSecKey(), secretKey)),
-      ea(context, context.alMod), // encrypted array with "full slots"
+      ea(context, context.getAlMod()), // encrypted array with "full slots"
       matrixPtr(buildMat<typename T::MatrixType>(ea, dim)){};
 
   virtual void SetUp()

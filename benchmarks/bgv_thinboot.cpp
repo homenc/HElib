@@ -34,11 +34,10 @@ static void BM_thinboot(benchmark::State& state,
                         long bits,
                         long t,
                         int c_m,
-                        std::vector<long> mvector,
+                        std::vector<long> mvec,
                         std::vector<long> gens,
                         std::vector<long> ords)
 {
-  NTL::Vec<long> mvec = helib::convert<NTL::Vec<long>>(mvector);
   // clang-format off
   std::cout << "m=" << m
             << ", p=" << p
@@ -47,23 +46,27 @@ static void BM_thinboot(benchmark::State& state,
             << ", c=" << c
             << ", skHwt=" << t
             << ", c_m=" << c_m
-            << ", mvec=" << mvec
+            << ", mvec=" << helib::vecToStr(mvec)
             << ", gens=" << helib::vecToStr(gens)
             << ", ords=" << helib::vecToStr(ords)
             << std::endl;
   // clang-format on
   std::cout << "Initialising context object..." << std::endl;
-  helib::Context context(m, p, r, gens, ords);
-  context.zMStar.set_cM(c_m / 100.0);
-
-  std::cout << "Building modulus chain..." << std::endl;
-  buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*skHwt*/ t);
-
-  // Make bootstrappable (saves time by disabling some fat boot precomputation)
-  context.enableBootStrapping(mvec, /*build_cache=*/0, /*alsoThick=*/false);
+  helib::Context context = helib::ContextBuilder<helib::BGV>()
+                               .m(m)
+                               .p(p)
+                               .r(r)
+                               .gens(gens)
+                               .ords(ords)
+                               .bits(bits)
+                               .c(c)
+                               .bootstrappable(true)
+                               .skHwt(t)
+                               .mvec(mvec)
+                               .build();
 
   // Print the context
-  context.zMStar.printout();
+  context.printout();
   std::cout << std::endl;
   std::cout << "Security: " << context.securityLevel() << std::endl;
 
@@ -80,7 +83,7 @@ static void BM_thinboot(benchmark::State& state,
   // NOTE: For some reason the reCrypt method is not marked const so
   //       I had to remove the const from the public key
   helib::PubKey& public_key = secret_key;
-  const helib::EncryptedArray& ea = *(context.ea);
+  const helib::EncryptedArray& ea = context.getEA();
 
   long nslots = ea.size();
   std::cout << "Number of slots: " << nslots << std::endl;

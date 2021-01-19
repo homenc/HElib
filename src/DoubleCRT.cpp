@@ -21,8 +21,10 @@
 #include <NTL/ZZVec.h>
 #include <NTL/BasicThreadPool.h>
 
+#include "binio.h"
+#include "io.h"
+
 #include <helib/timing.h>
-#include <helib/binio.h>
 #include <helib/sample.h>
 #include <helib/DoubleCRT.h>
 #include <helib/Context.h>
@@ -91,14 +93,15 @@ void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
 // moduli chain an error is raised if they are not consistent
 void DoubleCRT::verify()
 {
-  assertTrue(map.getIndexSet() <= (context.smallPrimes | context.specialPrimes |
-                                   context.ctxtPrimes),
+  assertTrue(map.getIndexSet() <=
+                 (context.getSmallPrimes() | context.getSpecialPrimes() |
+                  context.getCtxtPrimes()),
              "Index set must be a subset of the union of small primes, special "
              "primes, and ctxt primes");
 
   const IndexSet& s = map.getIndexSet();
 
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   // check that the content of i'th row is in [0,pi) for all i
   for (long i : s) {
@@ -159,7 +162,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT& other, Fun fun, bool matchIndexSets)
   }
 
   const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i : s) {
@@ -218,7 +221,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
   }
 
   const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i : s) {
@@ -254,7 +257,7 @@ DoubleCRT& DoubleCRT::Op(const NTL::ZZ& num, Fun fun)
     return *this;
 
   const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   for (long i : s) {
     long pi = context.ithPrime(i);
@@ -287,7 +290,7 @@ DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
     map = other.map; // copy the data
   }
   const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
   for (long i : s) {
     long pi = context.ithPrime(i);
     NTL::vec_long& row = map[i];
@@ -325,27 +328,26 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
 {
   HELIB_TIMER_START;
 
-  const PAlgebra& palg = context.zMStar;
-  long phim = palg.getPhiM();
+  long phim = context.getPhiM();
 
   IndexSet remainingPrimes = getIndexSet();
   long n = 0;
 
   for (; !empty(remainingPrimes); n++) {
-    IndexSet digitPrimes = context.digits.at(n);
+    IndexSet digitPrimes = context.getDigits().at(n);
     digitPrimes.retain(remainingPrimes);
 
-    remainingPrimes.remove(context.digits.at(n));
+    remainingPrimes.remove(context.getDigits().at(n));
   }
 
-  IndexSet allPrimes = getIndexSet() | context.specialPrimes;
+  IndexSet allPrimes = getIndexSet() | context.getSpecialPrimes();
 
-  assertTrue(getIndexSet() <= context.ctxtPrimes,
+  assertTrue(getIndexSet() <= context.getCtxtPrimes(),
              "Index set must be a subset of ctxt primes");
   // the calling routine should ensure that the index set
   // contains only ctxt primes
 
-  assertTrue(n <= (long)context.digits.size(),
+  assertTrue(n <= (long)context.getDigits().size(),
              "n cannot be larger than the size of context.digits");
 
   digits.resize(n, DoubleCRT(context, IndexSet::emptySet()));
@@ -354,7 +356,7 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
 
   for (long i : range(n)) {
     digits[i] = *this;
-    IndexSet notInDigit = digits[i].getIndexSet() / context.digits[i];
+    IndexSet notInDigit = digits[i].getIndexSet() / context.getDigit(i);
     digits[i].removePrimes(notInDigit); // reduce modulo the digit primes
   }
 
@@ -385,7 +387,7 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
     digits[i].addPrimes(notInDigit, &poly); // add back all the primes
 
     HELIB_NTIMER_START(NORM_VAL);
-    NTL::xdouble norm_val = embeddingLargestCoeff(poly, palg);
+    NTL::xdouble norm_val = embeddingLargestCoeff(poly, context.getZMStar());
     HELIB_NTIMER_STOP(NORM_VAL);
 
     noise += norm_val;
@@ -395,7 +397,7 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
 
 #endif
 
-    NTL::ZZ pi = context.productOfPrimes(context.digits[i]);
+    NTL::ZZ pi = context.productOfPrimes(context.getDigit(i));
     for (long j : range(i + 1, digits.size())) {
       digits[j].Sub(digits[i], /*matchIndexSets=*/false);
       digits[j] /= pi;
@@ -469,7 +471,7 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
   }
 
   // scale existing rows
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
   const IndexSet& iSet = map.getIndexSet();
   for (long i : iSet) {
     long qi = context.ithPrime(i);
@@ -495,7 +497,7 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 // *****************************************************
 DoubleCRTHelper::DoubleCRTHelper(const Context& context)
 {
-  val = context.zMStar.getPhiM();
+  val = context.getPhiM();
 }
 
 DoubleCRT::DoubleCRT(const NTL::ZZX& poly,
@@ -627,7 +629,7 @@ DoubleCRT::DoubleCRT(const Context& _context, const IndexSet& s) :
   if (isDryRun())
     return;
 
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   for (long i : s) {
     NTL::vec_long& row = map[i];
@@ -649,7 +651,7 @@ DoubleCRT::DoubleCRT(const Context &_context)
   map.insert(s);
   if (isDryRun()) return;
 
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     NTL::vec_long& row = map[i];
@@ -671,7 +673,7 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
     map = other.map; // copy the data
   } else {
     const IndexSet& s = map.getIndexSet();
-    long phim = context.zMStar.getPhiM();
+    long phim = context.getPhiM();
     for (long i : s) {
       NTL::vec_long& row = map[i];
       const NTL::vec_long& other_row = other.map[i];
@@ -715,7 +717,7 @@ DoubleCRT& DoubleCRT::operator=(const NTL::ZZ& num)
   if (isDryRun())
     return *this;
 
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   for (long i : s) {
     NTL::vec_long& row = map[i];
@@ -759,7 +761,7 @@ long DoubleCRT::getOneRow(NTL::Vec<long>& row, long idx, bool positive) const
   // By default, integers are in [0,q).
   // If we need the symmetric interval then make it so.
   if (!positive) {
-    long phim = context.zMStar.getPhiM();
+    long phim = context.getPhiM();
     for (long j : range(phim))
       if (row[j] > q / 2)
         row[j] -= q;
@@ -796,7 +798,7 @@ void DoubleCRT::toPoly(NTL::ZZX& poly, const IndexSet& s, bool positive) const
   NTL::Vec<NTL::zz_pX>& tmpvec = tls_tmpvec;
 
   // initialize the ivec vector, ivec[j] = index of j'th active prime
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
   long icard = MakeIndexVector(s1, ivec); // icard = how many active primes
 
   // Which primes are handled by what thread
@@ -971,7 +973,7 @@ DoubleCRT& DoubleCRT::operator/=(const NTL::ZZ& num)
     return *this;
 
   const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   for (long i : s) {
     long pi = context.ithPrime(i);
@@ -991,7 +993,7 @@ void DoubleCRT::Exp(long e)
     return;
 
   const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   for (long i : s) {
     long pi = context.ithPrime(i);
@@ -1008,12 +1010,12 @@ void DoubleCRT::automorph(long k)
   if (isDryRun())
     return;
 
-  const PAlgebra& zMStar = context.zMStar;
+  const PAlgebra& zMStar = context.getZMStar();
   if (!zMStar.inZmStar(k))
     throw RuntimeError("DoubleCRT::automorph: k not in Zm*");
 
   long m = zMStar.getM();
-  long phim = zMStar.getPhiM();
+  long phim = context.getPhiM();
   std::vector<long> tmp(m); // temporary array of size m
   NTL::mulmod_precon_t precon = NTL::PrepMulModPrecon(k, m);
 
@@ -1053,11 +1055,11 @@ void DoubleCRT::automorph(long k)
 {
   if (isDryRun())
     return;
-  const PAlgebra& zMStar = context.zMStar;
+  const PAlgebra& zMStar = context.getZMStar();
   if (!zMStar.inZmStar(k))
     throw RuntimeError("DoubleCRT::automorph: k not in Zm*");
   long m = zMStar.getM();
-  long phim = zMStar.getPhiM();
+  long phim = getPhiM();
   std::vector<long> tmp(phim); // temporary array of size m
 
   k = NTL::InvMod(k, m);
@@ -1088,9 +1090,7 @@ void DoubleCRT::complexConj()
   if (isDryRun())
     return;
 
-  const PAlgebra& zMStar = context.zMStar;
-  long phim = zMStar.getPhiM();
-
+  long phim = context.getPhiM();
   const IndexSet& s = map.getIndexSet();
 
   // go over the rows, permute them one at a time
@@ -1114,7 +1114,7 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
     SetSeed(*seed);
 
   const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
+  long phim = context.getPhiM();
 
   NTL::RandomStream& stream = NTL::GetCurrentRandomStream();
   const long bufsz = 2048;
@@ -1266,7 +1266,7 @@ double DoubleCRT::sampleHWtBounded(long Hwt)
 double DoubleCRT::sampleGaussian(double stdev)
 {
   if (stdev == 0.0)
-    stdev = to_double(context.stdev);
+    stdev = to_double(context.getStdev());
   zzX poly;
   double retval = ::helib::sampleGaussian(poly, context, stdev);
   *this = poly; // convert to DoubleCRT
@@ -1276,7 +1276,7 @@ double DoubleCRT::sampleGaussian(double stdev)
 double DoubleCRT::sampleGaussianBounded(double stdev)
 {
   if (stdev == 0.0)
-    stdev = to_double(context.stdev);
+    stdev = to_double(context.getStdev());
   zzX poly;
   double retval = ::helib::sampleGaussianBounded(poly, context, stdev);
   *this = poly; // convert to DoubleCRT
@@ -1365,59 +1365,21 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s,
 
 std::ostream& operator<<(std::ostream& str, const DoubleCRT& d)
 {
-  const IndexSet& set = d.map.getIndexSet();
-
-  // check that the content of i'th row is in [0,pi) for all i
-  str << "[" << set << std::endl;
-  for (long i : set)
-    str << " " << d.map[i] << "\n";
-  str << "]";
+  str << d.writeToJSON();
   return str;
 }
 
 std::istream& operator>>(std::istream& str, DoubleCRT& d)
 {
-  //  std::cerr << "DoubleCRT[";
-  // Advance str beyond first '['
-  seekPastChar(str, '['); // this function is defined in NumbTh.cpp
-
-  IndexSet set;
-  const Context& context = d.context;
-  long phim = context.zMStar.getPhiM();
-
-  str >> set; // read in the indexSet
-  assertTrue(
-      set <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes),
-      "Stream does not contain subset of the context's primes");
-  d.map.clear();
-  d.map.insert(set); // fix the index set for the data
-
-  for (long i : set) {
-    str >> d.map[i]; // read the actual data
-
-    // verify that the data is valid
-    assertEq(d.map[i].length(),
-             phim,
-             "Data not valid: d.map[i].length() != phim");
-    for (long j : range(phim))
-      assertInRange(
-          d.map[i][j],
-          0l,
-          context.ithPrime(i),
-          "d.map[i][j] invalid: must be between 0 and context.ithPrime(i)");
-  }
-
-  // Advance str beyond closing ']'
-  seekPastChar(str, ']');
-  //  std::cerr << "]";
+  d.readJSON(str);
   return str;
 }
 
-void DoubleCRT::write(std::ostream& str) const
+void DoubleCRT::writeTo(std::ostream& str) const
 {
   const IndexSet& set = map.getIndexSet();
   //  std::cerr << "[DCRT::write] set: " << set << std::endl;
-  set.write(str);
+  set.writeTo(str);
 
   for (long i : set) {
     write_ntl_vec_long(str, map[i]);
@@ -1425,10 +1387,17 @@ void DoubleCRT::write(std::ostream& str) const
   }
 }
 
+DoubleCRT DoubleCRT::readFrom(std::istream& str, const Context& context)
+{
+  DoubleCRT ret(context, IndexSet::emptySet());
+  ret.read(str);
+
+  return ret;
+}
+
 void DoubleCRT::read(std::istream& str)
 {
-  IndexSet set;
-  set.read(str); // read in the indexSet
+  IndexSet set = IndexSet::readFrom(str); // read in the indexSet
   map.clear();
   map.insert(set); // fix the index set for the data
                    //  std::cerr << "[DCRT::read] set: " << set << std::endl;
@@ -1436,6 +1405,78 @@ void DoubleCRT::read(std::istream& str)
   for (long i : set) {
     read_ntl_vec_long(str, map[i]);
     //   std::cerr << "[DCRT::read] map[i]: " << map[i] << std::endl;
+  }
+}
+
+void DoubleCRT::writeToJSON(std::ostream& str) const
+{
+  str << this->writeToJSON();
+}
+
+JsonWrapper DoubleCRT::writeToJSON() const
+{
+  const IndexSet& set = this->map.getIndexSet();
+  std::vector<NTL::Vec<long>> map_cnt;
+
+  // check that the content of i'th row is in [0,pi) for all i
+  for (long i : set)
+    map_cnt.emplace_back(this->map[i]);
+
+  json j = {{"set", unwrap(set.writeToJSON())}, {"map", map_cnt}};
+  return wrap(j);
+}
+
+DoubleCRT DoubleCRT::readFromJSON(std::istream& str, const Context& context)
+{
+  json j;
+  str >> j;
+  return DoubleCRT::readFromJSON(wrap(j), context);
+}
+
+DoubleCRT DoubleCRT::readFromJSON(const JsonWrapper& j, const Context& context)
+{
+  DoubleCRT ret{context, IndexSet::emptySet()};
+  ret.readJSON(j);
+  return ret;
+}
+
+void DoubleCRT::readJSON(std::istream& str)
+{
+  json j;
+  str >> j;
+  return this->readJSON(wrap(j));
+}
+
+void DoubleCRT::readJSON(const JsonWrapper& jw)
+{
+  json j = unwrap(jw);
+
+  const Context& context = this->context;
+  long phim = context.getPhiM();
+
+  IndexSet set = IndexSet::readFromJSON(wrap(j.at("set")));
+  assertTrue(set <= (context.getSmallPrimes() | context.getSpecialPrimes() |
+                     context.getCtxtPrimes()),
+             "Stream does not contain subset of the context's primes");
+  this->map.clear();
+  this->map.insert(set); // fix the index set for the data
+
+  std::vector<NTL::Vec<long>> map_cnt = j.at("map");
+
+  std::size_t cnt = 0;
+  for (long i : set) {
+    this->map[i] = map_cnt[cnt++]; // read the actual data
+
+    // verify that the data is valid
+    assertEq(this->map[i].length(),
+             phim,
+             "Data not valid: d.map[i].length() != phim");
+    for (long j : range(phim))
+      assertInRange(
+          this->map[i][j],
+          0l,
+          context.ithPrime(i),
+          "this->map[i][j] invalid: must be between 0 and context.ithPrime(i)");
   }
 }
 

@@ -25,7 +25,7 @@ helib::Ptxt<helib::BGV> generateRandomPtxt(const helib::Context& context)
   // Consider generating random polynomials if THICK
   helib::Ptxt<helib::BGV> ptxt(context);
   std::mt19937 gen(231087);
-  std::uniform_int_distribution<int> coinFlipDist(0, context.zMStar.getP() - 1);
+  std::uniform_int_distribution<int> coinFlipDist(0, context.getP() - 1);
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     ptxt[i] = coinFlipDist(gen);
   }
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     std::cerr << "Context is not bootstrappable" << std::endl;
     return EXIT_FAILURE;
   }
-  const helib::EncryptedArray& ea(*context.ea);
+  const helib::EncryptedArray& ea(context.getEA());
   helib::Ptxt<helib::BGV> ptxt =
       generateRandomPtxt(context); // Random in [0, p)
   helib::Ctxt ctxt(publicKey);

@@ -206,9 +206,9 @@ int main(int argc, char* argv[])
 
   try {
     // Read in, encrypt, output.
-    if (contextp->zMStar.getP() == -1) { // CKKS
+    if (contextp->getP() == -1) { // CKKS
       encryptFromTo<helib::CKKS>(cmdLineOpts, *contextp, *pkp);
-    } else if (contextp->zMStar.getP() > 0) { // BGV
+    } else if (contextp->getP() > 0) { // BGV
       encryptFromTo<helib::BGV>(cmdLineOpts, *contextp, *pkp);
     } else {
       std::cerr << "Unrecognized scheme from context." << std::endl;

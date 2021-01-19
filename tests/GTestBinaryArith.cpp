@@ -171,14 +171,14 @@ protected:
         std::cout << "  using " << NTL::AvailableThreads() << " threads\n";
       std::cout << "computing key-independent tables..." << std::flush;
     }
-    buildModChain(context, L, c, /*willBeBootstrappable=*/bootstrap);
+    context.buildModChain(L, c, /*willBeBootstrappable=*/bootstrap);
     if (bootstrap) {
       context.enableBootStrapping(mvec);
     }
-    buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
+    buildUnpackSlotEncoding(unpackSlotEncoding, context.getEA());
     if (helib_test::verbose) {
       std::cout << " done.\n";
-      context.zMStar.printout();
+      context.printout();
     }
     return context;
   };
@@ -235,7 +235,14 @@ protected:
       B(vals[13]),
       c(vals[14]),
       L(calculateLevels(bootstrap, outSize, bitSize)),
-      context(m, p, /*r=*/1, gens, ords),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(1)
+                  .gens(gens)
+                  .ords(ords)
+                  .buildModChain(false)
+                  .build()),
       secKey(prepareContext(context)){};
 
   void SetUp() override
@@ -249,7 +256,7 @@ protected:
 
     helib::activeContext = &context; // make things a little easier sometimes
 
-    helib::setupDebugGlobals(&secKey, context.ea);
+    helib::setupDebugGlobals(&secKey, context.shareEA());
   }
 
   virtual void TearDown() override
@@ -350,7 +357,7 @@ TEST_P(GTestBinaryArith, product)
   // bit, however packing more into the slots is possible.
   // LSB is at the start (left) of the vector.
 
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   // outSize 1's on the least significant end of mask.
   long mask = (outSize ? ((1L << outSize) - 1) : -1);
 
@@ -494,7 +501,7 @@ TEST_P(GTestBinaryArith, add)
   // bit, however packing more into the slots is possible.
   // LSB is at the start(left) of the vector.
 
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   // outSize 1's on the least significant end of mask.
   long mask = (outSize ? ((1L << outSize) - 1) : -1);
 
@@ -591,7 +598,7 @@ TEST_P(GTestBinaryArith, addManyNumbers)
   // LSB is at the start(left) of the vector.
 
   const long num_summands = 5;
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   // outSize 1's on the least significant end of mask.
   long mask = (outSize ? ((1L << outSize) - 1) : -1);
 
@@ -669,7 +676,7 @@ TEST_P(GTestBinaryArith, negateNegatesCorrectly)
 {
   // Randomly generate a number in 2's complement and negate it.
 
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   unsigned long input_data = NTL::RandomBits_long(bitSize);
 
   long mask = ((1L << bitSize) - 1);
@@ -711,7 +718,7 @@ TEST_P(GTestBinaryArith, subtractSubtractsCorrectly)
 {
   // Randomly generate two numbers in 2's complement and subtract one from the
   // other.
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   unsigned long minuend_data = NTL::RandomBits_long(bitSize);
   unsigned long subtrahend_data = NTL::RandomBits_long(bitSize);
 
@@ -766,7 +773,7 @@ TEST_P(GTestBinaryArith, subtractSubtractsCorrectly)
 
 TEST_P(GTestBinaryArith, binaryMaskMasksCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   const helib::PubKey& pubKey = secKey;
   helib::Ctxt mask(secKey);
   helib::Ptxt<helib::BGV> mask_data(context);
@@ -799,7 +806,7 @@ TEST_P(GTestBinaryArith, binaryMaskMasksCorrectly)
 
 TEST_P(GTestBinaryArith, binaryCondWorksCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   const helib::PubKey& pubKey = secKey;
   helib::Ctxt cond(secKey);
   helib::Ptxt<helib::BGV> cond_data(context);
@@ -851,7 +858,7 @@ TEST_P(GTestBinaryArith, binaryCondWorksCorrectly)
 
 TEST_P(GTestBinaryArith, concatBinaryNumsConcatsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long lhs_number = NTL::RandomBits_long(bitSize);
   long rhs_number = NTL::RandomBits_long(bitSize);
 
@@ -892,7 +899,7 @@ TEST_P(GTestBinaryArith, concatBinaryNumsConcatsCorrectly)
 
 TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long lhs_number = NTL::RandomBits_long(bitSize + 1);
   long rhs_number = NTL::RandomBits_long(bitSize);
 
@@ -946,7 +953,7 @@ TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
 
 TEST_P(GTestBinaryArith, bitwiseShiftShiftsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long number = NTL::RandomBits_long(bitSize);
 
   std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));
@@ -986,7 +993,7 @@ TEST_P(GTestBinaryArith, bitwiseShiftShiftsCorrectly)
 
 TEST_P(GTestBinaryArith, bitwiseRotateRotatesCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long input = NTL::RandomBits_long(bitSize);
 
   std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));
@@ -1033,7 +1040,7 @@ TEST_P(GTestBinaryArith, bitwiseRotateRotatesCorrectly)
 
 TEST_P(GTestBinaryArith, binaryAndWithLongAndsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long number = NTL::RandomBits_long(bitSize);
 
   unsigned long long_mask = 0;
@@ -1072,7 +1079,7 @@ TEST_P(GTestBinaryArith, binaryAndWithLongAndsCorrectly)
 
 TEST_P(GTestBinaryArith, binaryXORXORsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long lhs = NTL::RandomBits_long(bitSize);
   long rhs = NTL::RandomBits_long(bitSize);
 
@@ -1113,7 +1120,7 @@ TEST_P(GTestBinaryArith, binaryXORXORsCorrectly)
 
 TEST_P(GTestBinaryArith, binaryAndAndsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long lhs = NTL::RandomBits_long(bitSize);
   long rhs = NTL::RandomBits_long(bitSize);
 
@@ -1154,7 +1161,7 @@ TEST_P(GTestBinaryArith, binaryAndAndsCorrectly)
 
 TEST_P(GTestBinaryArith, binaryOrOrsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long lhs = NTL::RandomBits_long(bitSize);
   long rhs = NTL::RandomBits_long(bitSize);
 
@@ -1195,7 +1202,7 @@ TEST_P(GTestBinaryArith, binaryOrOrsCorrectly)
 
 TEST_P(GTestBinaryArith, bitwiseNotNotsCorrectly)
 {
-  const helib::EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = context.getEA();
   long input = NTL::RandomBits_long(bitSize);
 
   std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));

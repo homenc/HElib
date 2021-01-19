@@ -144,15 +144,6 @@ private:
     time = -NTL::GetTime();
   }
 
-  void postContextSetup()
-  {
-    if (scale) {
-      context.scale = scale;
-    }
-
-    context.zMStar.set_cM(c_m / 100.0);
-  }
-
   static void setGlobals(int force_bsgs, int force_hoist, int chen_han)
   {
     helib::fhe_test_force_bsgs = force_bsgs;
@@ -235,10 +226,17 @@ protected:
       m(helib::computeProd(mvec)),
       phim((checkPM(p, m), helib::phi_N(m))),
       time(0),
-      context((preContextSetup(), m), p, r, gens, ords)
-  {
-    postContextSetup();
-  }
+      context((preContextSetup(),
+               helib::ContextBuilder<helib::BGV>()
+                   .m(m)
+                   .p(p)
+                   .r(r)
+                   .gens(gens)
+                   .ords(ords)
+                   .scale(scale ? scale : 10 /*default is 10.*/)
+                   .buildModChain(false)
+                   .build()))
+  {}
 
   void TearDown() override
   {
@@ -255,26 +253,29 @@ protected:
 
 TEST_P(GTestFatboot, correctlyPerformsFatboot)
 {
-  helib::buildModChain(context,
-                       bits,
-                       c,
-                       /*willBeBootstrappable=*/true,
-                       /*t=*/skHwt);
+  context.buildModChain(bits,
+                        c,
+                        /*willBeBootstrappable=*/true,
+                        /*t=*/skHwt);
 
   if (!helib_test::noPrint) {
     std::cout << "security=" << context.securityLevel() << std::endl;
-    std::cout << "# small primes = " << context.smallPrimes.card() << std::endl;
-    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << std::endl;
+    std::cout << "# small primes = " << context.getSmallPrimes().card()
+              << std::endl;
+    std::cout << "# ctxt primes = " << context.getCtxtPrimes().card()
+              << std::endl;
     std::cout << "# bits in ctxt primes = "
-              << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) + 0.5)
-              << std::endl;
-    std::cout << "# special primes = " << context.specialPrimes.card()
-              << std::endl;
-    std::cout << "# bits in special primes = "
-              << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+              << long(context.logOfProduct(context.getCtxtPrimes()) / log(2.0) +
                       0.5)
               << std::endl;
-    std::cout << "scale=" << context.scale << std::endl;
+    std::cout << "# special primes = " << context.getSpecialPrimes().card()
+              << std::endl;
+    std::cout << "# bits in special primes = "
+              << long(context.logOfProduct(context.getSpecialPrimes()) /
+                          log(2.0) +
+                      0.5)
+              << std::endl;
+    std::cout << "scale=" << context.getScale() << std::endl;
   }
 
   context.enableBootStrapping(mvec, useCache);
@@ -282,15 +283,16 @@ TEST_P(GTestFatboot, correctlyPerformsFatboot)
 
   if (!helib_test::noPrint) {
     std::cout << " done in " << time << " seconds" << std::endl;
-    std::cout << "  e=" << context.rcData.e << ", e'=" << context.rcData.ePrime
-              << ", t=" << context.rcData.skHwt << std::endl
+    std::cout << "  e=" << context.getRcData().e
+              << ", e'=" << context.getRcData().ePrime
+              << ", t=" << context.getRcData().skHwt << "\n"
               << "  ";
-    context.zMStar.printout();
+    context.printout();
   }
   helib::setDryRun(
       helib_test::dry); // Now we can set the dry-run flag if desired
 
-  long p2r = context.alMod.getPPowR();
+  long p2r = context.getAlMod().getPPowR();
 
   for (long numkey = 0; numkey < outer_rep; numkey++) { // test with 3 keys
 
@@ -311,14 +313,14 @@ TEST_P(GTestFatboot, correctlyPerformsFatboot)
       std::cout << " done in " << time << " seconds\n";
 
     NTL::zz_p::init(p2r);
-    NTL::zz_pX poly_p = NTL::random_zz_pX(context.zMStar.getPhiM());
+    NTL::zz_pX poly_p = NTL::random_zz_pX(context.getPhiM());
     helib::zzX poly_p1 = helib::balanced_zzX(poly_p);
     NTL::ZZX ptxt_poly = helib::convert<NTL::ZZX>(poly_p1);
     NTL::ZZX ptxt_poly1;
     helib::PolyRed(ptxt_poly1, ptxt_poly, p2r, true);
     // this is the format produced by decryption
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
 
     NTL::ZZX poly2;
     helib::Ctxt c1(publicKey);

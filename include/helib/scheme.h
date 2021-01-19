@@ -32,6 +32,11 @@ struct CKKS
    * @brief Slot type used for CKKS plaintexts: `std::complex<double>`.
    **/
   using SlotType = std::complex<double>;
+
+  /**
+   * @brief Scheme label to be added to JSON serialization.
+   */
+  static constexpr std::string_view schemeName = "CKKS";
 };
 
 /**
@@ -44,6 +49,11 @@ struct BGV
    * polynomial modulo p^r and G.
    **/
   using SlotType = PolyMod;
+
+  /**
+   * @brief Scheme label to be added to JSON serialization.
+   */
+  static constexpr std::string_view schemeName = "BGV";
 };
 
 } // namespace helib

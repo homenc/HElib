@@ -80,10 +80,16 @@ protected:
       isMonic(GetParam().isMonic),
       m(GetParam().m),
       k(GetParam().k),
-      context((helib::setDryRun(helib_test::dry), m), p, r),
-      p2r(context.alMod.getPPowR()),
-      ea(std::make_shared<helib::EncryptedArray>(
-          (helib::buildModChain(context, L, /*c=*/3), context))),
+      context((helib::setDryRun(helib_test::dry),
+               helib::ContextBuilder<helib::BGV>()
+                   .m(m)
+                   .p(p)
+                   .r(r)
+                   .bits(L)
+                   .c(3)
+                   .build())),
+      p2r(context.getAlMod().getPPowR()),
+      ea(std::make_shared<helib::EncryptedArray>(context)),
       secretKey(context),
       publicKey((secretKey.GenSecKey(), secretKey))
       //  addSome1DMatrices(secretKey); // compute key-switching matrices

@@ -76,7 +76,7 @@ protected:
   {
     long ll = NTL::NextPowerOfTwo(p);
     return 30 * (r * ll * 3 + 2);
-  };
+  }
 
   GTestExtractDigits() :
       p(GetParam().p),
@@ -86,8 +86,14 @@ protected:
             : p + 1), // FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
       p2r(NTL::power_long(p, r)),
       L(calculateLevels(r, p)),
-      context(m, p, r),
-      secretKey((helib::buildModChain(context, L, /*c=*/4), context)),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(r)
+                  .bits(L)
+                  .c(4)
+                  .build()),
+      secretKey(context),
       publicKey(secretKey)
   {}
 
@@ -107,8 +113,8 @@ protected:
     // On legacy test is debug, but used verbose for consistency with other
     // tests
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
-  };
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
+  }
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };

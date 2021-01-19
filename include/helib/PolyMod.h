@@ -16,7 +16,9 @@
 #include <NTL/ZZX.h>
 #include <vector>
 #include <memory>
+
 #include <helib/PolyModRing.h>
+#include <helib/JsonWrapper.h>
 
 /**
  * @file PolyMod.h
@@ -375,45 +377,113 @@ public:
   PolyMod& operator-=(const NTL::ZZX& otherPoly);
 
   /**
+   * @brief Serialize `this` `PolyMod` to the output stream `os`.
+   * @param os Output `std::ostream`.
+   * @note p2r and G are not serialized, see note of `deserialize`.
+   *
+   * The output stream will be formatted as a JSON list.\n
+   * Each coefficient of `poly` will be serialized in an element of such list.\n
+   * For example if we have a `PolyMod` object `poly` such that `poly[0]=coef0`,
+   * `poly[1]=coef1`, `poly[2]=coef2`, and `poly[i]=0` for `i>2`, it will be
+   * serialized as '['coef0', 'coef1', 'coef2']'.
+   **/
+  void writeToJSON(std::ostream& os) const;
+
+  /**
+   * @brief Serialize `this` `PolyMod` to the `JsonWrapper` object.
+   * @return The `JsonWrapper` containing the serialized `PolyMod`.
+   * @note p2r and G are not serialized, see note of `deserialize`.
+   *
+   * The output will be a JSON list.\n
+   * Each coefficient of `poly` will be serialized in an element of such list.\n
+   * For example if we have a `PolyMod` object `poly` such that `poly[0]=coef0`,
+   * `poly[1]=coef1`, `poly[2]=coef2`, and `poly[i]=0` for `i>2`, it will be
+   * serialized as '['coef0', 'coef1', 'coef2']'.
+   **/
+  JsonWrapper writeToJSON() const;
+
+  /**
    * @brief Deserialize a `PolyMod` object from the input stream `is`.
    * @param is Input `std::istream`.
-   * @param poly Destination `PolyMod` object.
-   * @throws IOError if the stream is badly formatted (i.e. it is not delimited
-   * by '[' and ']').
-   * @note `poly` must be constructed with an appropriate p2r and G @b BEFORE
-   * calling this function. For example,
+   * @param ringDescriptor Descriptor object for the plaintext ring.
+   * @return The deserialized `PolyMod` object.
+   * @throws IOError if the stream is not a valid JSON.
    * @code
-   * PolyMod my_poly(p2r, G);
-   * deserialize(std::cin, my_poly);
+   * PolyMod my_poly = PolyMod::readFromJSON(std::cin, context);
    * @endcode
    *
-   * The input stream has to be formatted as a comma-separated list surrounded
-   * by '[' and ']'.\n
+   * The input stream has to be formatted as a JSON list.\n
    * Each element of the list will be deserialized as a coefficient of the
    * polynomial.\n
    * For example '['coef0', 'coef1', 'coef2']' will be deserialized as a
    * `PolyMod` object `poly` where `poly[0]=coef0`, `poly[1]=coef1`,
    * `poly[2]=coef2` and `poly[i]=0` for `i>2`.
    **/
-  friend void deserialize(std::istream& is, PolyMod& poly);
+  static PolyMod readFromJSON(
+      std::istream& is,
+      const std::shared_ptr<PolyModRing>& ringDescriptor);
 
   /**
-   * @brief Serialize a `PolyMod` to the output stream `os`.
-   * @param os Output `std::ostream`.
-   * @param poly `PolyMod` object to be written.
-   * @return Input `std::ostream` post writing.
-   * @note p2r and G are not serialized, see note of `deserialize`.
+   * @brief Deserialize a `PolyMod` object from the `JsonWrapper` `jw`.
+   * @param jw Input `JsonWrapper`.
+   * @param ringDescriptor Descriptor object for the plaintext ring.
+   * @return The deserialized `PolyMod` object.
+   * @code
+   * PolyMod my_poly = PolyMod::readFromJSON(..., context);
+   * @endcode
    *
-   * The output stream will be formatted as a comma-separated list surrounded by
-   * '[' and ']'.\n
-   * Each coefficient of `poly` will be serialized in an element of such list by
-   * the `>>` operator.\n
-   * For example if we have a `PolyMod` object `poly` such that `poly[0]=coef0`,
-   * `poly[1]=coef1`, `poly[2]=coef2`, and `poly[i]=0` for `i>2`, it will be
-   * serialized as '['coef0', 'coef1', 'coef2']'.
+   * The input stream has to be a JSON list.\n
+   * Each element of the list will be deserialized as a coefficient of the
+   * polynomial.\n
+   * For example '['coef0', 'coef1', 'coef2']' will be deserialized as a
+   * `PolyMod` object `poly` where `poly[0]=coef0`, `poly[1]=coef1`,
+   * `poly[2]=coef2` and `poly[i]=0` for `i>2`.
    **/
-  friend void serialize(std::ostream& os, const PolyMod& slot);
+  static PolyMod readFromJSON(
+      const JsonWrapper& jw,
+      const std::shared_ptr<PolyModRing>& ringDescriptor);
 
+  /**
+   * @brief In-place deserialize a `PolyMod` object from the input stream `is`.
+   * @param is Input `std::istream`.
+   * @throws IOError if the stream is not a valid JSON.
+   * @note `poly` must be constructed with an appropriate p2r and G @b BEFORE
+   * calling this function. For example,
+   * @code
+   * PolyMod my_poly(p2r, G);
+   * my_poly.readJSON(std::cin);
+   * @endcode
+   *
+   * The input stream has to be formatted as a JSON list.\n
+   * Each element of the list will be deserialized as a coefficient of the
+   * polynomial.\n
+   * For example '['coef0', 'coef1', 'coef2']' will be deserialized as a
+   * `PolyMod` object `poly` where `poly[0]=coef0`, `poly[1]=coef1`,
+   * `poly[2]=coef2` and `poly[i]=0` for `i>2`.
+   **/
+  void readJSON(std::istream& is);
+
+  /**
+   * @brief In-place deserialize a `PolyMod` object from the from the
+   * `JsonWrapper` `jw`.
+   * @param jw Input `JsonWrapper`.
+   * @note `poly` must be constructed with an appropriate p2r and G @b BEFORE
+   * calling this function. For example,
+   * @code
+   * PolyMod my_poly(p2r, G);
+   * my_poly.readJSON(...);
+   * @endcode
+   *
+   * The input stream has to a JSON list.\n
+   * Each element of the list will be deserialized as a coefficient of the
+   * polynomial.\n
+   * For example '['coef0', 'coef1', 'coef2']' will be deserialized as a
+   *`PolyMod` object `poly` where `poly[0]=coef0`, `poly[1]=coef1`,
+   *`poly[2]=coef2` and `poly[i]=0` for `i>2`.
+   **/
+  void readJSON(const JsonWrapper& jw);
+
+  // TODO: serialization 2.0: fix the following comment
   /**
    * @brief Input shift operator.
    * @param is Input `std::istream`.
@@ -438,6 +508,7 @@ public:
    **/
   friend std::istream& operator>>(std::istream& is, PolyMod& poly);
 
+  // TODO: serialization 2.0: fix the following comment
   /**
    * @brief Output shift operator.
    * @param os Output `std::ostream`.

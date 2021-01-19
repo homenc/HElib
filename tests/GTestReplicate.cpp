@@ -60,7 +60,7 @@ protected:
   static void printContextAndG(const helib::Context& context, const NTL::ZZX& G)
   {
     if (!helib_test::noPrint) {
-      context.zMStar.printout();
+      context.printout();
       std::cout << std::endl;
       std::cout << "G = " << G << "\n";
     }
@@ -68,7 +68,7 @@ protected:
 
   static NTL::ZZX createG(const helib::Context& context, long p, long d)
   {
-    return (d == 0) ? context.alMod.getFactorsOverZZ()[0]
+    return (d == 0) ? context.getAlMod().getFactorsOverZZ()[0]
                     : helib::makeIrredPoly(p, d);
   };
 
@@ -80,10 +80,16 @@ protected:
       L(GetParam().L),
       bnd(GetParam().bnd),
       B(GetParam().B),
-      context((helib::setDryRun(helib_test::dry), helib::setTimersOn(), m),
-              p,
-              r),
-      secretKey((buildModChain(context, L, /*c=*/2), context)),
+      context((helib::setDryRun(helib_test::dry),
+               helib::setTimersOn(),
+               helib::ContextBuilder<helib::BGV>()
+                   .m(m)
+                   .p(p)
+                   .r(r)
+                   .bits(L)
+                   .c(2)
+                   .build())),
+      secretKey(context),
       G(createG(context, p, d)),
       publicKey((printContextAndG(context, G),
                  secretKey.GenSecKey(), // A +-1/0 secret key
@@ -104,7 +110,7 @@ protected:
     ea.encode(poly_xp1, xp1);
     xc1 = xc0;
 
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   };
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }

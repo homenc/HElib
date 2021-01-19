@@ -173,7 +173,7 @@ protected:
   {
     if (helib_test::verbose) {
       std::cout << " done.\n";
-      context.zMStar.printout();
+      context.printout();
       std::cout << " L=" << L << std::endl;
     };
   }
@@ -182,11 +182,11 @@ protected:
   helib::Context& prepareContext(helib::Context& context)
   {
     printPreContextPrepDiagnostics(bitSize, outSize, nTests, nthreads);
-    helib::buildModChain(context, L, c, /*willBeBootstrappable*/ bootstrap);
+    context.buildModChain(L, c, /*willBeBootstrappable*/ bootstrap);
     if (bootstrap) {
       context.enableBootStrapping(mvec);
     }
-    helib::buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
+    helib::buildUnpackSlotEncoding(unpackSlotEncoding, context.getEA());
     printPostContextPrepDiagnostics(context, L);
     return context;
   };
@@ -233,7 +233,14 @@ protected:
       ords(calculateOrds(vals)),
       c(vals[14]),
       L(calculateLevels(bootstrap, bitSize)),
-      context(m, p, /*r=*/1, gens, ords),
+      context(helib::ContextBuilder<helib::BGV>()
+                  .m(m)
+                  .p(p)
+                  .r(1)
+                  .gens(gens)
+                  .ords(ords)
+                  .buildModChain(false)
+                  .build()),
       secretKey(prepareContext(context))
   {
     prepareSecKey(secretKey, bootstrap);
@@ -261,7 +268,7 @@ protected:
   void SetUp() override
   {
     helib::activeContext = &context; // make things a little easier sometimes
-    helib::setupDebugGlobals(&secretKey, context.ea);
+    helib::setupDebugGlobals(&secretKey, context.shareEA());
   };
 
   virtual void TearDown() override
@@ -295,7 +302,7 @@ TEST_P(GTestTableLookup, lookupFunctionsCorrectly)
       outSize,
       /*scale_out=*/1 - outSize,
       /*sign_out=*/0,
-      *(secretKey.getContext().ea));
+      secretKey.getContext().getEA());
 
   ASSERT_EQ(helib::lsize(T), 1L << bitSize);
   for (long i = 0; i < helib::lsize(T); i++) {

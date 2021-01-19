@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 IBM Corp.
+/* Copyright (C) 2020-2021 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -13,6 +13,8 @@
 #ifndef HELIB_LOG_H
 #define HELIB_LOG_H
 
+#include <iomanip>
+#include <ctime>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -93,12 +95,25 @@ public:
 extern Logger helog;
 
 /**
+ * @brief Return a time stamp for now.
+ * @return A `const std::string` with format `[ HH:mm:ss ]`.
+ **/
+inline const std::string timestamp()
+{
+  auto t = std::time(nullptr);
+  auto now = *std::localtime(&t);
+  std::ostringstream oss;
+  oss << std::put_time(&now, "[ %T ]");
+  return oss.str();
+}
+
+/**
  * @brief Function for logging a warning message.
  * @param msg The warning message.
  **/
 inline void Warning(const char* msg)
 {
-  *helog.logStream_p << "WARNING: " << msg << std::endl;
+  *helog.logStream_p << timestamp() << " WARNING: " << msg << std::endl;
 }
 
 /**

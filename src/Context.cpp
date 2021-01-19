@@ -12,15 +12,155 @@
 #include <cstring>
 #include <algorithm>
 #include <optional>
+
+#include <json.hpp>
+using json = ::nlohmann::json;
+
 #include <helib/Context.h>
 #include <helib/EvalMap.h>
 #include <helib/powerful.h>
-#include <helib/binio.h>
 #include <helib/sample.h>
 #include <helib/EncryptedArray.h>
 #include <helib/PolyModRing.h>
+#include <helib/fhe_stats.h>
+
+#include "binio.h"
+#include "io.h"
 
 namespace helib {
+
+double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
+{
+  if (hwt < 0 || (hwt > 0 && hwt < MIN_SK_HWT)) {
+    return 0;
+  }
+
+  // clang-format off
+  constexpr double hwgts[] =
+      {120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450};
+  constexpr double slopes[] =
+      {2.4, 2.67, 2.83, 3.0, 3.1, 3.3, 3.3, 3.35, 3.4, 3.45, 3.5, 3.55};
+  constexpr double cnstrms[] =
+      {19, 13, 10, 6, 3, 1, -3, -4, -5, -7, -10, -12};
+  // clang-format on
+
+  constexpr size_t numWghts = sizeof(hwgts) / sizeof(hwgts[0]);
+
+  const size_t idx = (hwt - 120) / 30; // index into the array above
+  double slope = 0, consterm = 0;
+  if (hwt == 0) { // dense keys
+    slope = 3.8;
+    consterm = -20;
+  } else if (idx < numWghts - 1) {
+    // estimate prms on a line from prms[i] to prms[i+1]
+    // how far into this interval
+    double a = double(hwt - hwgts[idx]) / (hwgts[idx + 1] - hwgts[idx]);
+    slope = slopes[idx] + a * (slopes[idx + 1] - slopes[idx]);
+    consterm = cnstrms[idx] + a * (cnstrms[idx + 1] - cnstrms[idx]);
+  } else {
+    // Use the params corresponding to largest weight (450 above)
+    slope = slopes[numWghts - 1];
+    consterm = cnstrms[numWghts - 1];
+  }
+
+  double x = n / log2AlphaInv;
+  double ret = slope * x + consterm;
+
+  return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
+}
+
+// You initialize a PrimeGenerator as follows:
+//    PrimeGenerator gen(len, m);
+// Each call to gen.next() generates a prime p with
+// (1-1/2^B)*2^len <= p < 2^len and p = 2^k*t*m + 1,
+// where t is odd and k is as large as possible
+// and B is a small constant (typically, B in {2,3,4}).
+// If no such prime is found, then an error is raised.
+
+struct PrimeGenerator
+{
+  const static long B = 3;
+  long len, m;
+  long k, t;
+
+  PrimeGenerator(long _len, long _m) : len(_len), m(_m)
+  {
+    assertInRange<InvalidArgument>(len,
+                                   long(B),
+                                   static_cast<long>(NTL_SP_NBITS),
+                                   "PrimeGenerator: len is not "
+                                   "in [B, NTL_SP_NBITS]",
+                                   true);
+    assertInRange<InvalidArgument>(m,
+                                   1l,
+                                   static_cast<long>(NTL_SP_BOUND),
+                                   "PrimeGenerator: m is "
+                                   "not in [1, NTL_SP_BOUND)");
+
+    // compute k as smallest non-negative integer such that
+    // 2^{len-B} < 2^k*m
+    k = 0;
+    while ((m << k) <= (1L << (len - B)))
+      k++;
+
+    t = divc((1L << len) - 1, m << k);
+    // this ensures the fist call to next will trigger a new k-value
+  }
+
+  long next()
+  {
+    // we consider all odd t in the interval
+    // [ (1-1/2^B)*2^len-1)/(2^k*m), (2^len-1)/(2^k*m) ).
+    // For k satisfying 2^{len-B} >= 2^k*m, this interval is
+    // contains at least one integer.
+    // It is equivalent to consider the interval
+    // of integers [tlb, tub), where tlb = ceil(((1-1/2^B)*2^len-1)/(2^k*m))
+    // and tub = ceil((2^len-1)/(2^k*m)).
+
+    long tub = divc((1L << len) - 1, m << k);
+
+    for (;;) {
+
+      t++;
+
+      if (t >= tub) {
+        // move to smaller value of k, reset t and tub
+
+        k--;
+
+        long klb;
+        if (m % 2 == 0)
+          klb = 0;
+        else
+          klb = 1;
+
+        // we run k down to 0  if m is even, and down to 1
+        // if m is odd.
+
+        if (k < klb)
+          throw RuntimeError("Prime generator ran out of primes");
+
+        t = divc((1L << len) - (1L << (len - B)) - 1, m << k);
+        tub = divc((1L << len) - 1, m << k);
+      }
+
+      if (t % 2 == 0)
+        continue; // we only want to consider odd t
+
+      long cand = ((t * m) << k) + 1; // = 2^k*t*m + 1
+
+      // double check that cand is in the prescribed interval
+      assertInRange(cand,
+                    (1L << len) - (1L << (len - B)),
+                    1L << len,
+                    "Candidate cand is not in the prescribed interval");
+
+      if (NTL::ProbPrime(cand, 60))
+        return cand;
+      // iteration count == 60 implies 2^{-120} error probability
+    }
+  }
+};
 
 // Useful params objects (POD) to simplify calls between ContextBuilder and
 // Context.
@@ -32,6 +172,8 @@ struct Context::ModChainParams
   long skHwt;
   long resolution;
   long bitsInSpecialPrimes;
+  double stdev;
+  double scale;
 };
 
 struct Context::BootStrapParams
@@ -39,6 +181,27 @@ struct Context::BootStrapParams
   NTL::Vec<long> mvec;
   bool buildCacheFlag;
   bool thickFlag;
+};
+
+struct Context::SerializableContent
+{
+  long p;
+  long r;
+  long m;
+  std::vector<long> gens;
+  std::vector<long> ords;
+  NTL::xdouble stdev;
+  double scale;
+  IndexSet smallPrimes;
+  IndexSet specialPrimes;
+  std::vector<long> qs;
+  std::vector<IndexSet> digits;
+  long hwt_param;
+  long e_param;
+  long ePrime_param;
+  NTL::Vec<long> mvec;
+  bool build_cache;
+  bool alsoThick;
 };
 
 long FindM(long k,
@@ -234,7 +397,7 @@ bool Context::operator==(const Context& other) const
     if (digits[i] != other.digits[i])
       return false;
 
-  if (stdev != other.stdev)
+  if (stdev != other.getStdev())
     return false;
 
   if (scale != other.scale)
@@ -249,338 +412,259 @@ bool Context::operator==(const Context& other) const
   return true;
 }
 
-void writeContextBaseBinary(std::ostream& str, const Context& context)
+void Context::writeTo(std::ostream& str) const
 {
-  writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
+  SerializeHeader<Context>().writeTo(str);
 
-  write_raw_int(str, context.zMStar.getP());
-  write_raw_int(str, context.alMod.getR());
-  write_raw_int(str, context.zMStar.getM());
+  writeEyeCatcher(str, EyeCatcher::CONTEXT_BEGIN);
 
-  write_raw_int(str, context.zMStar.numOfGens());
+  write_raw_int(str, this->zMStar.getP());
+  write_raw_int(str, this->alMod.getR());
+  write_raw_int(str, this->zMStar.getM());
+
+  write_raw_int(str, this->zMStar.numOfGens());
 
   // There aren't simple getters to get the gens and ords vectors
-  for (long i = 0; i < context.zMStar.numOfGens(); i++) {
-    write_raw_int(str, context.zMStar.ZmStarGen(i));
+  for (long i = 0; i < this->zMStar.numOfGens(); i++) {
+    write_raw_int(str, this->zMStar.ZmStarGen(i));
   }
 
-  write_raw_int(str, context.zMStar.numOfGens());
+  write_raw_int(str, this->zMStar.numOfGens());
 
   // Copying the way it is done in ASCII IO.
   // Bad dimensions are represented as a negated ord
-  for (long i = 0; i < context.zMStar.numOfGens(); i++) {
-    if (context.zMStar.SameOrd(i))
-      write_raw_int(str, context.zMStar.OrderOf(i));
+  for (long i = 0; i < this->zMStar.numOfGens(); i++) {
+    if (this->zMStar.SameOrd(i))
+      write_raw_int(str, this->zMStar.OrderOf(i));
     else
-      write_raw_int(str, -context.zMStar.OrderOf(i));
+      write_raw_int(str, -this->zMStar.OrderOf(i));
   }
 
-  writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
+  // standard-deviation
+  write_raw_xdouble(str, this->stdev);
+
+  // scale
+  write_raw_double(str, this->scale);
+
+  // the "small" index
+  this->smallPrimes.writeTo(str);
+
+  // the "special" index
+  this->specialPrimes.writeTo(str);
+
+  // output the primes in the chain
+  write_raw_int(str, this->moduli.size());
+
+  for (const auto& modulo : this->moduli) {
+    write_raw_int(str, modulo.getQ());
+  }
+
+  // output the digits
+  write_raw_int(str, this->digits.size());
+
+  for (const auto& digit : this->digits) {
+    digit.writeTo(str);
+  }
+
+  write_raw_int(str, this->hwt_param);
+  write_raw_int(str, this->e_param);
+  write_raw_int(str, this->ePrime_param);
+
+  write_ntl_vec_long(str, this->rcData.mvec);
+  write_raw_int(str, static_cast<long>(this->rcData.build_cache));
+  write_raw_int(str, static_cast<long>(this->rcData.alsoThick));
+
+  writeEyeCatcher(str, EyeCatcher::CONTEXT_END);
 }
 
-void readContextBaseBinary(std::istream& str,
-                           unsigned long& m,
-                           unsigned long& p,
-                           unsigned long& r,
-                           std::vector<long>& gens,
-                           std::vector<long>& ords)
+Context::SerializableContent Context::readParamsFrom(std::istream& str)
 {
-  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
-  assertEq(eyeCatcherFound, 0, "Could not find pre-context-base eye catcher");
+  const auto header = SerializeHeader<Context>::readFrom(str);
+  assertEq<IOError>(header.version,
+                    Binio::VERSION_0_0_1_0,
+                    "Header: version " + header.versionString() +
+                        " not supported");
 
-  p = read_raw_int(str);
-  r = read_raw_int(str);
-  m = read_raw_int(str);
+  bool eyeCatcherFound = readEyeCatcher(str, EyeCatcher::CONTEXT_BEGIN);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find pre-context eye catcher");
+
+  Context::SerializableContent context_params;
+  context_params.p = read_raw_int(str);
+  context_params.r = read_raw_int(str);
+  context_params.m = read_raw_int(str);
 
   // Number of gens and ords saved in front of vectors
-  read_raw_vector(str, gens);
-  read_raw_vector(str, ords);
-
-  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
-  assertEq(eyeCatcherFound, 0, "Could not find post-context-base eye catcher");
-}
-
-std::unique_ptr<Context> buildContextFromBinary(std::istream& str)
-{
-  unsigned long m, p, r;
-  std::vector<long> gens, ords;
-  readContextBaseBinary(str, m, p, r, gens, ords);
-  return std::unique_ptr<Context>(new Context(m, p, r, gens, ords));
-}
-
-void writeContextBinary(std::ostream& str, const Context& context)
-{
-
-  writeEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
-
-  // standard-deviation
-  write_raw_xdouble(str, context.stdev);
-
-  // scale
-  write_raw_double(str, context.scale);
-
-  // the "small" index
-  write_raw_int(str, context.smallPrimes.card());
-  for (long tmp : context.smallPrimes) {
-    write_raw_int(str, tmp);
-  }
-
-  // the "special" index
-  write_raw_int(str, context.specialPrimes.card());
-  for (long tmp : context.specialPrimes) {
-    write_raw_int(str, tmp);
-  }
-
-  // output the primes in the chain
-  write_raw_int(str, context.moduli.size());
-
-  for (long i = 0; i < (long)context.moduli.size(); i++) {
-    write_raw_int(str, context.moduli[i].getQ());
-  }
-
-  // output the digits
-  write_raw_int(str, context.digits.size());
-
-  for (long i = 0; i < (long)context.digits.size(); i++) {
-    write_raw_int(str, context.digits[i].card());
-    for (long tmp : context.digits[i]) {
-      write_raw_int(str, tmp);
-    }
-  }
-
-  write_raw_int(str, context.hwt_param);
-  write_raw_int(str, context.e_param);
-  write_raw_int(str, context.ePrime_param);
-
-  write_ntl_vec_long(str, context.rcData.mvec);
-
-  writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
-}
-
-void readContextBinary(std::istream& str, Context& context)
-{
-  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
-  assertEq(eyeCatcherFound, 0, "Could not find pre-context eye catcher");
+  read_raw_vector(str, context_params.gens);
+  read_raw_vector(str, context_params.ords);
 
   // Get the standard deviation
-  context.stdev = read_raw_xdouble(str);
+  context_params.stdev = read_raw_xdouble(str);
 
   // Get the scale
-  context.scale = read_raw_double(str);
+  context_params.scale = read_raw_double(str);
 
-  IndexSet smallPrimes;
-  long smallPrimes_sz = read_raw_int(str);
-  for (long tmp, i = 0; i < smallPrimes_sz; i++) {
-    tmp = read_raw_int(str);
-    smallPrimes.insert(tmp);
-  }
+  context_params.smallPrimes = IndexSet::readFrom(str);
+  context_params.specialPrimes = IndexSet::readFrom(str);
 
-  IndexSet specialPrimes;
-  long specialPrimes_sz = read_raw_int(str);
-  for (long tmp, i = 0; i < specialPrimes_sz; i++) {
-    tmp = read_raw_int(str);
-    specialPrimes.insert(tmp);
-  }
-
-  context.moduli.clear();
-  context.smallPrimes.clear();
-  context.specialPrimes.clear();
-  context.ctxtPrimes.clear();
-
-  long nPrimes = read_raw_int(str);
-
-  for (long p, i = 0; i < nPrimes; i++) {
-    p = read_raw_int(str);
-
-    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
-
-    if (smallPrimes.contains(i))
-      context.smallPrimes.insert(i); // small prime
-    else if (specialPrimes.contains(i))
-      context.specialPrimes.insert(i); // special prime
-    else
-      context.ctxtPrimes.insert(i); // ciphertext prime
-  }
+  read_raw_vector<long>(str, context_params.qs);
 
   long nDigits = read_raw_int(str);
+  context_params.digits.reserve(nDigits);
 
-  context.digits.resize(nDigits);
-  for (long i = 0; i < (long)context.digits.size(); i++) {
-    long sizeOfS = read_raw_int(str);
+  for (long i = 0; i < (long)nDigits; i++) {
+    context_params.digits.emplace_back(IndexSet::readFrom(str));
+  }
+  context_params.hwt_param = read_raw_int(str);
+  context_params.e_param = read_raw_int(str);
+  context_params.ePrime_param = read_raw_int(str);
 
-    for (long tmp, n = 0; n < sizeOfS; n++) {
-      tmp = read_raw_int(str);
-      context.digits[i].insert(tmp);
+  // Read in the partition of m into co-prime factors (if bootstrappable)
+  read_ntl_vec_long(str, context_params.mvec);
+
+  context_params.build_cache = read_raw_int(str);
+  context_params.alsoThick = read_raw_int(str);
+
+  eyeCatcherFound = readEyeCatcher(str, EyeCatcher::CONTEXT_END);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find post-context eye catcher");
+
+  return context_params;
+}
+
+Context Context::readFrom(std::istream& str)
+{
+  return Context(readParamsFrom(str));
+}
+
+Context* Context::readPtrFrom(std::istream& str)
+{
+  return new Context(readParamsFrom(str));
+}
+
+Context::SerializableContent Context::readParamsFromJSON(
+    const JsonWrapper& jwrap)
+{
+  auto body = [&]() {
+    const json j = fromTypedJson<Context>(unwrap(jwrap));
+
+    Context::SerializableContent content;
+
+    // This way stops ordering inconsistencies
+    content.m = j.at("m");
+    content.p = j.at("p");
+    content.r = j.at("r");
+    content.gens = j.at("gens").get<std::vector<long>>();
+    content.ords = j.at("ords").get<std::vector<long>>();
+    content.stdev = j.at("stdev").get<NTL::xdouble>();
+    content.scale = j.at("scale");
+    content.smallPrimes = IndexSet::readFromJSON(wrap(j.at("smallPrimes")));
+    content.specialPrimes = IndexSet::readFromJSON(wrap(j.at("specialPrimes")));
+    content.qs = j.at("qs").get<std::vector<long>>();
+    content.digits = readVectorFromJSON<IndexSet>(j.at("digits"));
+    content.hwt_param = j.at("hwt_param");
+    content.e_param = j.at("e_param");
+    content.ePrime_param = j.at("ePrime_param");
+    content.mvec = j.at("mvec");
+    content.build_cache = j.at("build_cache");
+    content.alsoThick = j.at("alsoThick");
+
+    return content;
+  };
+
+  return executeRedirectJsonError<Context::SerializableContent>(body);
+}
+
+Context Context::readFromJSON(std::istream& is)
+{
+  return executeRedirectJsonError<Context>([&]() {
+    json j;
+    is >> j;
+    return Context::readFromJSON(wrap(j));
+  });
+}
+
+Context Context::readFromJSON(const JsonWrapper& jw)
+{
+  return Context(readParamsFromJSON(jw));
+}
+
+Context* Context::readPtrFromJSON(std::istream& is)
+{
+  return executeRedirectJsonError<Context*>([&]() {
+    json j;
+    is >> j;
+    return new Context(readParamsFromJSON(wrap(j)));
+  });
+}
+
+JsonWrapper Context::writeToJSON() const
+{
+  std::function<JsonWrapper()> body = [this]() {
+    std::vector<long> gens(this->zMStar.numOfGens());
+    // There aren't simple getters to get the gens and ords vectors
+    for (long i = 0; i < this->zMStar.numOfGens(); i++) {
+      gens[i] = this->zMStar.ZmStarGen(i);
     }
-  }
-  context.hwt_param = read_raw_int(str);
-  context.e_param = read_raw_int(str);
-  context.ePrime_param = read_raw_int(str);
 
-  endBuildModChain(context);
+    std::vector<long> ords(this->zMStar.numOfGens());
+    // Bad dimensions are represented as a negated ord
+    for (long i = 0; i < this->zMStar.numOfGens(); i++) {
+      if (this->zMStar.SameOrd(i))
+        ords[i] = this->zMStar.OrderOf(i);
+      else
+        ords[i] = -this->zMStar.OrderOf(i);
+    }
 
-  // Read in the partition of m into co-prime factors (if bootstrappable)
-  NTL::Vec<long> mv;
-  read_ntl_vec_long(str, mv);
+    // output the primes in the chain
+    std::vector<long> qs;
+    qs.reserve(this->moduli.size());
+    for (const auto& modulo : this->moduli) {
+      qs.emplace_back(modulo.getQ());
+    }
 
-  if (mv.length() > 0) {
-    context.enableBootStrapping(mv);
-    // VJS-FIXME: what about the build_cache and alsoThick params?
-  }
+    // m
+    // p
+    // r
+    // gens
+    // ords
+    // stdev
+    // scale
+    json j = {{"m", this->zMStar.getM()},
+              {"p", this->zMStar.getP()},
+              {"r", this->alMod.getR()},
+              {"gens", gens},
+              {"ords", ords},
+              {"stdev", this->stdev},
+              {"scale", this->scale},
+              {"smallPrimes", unwrap(this->smallPrimes.writeToJSON())},
+              {"specialPrimes", unwrap(this->specialPrimes.writeToJSON())},
+              {"qs", qs},
+              {"digits", writeVectorToJSON(this->digits)},
+              {"hwt_param", this->hwt_param},
+              {"e_param", this->e_param},
+              {"ePrime_param", this->ePrime_param},
+              {"mvec", this->rcData.mvec},
+              {"build_cache", this->rcData.build_cache},
+              {"alsoThick", this->rcData.alsoThick}};
+    return wrap(toTypedJson<Context>(j));
+  };
 
-  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
-  assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
+  return executeRedirectJsonError<JsonWrapper>(body);
+} // namespace helib
+
+void Context::writeToJSON(std::ostream& os) const
+{
+  // We need to wrap as this->writeToJSON() returns a JsonWrapper, so os << js
+  // may throw a json-related exception
+  return executeRedirectJsonError<void>(
+      [&, this]() { os << this->writeToJSON(); });
 }
 
-void writeContextBase(std::ostream& str, const Context& context)
+std::ostream& operator<<(std::ostream& os, const Context& context)
 {
-  str << "[" << context.zMStar.getM() << " " << context.zMStar.getP() << " "
-      << context.alMod.getR() << " [";
-  for (long i = 0; i < (long)context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.ZmStarGen(i)
-        << ((i == (long)context.zMStar.numOfGens() - 1) ? "]" : " ");
-  }
-  str << " [";
-  for (long i = 0; i < (long)context.zMStar.numOfGens(); i++) {
-    long ord = context.zMStar.OrderOf(i);
-    if (context.zMStar.SameOrd(i))
-      str << ord;
-    else
-      str << (-ord);
-    if (i < (long)context.zMStar.numOfGens() - 1)
-      str << ' ';
-  }
-  str << "]]";
-}
-
-std::ostream& operator<<(std::ostream& str, const Context& context)
-{
-  str << "[\n";
-
-  // standard-deviation
-  str << context.stdev << "\n";
-
-  // scale
-  str << context.scale << "\n";
-
-  // the "small" index
-  str << context.smallPrimes << "\n ";
-
-  // the "special" index
-  str << context.specialPrimes << "\n ";
-
-  // output the primes in the chain
-  str << context.moduli.size() << "\n";
-  for (long i = 0; i < (long)context.moduli.size(); i++)
-    str << context.moduli[i].getQ() << " ";
-  str << "\n ";
-
-  // output the digits
-  str << context.digits.size() << "\n";
-  for (long i = 0; i < (long)context.digits.size(); i++)
-    str << context.digits[i] << " ";
-
-  str << "\n";
-
-  str << context.hwt_param << " ";
-  str << context.e_param << " ";
-  str << context.ePrime_param << "\n";
-
-  str << context.rcData.mvec;
-  str << " " << context.rcData.build_cache;
-
-  str << "]\n";
-
-  return str;
-}
-
-void readContextBase(std::istream& str,
-                     unsigned long& m,
-                     unsigned long& p,
-                     unsigned long& r,
-                     std::vector<long>& gens,
-                     std::vector<long>& ords)
-{
-  // Advance str beyond first '['
-  seekPastChar(str, '['); // this function is defined in NumbTh.cpp
-
-  str >> m >> p >> r;
-  str >> gens;
-  str >> ords;
-
-  seekPastChar(str, ']');
-}
-
-std::unique_ptr<Context> buildContextFromAscii(std::istream& str)
-{
-  unsigned long m, p, r;
-  std::vector<long> gens, ords;
-  readContextBase(str, m, p, r, gens, ords);
-  return std::unique_ptr<Context>(new Context(m, p, r, gens, ords));
-}
-
-std::istream& operator>>(std::istream& str, Context& context)
-{
-  seekPastChar(str, '['); // this function is defined in NumbTh.cpp
-
-  // Get the standard deviation
-  str >> context.stdev;
-
-  // Get the scale
-  str >> context.scale;
-
-  IndexSet smallPrimes;
-  str >> smallPrimes;
-
-  IndexSet specialPrimes;
-  str >> specialPrimes;
-
-  context.moduli.clear();
-  context.smallPrimes.clear();
-  context.specialPrimes.clear();
-  context.ctxtPrimes.clear();
-
-  long nPrimes;
-  str >> nPrimes;
-  for (long i = 0; i < nPrimes; i++) {
-    long p;
-    str >> p;
-
-    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
-
-    if (smallPrimes.contains(i))
-      context.smallPrimes.insert(i); // small prime
-    else if (specialPrimes.contains(i))
-      context.specialPrimes.insert(i); // special prime
-    else
-      context.ctxtPrimes.insert(i); // ciphertext prime
-  }
-
-  // read in the partition to digits
-  long nDigits;
-  str >> nDigits;
-  context.digits.resize(nDigits);
-  for (long i = 0; i < (long)context.digits.size(); i++)
-    str >> context.digits[i];
-
-  str >> context.hwt_param;
-  str >> context.e_param;
-  str >> context.ePrime_param;
-
-  endBuildModChain(context);
-
-  // Read in the partition of m into co-prime factors (if bootstrappable)
-  NTL::Vec<long> mv;
-  int build_cache;
-  str >> mv;
-  str >> build_cache;
-  if (mv.length() > 0) {
-    context.enableBootStrapping(mv, build_cache);
-    // VJS-FIXME: what about alsoThick? why is this different
-    // than the binary case??
-  }
-  seekPastChar(str, ']');
-  return str;
+  context.writeToJSON(os);
+  return os;
 }
 
 NTL::ZZX getG(const EncryptedArray& ea)
@@ -663,13 +747,15 @@ Context::Context(long m,
     Context(m, p, r, gens, ords)
 {
   if (mparams) {
-    ::helib::buildModChain(*this,
-                           mparams->bits,
-                           mparams->c,
-                           mparams->bootstrappableFlag,
-                           mparams->skHwt,
-                           mparams->resolution,
-                           mparams->bitsInSpecialPrimes);
+    this->stdev = mparams->stdev;
+    this->scale = mparams->scale;
+
+    this->buildModChain(mparams->bits,
+                        mparams->c,
+                        mparams->bootstrappableFlag,
+                        mparams->skHwt,
+                        mparams->resolution,
+                        mparams->bitsInSpecialPrimes);
 
     if (mparams->bootstrappableFlag && bparams) {
       this->enableBootStrapping(bparams->mvec,
@@ -679,27 +765,445 @@ Context::Context(long m,
   }
 }
 
+Context::Context(const SerializableContent& content) :
+    Context(content.m, content.p, content.r, content.gens, content.ords)
+{
+  this->stdev = content.stdev;
+  this->scale = content.scale;
+  this->digits = content.digits;
+  this->hwt_param = content.hwt_param;
+  this->e_param = content.e_param;
+  this->ePrime_param = content.ePrime_param;
+
+  for (long i = 0; i < lsize(content.qs); i++) {
+    long q = content.qs[i];
+
+    this->moduli.emplace_back(this->zMStar, q, 0);
+
+    // FIXME: Consider serializing all 3 sets and setting them directly.
+    if (content.smallPrimes.contains(i))
+      this->smallPrimes.insert(i); // small prime
+    else if (content.specialPrimes.contains(i))
+      this->specialPrimes.insert(i); // special prime
+    else
+      this->ctxtPrimes.insert(i); // ciphertext prime
+  }
+
+  endBuildModChain();
+
+  // Read in the partition of m into co-prime factors (if bootstrappable)
+  if (content.mvec.length() > 0) {
+    // VJS-FIXME: what about the build_cache and alsoThick params?
+    this->enableBootStrapping(content.mvec,
+                              content.build_cache,
+                              content.alsoThick);
+  }
+}
+
+static void CheckPrimes(const Context& context,
+                        const IndexSet& s,
+                        const char* name)
+{
+  for (long i : s) {
+    NTL::zz_pPush push;
+    context.ithModulus(i).restoreModulus();
+    if (!NTL::zz_p::IsFFTPrime()) {
+      Warning(__func__ + std::string(": non-FFT prime in ") + name);
+    }
+  }
+}
+
+// Add small primes to get target resolution
+// FIXME: there is some black magic here.
+// we need to better document the strategy.
+void Context::addSmallPrimes(long resolution, long cpSize)
+{
+  // cpSize is the size of the ciphertext primes
+  // Sanity-checks, cpSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
+  assertTrue(cpSize >= 30, "cpSize is too small (minimum is 30)");
+  assertInRange(cpSize * 10,
+                9l * NTL_SP_NBITS,
+                10l * NTL_SP_NBITS,
+                "cpSize not in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]",
+                true);
+
+  long m = getM();
+  if (m <= 0 || m > (1 << 20)) // sanity checks
+    throw RuntimeError("addSmallPrimes: m undefined or larger than 2^20");
+  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
+
+  if (resolution < 1 || resolution > 10) // set to default of 3-bit resolution
+    resolution = 3;
+
+  std::vector<long> sizes;
+  long smallest; // size of the smallest of the smallPrimes
+  // We need at least two of this size, maybe three
+
+  if (cpSize >= 54)
+    smallest = divc(2 * cpSize, 3);
+  else if (cpSize >= 45)
+    smallest = divc(7 * cpSize, 10);
+  else { // Make the smallest ones at least 22-bit primes
+    smallest = divc(11 * cpSize, 15);
+    sizes.push_back(smallest); // need three of them
+  }
+  sizes.push_back(smallest);
+  sizes.push_back(smallest);
+
+  // This ensures we can express everything to given resolution.
+
+  // use sizes cpSize-r, cpSize-2r, cpSize-4r,... down to the sizes above
+  for (long delta = resolution; cpSize - delta > smallest; delta *= 2)
+    sizes.push_back(cpSize - delta);
+
+  // This helps to minimize the number of small primes needed
+  // to express any particular resolution.
+  // This could be removed...need to experiment.
+
+  // Special cases: add also cpSize-3*resolution,
+  // and for resolution=1 also cpSize-11
+  if (cpSize - 3 * resolution > smallest)
+    sizes.push_back(cpSize - 3 * resolution);
+  if (resolution == 1 && cpSize - 11 > smallest)
+    sizes.push_back(cpSize - 11);
+
+  std::sort(sizes.begin(), sizes.end()); // order by size
+
+  long last_sz = 0;
+  std::unique_ptr<PrimeGenerator> gen;
+  for (long sz : sizes) {
+    if (sz != last_sz)
+      gen.reset(new PrimeGenerator(sz, m));
+    long q = gen->next();
+    addSmallPrime(q);
+    last_sz = sz;
+  }
+}
+
+void Context::addCtxtPrime(long q)
+{
+  assertFalse(inChain(q), "Prime q is already in the prime chain");
+  long i = moduli.size(); // The index of the new prime in the list
+  moduli.push_back(Cmodulus(zMStar, q, 0));
+  ctxtPrimes.insert(i);
+}
+
+void Context::addSpecialPrime(long q)
+{
+  assertFalse(inChain(q), "Special prime q is already in the prime chain");
+  long i = moduli.size(); // The index of the new prime in the list
+  moduli.push_back(Cmodulus(zMStar, q, 0));
+  specialPrimes.insert(i);
+}
+
+// Determine the target size of the ctxtPrimes. The target size is
+// set at 2^n, where n is at most NTL_SP_NBITS and at least
+// ceil(0.9*NTL_SP_NBITS), so that we don't overshoot nBits by too
+// much.
+// The reason that we do not allow to go below 0.9*NTL_SP_NBITS is
+// that we need some of the smallPrimes to be sufficiently smaller
+// than the ctxtPrimes, and still we need these smallPrimes to have
+// m'th roots of unity.
+static long ctxtPrimeSize(long nBits)
+{
+  double bit_loss =
+      -std::log1p(-1.0 / double(1L << PrimeGenerator::B)) / std::log(2.0);
+  // std::cerr << "*** bit_loss=" << bit_loss;
+
+  // How many primes of size NTL_SP_NBITS it takes to get to nBits
+  double maxPsize = NTL_SP_NBITS - bit_loss;
+  // primes of length len are guaranteed to be at least (1-1/2^B)*2^len,
+
+  long nPrimes = long(ceil(nBits / maxPsize));
+  // this is sufficiently many primes
+
+  // now we want to trim the size to avoid unnecssary overshooting
+  // so we decrease targetSize, while guaranteeing that
+  // nPrimes primes of length targetSize multiply out to
+  // at least nBits bits.
+
+  long targetSize = NTL_SP_NBITS;
+  while (10 * (targetSize - 1) >= 9 * NTL_SP_NBITS && (targetSize - 1) >= 30 &&
+         ((targetSize - 1) - bit_loss) * nPrimes >= nBits)
+    targetSize--;
+
+  if (((targetSize - 1) - bit_loss) * nPrimes >= nBits)
+    Warning(__func__ + std::string(": non-optimal targetSize"));
+
+  return targetSize;
+}
+
+void Context::addCtxtPrimes(long nBits, long targetSize)
+{
+  // We add enough primes of size targetSize until their product is
+  // at least 2^{nBits}
+
+  // Sanity-checks, targetSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
+  assertTrue(targetSize >= 30,
+             "Target prime is too small (minimum size is 30)");
+  assertInRange(targetSize * 10,
+                9l * NTL_SP_NBITS,
+                10l * NTL_SP_NBITS,
+                "targetSize not in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]",
+                true);
+  const PAlgebra& palg = getZMStar();
+  long m = palg.getM();
+
+  PrimeGenerator gen(targetSize, m);
+  double bitlen = 0; // how many bits we already have
+  while (bitlen < nBits - 0.5) {
+    long q = gen.next(); // generate the next prime
+    addCtxtPrime(q);     // add it to the list
+    bitlen += std::log2(q);
+  }
+
+  // std::cerr << "*** ctxtPrimes excess: " << (bitlen - nBits) << "\n";
+  HELIB_STATS_UPDATE("excess-ctxtPrimes", bitlen - nBits);
+}
+
+void Context::addSpecialPrimes(long nDgts,
+                               bool willBeBootstrappable,
+                               long bitsInSpecialPrimes)
+{
+  const PAlgebra& palg = getZMStar();
+  long p = std::abs(palg.getP()); // for CKKS, palg.getP() == -1
+  long m = palg.getM();
+  long phim = palg.getPhiM();
+  long p2r = isCKKS() ? 1 : getAlMod().getPPowR();
+
+  long p2e = p2r;
+  if (willBeBootstrappable && !isCKKS()) {
+    // bigger p^e for bootstrapping
+    long e, ePrime;
+    RecryptData::setAE(e, ePrime, *this);
+    p2e *= NTL::power_long(p, e - ePrime);
+
+    // initialize e and ePrime parameters in the context
+    this->e_param = e;
+    this->ePrime_param = ePrime;
+  }
+
+  long nCtxtPrimes = getCtxtPrimes().card();
+  if (nDgts > nCtxtPrimes)
+    nDgts = nCtxtPrimes; // sanity checks
+  if (nDgts <= 0)
+    nDgts = 1;
+
+  digits.resize(nDgts); // allocate space
+
+  if (nDgts > 1) { // we break ciphertext into a few digits when key-switching
+    // NOTE: The code below assumes that all the ctxtPrimes have roughly the
+    // same size
+
+    IndexSet remaining = getCtxtPrimes();
+    for (long dgt = 0; dgt < nDgts - 1; dgt++) {
+      long digitCard = divc(remaining.card(), nDgts - dgt);
+      // ceiling(#-of-remaining-primes, #-or-remaining-digits)
+
+      for (long i : remaining) {
+        digits[dgt].insert(i);
+        if (digits[dgt].card() >= digitCard)
+          break;
+      }
+      remaining.remove(digits[dgt]); // update the remaining set
+    }
+    // The last digit has everything else
+    if (empty(remaining)) { // sanity check, use one less digit
+      nDgts--;
+      digits.resize(nDgts);
+    } else
+      digits[nDgts - 1] = remaining;
+  } else { // only one digit
+    digits[0] = getCtxtPrimes();
+  }
+
+  double maxDigitLog = 0.0;
+  for (auto& digit : digits) {
+    double size = logOfProduct(digit);
+    if (size > maxDigitLog)
+      maxDigitLog = size;
+  }
+
+  // Add special primes to the chain for the P factor of key-switching
+  double nBits;
+
+  if (bitsInSpecialPrimes)
+    nBits = bitsInSpecialPrimes;
+  else {
+#if 0
+    nBits = (maxDigitLog + std::log(nDgts) + NTL::log(stdev * 2) +
+             std::log(p2e)) /
+            std::log(2.0);
+    // FIXME: Victor says: the above calculation does not make much sense to me
+#else
+    double h;
+    if (getHwt() == 0)
+      h = phim / 2.0;
+    else
+      h = getHwt();
+
+    double log_phim = std::log(phim);
+    if (log_phim < 1)
+      log_phim = 1;
+
+    if (isCKKS()) {
+      // This is based on a smaller noise estimate so as
+      // to better protect precision...this is based on
+      // a noise level equal to the mod switch added noise.
+      // Note that the relin_CKKS_adjust function in Ctxt.cpp
+      // depends on this estimate.
+      nBits = (maxDigitLog + NTL::log(getStdev()) + std::log(nDgts) -
+               0.5 * std::log(h)) /
+              std::log(2.0);
+    } else if (palg.getPow2()) {
+      nBits = (maxDigitLog + std::log(p2e) + NTL::log(getStdev()) +
+               0.5 * std::log(12.0) + std::log(nDgts) -
+               0.5 * std::log(log_phim) - 2 * std::log(p) - std::log(h)) /
+              std::log(2.0);
+    } else {
+      nBits =
+          (maxDigitLog + std::log(m) + std::log(p2e) + NTL::log(getStdev()) +
+           0.5 * std::log(12.0) + std::log(nDgts) - 0.5 * log_phim -
+           0.5 * std::log(log_phim) - 2 * std::log(p) - std::log(h)) /
+          std::log(2.0);
+    }
+
+    // Both of the above over-estimate nBits by a factor of
+    // log2(scale). That should provide a sufficient safety margin.
+    // See design document
+
+#endif
+  }
+
+  if (nBits < 1)
+    nBits = 1;
+
+  double bit_loss =
+      -std::log1p(-1.0 / double(1L << PrimeGenerator::B)) / std::log(2.0);
+
+  // How many primes of size NTL_SP_NBITS it takes to get to nBits
+  double maxPsize = NTL_SP_NBITS - bit_loss;
+  // primes of length len are guaranteed to be at least (1-1/2^B)*2^len,
+
+  long nPrimes = long(ceil(nBits / maxPsize));
+  // this is sufficiently many prime
+
+  // now we want to trim the size to avoid unnecssary overshooting
+  // so we decrease targetSize, while guaranteeing that
+  // nPrimes primes of length targetSize multiply out to
+  // at least nBits bits.
+
+  long targetSize = NTL_SP_NBITS;
+  while ((targetSize - 1) >= 0.55 * NTL_SP_NBITS && (targetSize - 1) >= 30 &&
+         ((targetSize - 1) - bit_loss) * nPrimes >= nBits)
+    targetSize--;
+
+  if (((targetSize - 1) - bit_loss) * nPrimes >= nBits)
+    Warning(__func__ + std::string(": non-optimal targetSize"));
+
+  PrimeGenerator gen(targetSize, m);
+
+  while (nPrimes > 0) {
+    long q = gen.next();
+
+    if (inChain(q))
+      continue;
+    // nbits could equal NTL_SP_BITS or the size of one
+    // of the small primes, so we have to check for duplicates here...
+    // this is not the most efficient way to do this,
+    // but it doesn't make sense to optimize this any further
+
+    addSpecialPrime(q);
+    nPrimes--;
+  }
+
+  // std::cerr << "*** specialPrimes excess: " <<
+  // (logOfProduct(specialPrimes)/std::log(2.0) - nBits) <<
+  // "\n";
+  HELIB_STATS_UPDATE("excess-specialPrimes",
+                     logOfProduct(getSpecialPrimes()) / std::log(2.0) - nBits);
+}
+
+void Context::buildModChain(long nBits,
+                            long nDgts,
+                            bool willBeBootstrappable,
+                            long skHwt,
+                            long resolution,
+                            long bitsInSpecialPrimes)
+{
+  // Cannot build modulus chain with nBits < 0
+  assertTrue<InvalidArgument>(nBits > 0,
+                              "Cannot initialise modulus chain with nBits < 1");
+
+  assertTrue(skHwt >= 0, "invalid skHwt parameter");
+
+  // ignore for CKKS
+  if (isCKKS())
+    willBeBootstrappable = false;
+
+  if (skHwt == 0) {
+    // default skHwt: if bootstrapping, set to BOOT_DFLT_SK_HWT
+    if (willBeBootstrappable)
+      skHwt = BOOT_DFLT_SK_HWT;
+  }
+
+  // initialize hwt param in context
+  hwt_param = skHwt;
+
+  long pSize = ctxtPrimeSize(nBits);
+  addSmallPrimes(resolution, pSize);
+  addCtxtPrimes(nBits, pSize);
+  addSpecialPrimes(nDgts, willBeBootstrappable, bitsInSpecialPrimes);
+
+  CheckPrimes(*this, smallPrimes, "smallPrimes");
+  CheckPrimes(*this, ctxtPrimes, "ctxtPrimes");
+  CheckPrimes(*this, specialPrimes, "specialPrimes");
+
+  endBuildModChain();
+}
+
+void Context::addSmallPrime(long q)
+{
+  assertFalse(inChain(q), "Small prime q is already in the prime chain");
+  long i = moduli.size(); // The index of the new prime in the list
+  moduli.push_back(Cmodulus(zMStar, q, 0));
+  smallPrimes.insert(i);
+}
+
+void Context::endBuildModChain()
+{
+  setModSizeTable();
+  long m = getM();
+  std::vector<long> mvec;
+  pp_factorize(mvec, m);
+  NTL::Vec<long> mmvec;
+  convert(mmvec, mvec);
+  pwfl_converter = std::make_shared<PowerfulDCRT>(*this, mmvec);
+}
+
 // Helper for the build and buildPtr methods
 template <typename SCHEME>
 const std::pair<std::optional<Context::ModChainParams>,
                 std::optional<Context::BootStrapParams>>
 ContextBuilder<SCHEME>::makeParamsArgs() const
 {
-  const auto mparams = buildModChainFlag_
-                           ? std::make_optional<Context::ModChainParams>({
-                                 bits_,
-                                 c_,
-                                 bootstrappableFlag_,
-                                 skHwt_,
-                                 resolution_,
-                                 bitsInSpecialPrimes_,
-                             })
-                           : std::nullopt;
+  const auto mparams =
+      buildModChainFlag_
+          ? std::make_optional<Context::ModChainParams>({bits_,
+                                                         c_,
+                                                         bootstrappableFlag_,
+                                                         skHwt_,
+                                                         resolution_,
+                                                         bitsInSpecialPrimes_,
+                                                         stdev_,
+                                                         scale_})
+          : std::nullopt;
 
   const auto bparams = bootstrappableFlag_
                            ? std::make_optional<Context::BootStrapParams>(
                                  {mvec_, buildCacheFlag_, thickFlag_})
                            : std::nullopt;
+
   return {mparams, bparams};
 }
 
@@ -717,48 +1221,45 @@ Context* ContextBuilder<SCHEME>::buildPtr() const
   return new Context(m_, p_, r_, gens_, ords_, mparams, bparams);
 }
 
+// Essentially serialization of params.
 template <>
 std::ostream& operator<<<BGV>(std::ostream& os, const ContextBuilder<BGV>& cb)
 {
-  os << "{\n"
-     << "  scheme: BGV\n"
-     << "  m: " << cb.m_ << "\n"
-     << "  p: " << cb.p_ << "\n"
-     << "  r: " << cb.r_ << "\n"
-     << "  c: " << cb.c_ << "\n"
-     << "  gens: " << vecToStr(cb.gens_) << "\n"
-     << "  ords: " << vecToStr(cb.ords_) << "\n"
-     << "  buildModChainFlag: " << cb.buildModChainFlag_ << "\n"
-     << "  bits: " << cb.bits_ << "\n"
-     << "  skHwt: " << cb.skHwt_ << "\n"
-     << "  resolution: " << cb.resolution_ << "\n"
-     << "  bitsInSpecialPrimes: " << cb.bitsInSpecialPrimes_ << "\n"
-     << "  bootstrappableFlag: " << cb.bootstrappableFlag_ << "\n"
-     << "  mvec: " << cb.mvec_ << "\n"
-     << "  buildCacheFlag: " << cb.buildCacheFlag_ << "\n"
-     << "  thickFlag: " << cb.thickFlag_ << "\n"
-     << "}" << std::endl;
-
+  const json j = {{"scheme", "bgv"},
+                  {"m", cb.m_},
+                  {"p", cb.p_},
+                  {"r", cb.r_},
+                  {"c", cb.c_},
+                  {"gens", cb.gens_},
+                  {"ords", cb.ords_},
+                  {"buildModChainFlag", cb.buildModChainFlag_},
+                  {"bits", cb.bits_},
+                  {"skHwt", cb.skHwt_},
+                  {"resolution", cb.resolution_},
+                  {"bitsInSpecialPrimes", cb.bitsInSpecialPrimes_},
+                  {"bootstrappableFlag", cb.bootstrappableFlag_},
+                  {"mvec", cb.mvec_},
+                  {"buildCacheFlag", cb.buildCacheFlag_},
+                  {"thickFlag", cb.thickFlag_}};
+  os << toTypedJson<ContextBuilder<BGV>>(j);
   return os;
 }
 
 template <>
 std::ostream& operator<<<CKKS>(std::ostream& os, const ContextBuilder<CKKS>& cb)
 {
-  os << "{\n"
-     << "  scheme: CKKS\n"
-     << "  m: " << cb.m_ << ",\n"
-     << "  precision: " << cb.r_ << ",\n"
-     << "  c: " << cb.c_ << ",\n"
-     << "  gens: " << vecToStr(cb.gens_) << ",\n"
-     << "  ords: " << vecToStr(cb.ords_) << ",\n"
-     << "  buildModChainFlag: " << cb.buildModChainFlag_ << ",\n"
-     << "  bits: " << cb.bits_ << ",\n"
-     << "  skHwt: " << cb.skHwt_ << ",\n"
-     << "  resolution: " << cb.resolution_ << ",\n"
-     << "  bitsInSpecialPrimes: " << cb.bitsInSpecialPrimes_ << "\n"
-     << "}" << std::endl;
-
+  const json j = {{"scheme", "ckks"},
+                  {"m", cb.m_},
+                  {"precision", cb.r_},
+                  {"c", cb.c_},
+                  {"gens", cb.gens_},
+                  {"ords", cb.ords_},
+                  {"buildModChainFlag", cb.buildModChainFlag_},
+                  {"bits", cb.bits_},
+                  {"skHwt", cb.skHwt_},
+                  {"resolution", cb.resolution_},
+                  {"bitsInSpecialPrimes", cb.bitsInSpecialPrimes_}};
+  os << toTypedJson<ContextBuilder<CKKS>>(j);
   return os;
 }
 

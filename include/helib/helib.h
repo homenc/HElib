@@ -17,6 +17,8 @@
    @brief Entry point header for HElib
 */
 
+#include <helib/version.h>
+
 #include <helib/DoubleCRT.h>
 #include <helib/Context.h>
 #include <helib/Ctxt.h>

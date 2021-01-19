@@ -12,10 +12,10 @@
 # limitations under the License. See accompanying LICENSE file.
 
 import argparse
-import ast
 from functools import reduce
 from itertools import islice
 import re
+import json
 
 def nSlotsFromParamsOutFile(filename):
     with open(filename) as f:
@@ -28,7 +28,7 @@ def nSlotsFromParamsOutFile(filename):
 
 def parsePtxtGetSlots(iterable):
     for ptxt in iterable:
-        for slot in ast.literal_eval(ptxt):
+        for slot in ptxt:
             yield slot
 
 def printoutNums(ptxts, nelements):
@@ -50,13 +50,17 @@ def main():
     if nslots is None:
         sys.exit("Could not find nslots in '%s'." % args.infofile)
 
-    with open(args.infile) as data:
-        header = data.readline()
+    with open(args.infile) as jsonfile:
+        header = jsonfile.readline()
+        ptxts = []
+        for line in jsonfile:
+            data = json.loads(line)
+            ptxts.append(data['content']['slots'])
         # Set if nelements is set otherwise calculate from info file.
         nelements = args.nelements if args.nelements is not None \
             else reduce((lambda x, y: x * y), map(int, header.split())) * nslots
         print(nelements)
-        printoutNums(data, nelements)
+        printoutNums(ptxts, nelements)
 
 if __name__ == '__main__':
     main()
