@@ -827,12 +827,15 @@ INPUT                  = ./mainpage.dox \
                          ../CONTRIBUTING.md \
                          ../CODE_OF_CONDUCT.md \
                          ../LICENSE.md \
+                         ../CHANGES.md \			 
                          ../INSTALL.md \
                          ../TESTS.md \
+                         ../examples/README.md \
                          ../include/helib \
                          ../src \
                          ../utils \
                          ../misc/psi \
+                         ../CKKS-security.md \
                          ../ISSUES.md
 
 # This tag can be used to specify the character encoding of the source files

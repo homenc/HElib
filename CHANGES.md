@@ -1,9 +1,10 @@
+Release Changes
+===============
+
 HElib 2.0.0, January 2021
 =========================
 (tagged as v2.0.0)
 
-December-January 2021
----------------------
 * Contains API changes that are not backwards compatible with v1.x.x
   * Changes to Context API
   * Must use ContextBuilder to build context
