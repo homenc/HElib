@@ -2,17 +2,20 @@
 
 ## Introduction
 
-The `examples` directory provides standalone example programs expressing the
-various APIs as well as a simple use-case using HElib. The example programs
-provided currently only use the BGV scheme.
+The `examples` directory contains tutorials and standalone example programs
+expressing the various APIs as well as a simple use-case using HElib. 
 
 ## What is provided
 
-Currently the examples provided comprise:
+The [tutorials](tutorial/) cover primarily the CKKS scheme and comprise 8 documented examples 
+from basic operations to more complex serialization. 
 
-- BGV_binary_arithmetic
-- BGV_country_db_lookup
-- BGV_packed_arithmetic
+
+The example programs provided use the BGV scheme and comprise:
+
+- [BGV_binary_arithmetic](BGV_binary_arithmetic)
+- [BGV_country_db_lookup](BGV_country_db_lookup)
+- [BGV_packed_arithmetic](BGV_packed_arithmetic)
 
 More examples are expected to be released at a later date.
 

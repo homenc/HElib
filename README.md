@@ -1,7 +1,10 @@
 HElib
 =====
 
-[![Build Status](https://travis-ci.com/homenc/HElib.svg?branch=master)](https://travis-ci.com/homenc/HElib)
+<!--- Commenting travis banner out as we don't have access to the free tier anymore --->
+<!--- When and if the free tier is reinstated, we will put the banner back  --->
+<!--- Our releases are tested in 14 different configuration in a private DevOps environement   --->
+<!--- [![Build Status](https://travis-ci.com/homenc/HElib.svg?branch=master)](https://travis-ci.com/homenc/HElib) ---> 
 
 HElib is an open-source ([Apache License v2.0][5]) software library that
 implements [homomorphic encryption][6] (HE). Currently available schemes are the
@@ -13,7 +16,7 @@ packing techniques and the [Gentry-Halevi-Smart][3] optimizations. See [this
 report][7] for a description of a few of the algorithms using in this library.
 
 Please refer to [CKKS-security.md](CKKS-security.md) for the latest discussion
-on the security of the the CKKS scheme implementation in HElib.
+on the security of the CKKS scheme implementation in HElib.
 
 Since mid-2018 HElib has been under extensive refactoring for *Reliability*,
 *Robustness & Serviceability*, *Performance*, and most importantly *Usability*
@@ -23,7 +26,8 @@ HElib supports an *"assembly language for HE"*, providing low-level routines
 (set, add, multiply, shift, etc.), sophisticated automatic noise management,
 improved BGV bootstrapping, multi-threading, and also support for Ptxt
 (plaintext) objects which mimics the functionality of Ctxt (ciphertext) objects.
-See [CHANGES.md](CHANGES.md) for more details.
+The report [Design and implementation of HElib][11] contains additional details.
+Also, see [CHANGES.md](CHANGES.md) for more information on the HElib releases.
 
 Full installation instructions and a list of the required dependencies can be
 found in [INSTALL.md](INSTALL.md).
@@ -35,7 +39,7 @@ example programs and our CKKS tutorials located in the `examples` directory. See
 If you are interested in contributing to HElib, please read our
 [Contributing Guidelines](CONTRIBUTING.md).
 
-HElib is written in C++14 and uses the [NTL mathematical library][4].  
+HElib is written in C++17 and uses the [NTL mathematical library][4].  
 HElib is distributed under the terms of the [Apache License v2.0][5].  
 
   [1]: http://eprint.iacr.org/2011/277       "BGV12"
@@ -48,3 +52,5 @@ HElib is distributed under the terms of the [Apache License v2.0][5].
   [8]: http://eprint.iacr.org/2014/873       "bootstrapping"
   [9]: http://eprint.iacr.org/2016/421       "CKKS16"
   [10]: https://github.com/homenc/HElib      "GitHubPages"
+  [11]: https://eprint.iacr.org/2020/1481    "HElib Design"
+  

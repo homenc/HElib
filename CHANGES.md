@@ -4,9 +4,10 @@ HElib 2.0.0, January 2021
 
 December-January 2021
 ---------------------
-* Changes to Context API
-* Must use ContextBuilder to build context
-* New serialization APIs: binary and JSON
+* Contains API changes that are not backwards compatible with v1.x.x
+  * Changes to Context API
+  * Must use ContextBuilder to build context
+  * New serialization APIs: binary and JSON
 * CKKS coding tutorials
 * Bug fixes
 
