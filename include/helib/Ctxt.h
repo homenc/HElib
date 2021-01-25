@@ -654,7 +654,7 @@ public:
   void addConstantCKKS(double x)
   { // FIXME: not enough precision when x is large
     addConstantCKKS(
-        rationalApprox(x, /*denomBound=*/1 << getContext().getAlMod().getR()));
+        rationalApprox(x, /*denomBound=*/1L << getContext().getAlMod().getR()));
   }
 
   // [[deprecated]]
