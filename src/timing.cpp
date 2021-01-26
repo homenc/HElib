@@ -18,6 +18,11 @@
 namespace helib {
 
 #ifdef CLOCK_MONOTONIC
+
+#ifndef CLOCK_MONOTONIC_RAW
+#define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
+#endif
+
 unsigned long GetTimerClock()
 {
   timespec ts;
