@@ -707,7 +707,7 @@ void extractDigitsPacked(Ctxt& ctxt,
 
   // Step 3: re-pack the slots
   HELIB_NTIMER_START(repack);
-  const EncryptedArray& ea2 = *ctxt.getContext().ea;
+  const EncryptedArray& ea2 = ctxt.getContext().getEA();
   NTL::ZZX xInSlots;
   std::vector<NTL::ZZX> xVec(ea2.size());
   ctxt = unpacked[0];
