@@ -1,10 +1,7 @@
 HElib
 =====
 
-<!--- Commenting travis banner out as we don't have access to the free tier anymore --->
-<!--- When and if the free tier is reinstated, we will put the banner back  --->
-<!--- Our releases are tested in 14 different configuration in a private DevOps environement   --->
-<!--- [![Build Status](https://travis-ci.com/IBM-HElib/HElib.svg?branch=master)](https://travis-ci.com/IBM-HElib/HElib) ---> 
+[![Build Status](https://travis-ci.com/IBM-HElib/HElib.svg?branch=master)](https://travis-ci.com/IBM-HElib/HElib)
 
 HElib is an open-source ([Apache License v2.0][5]) software library that
 implements [homomorphic encryption][6] (HE). Currently available schemes are the
