@@ -786,7 +786,7 @@ public:
    * @brief Function to deserialize and return a `Ptxt<Scheme>` from a
    * `JsonWrapper` object.
    * @param jw `JsonWrapper` containing the serialized object.
-   * @throws IOError if the `JsonWrapper` object does not contains a valid
+   * @throws IOError if the `JsonWrapper` object does not contain a valid
    * serialization of a `Ptxt<Scheme>`.
    * @code
    * Ptxt<BGV> my_ptxt = Ptxt<BGV>::readFromJSON(..., context);
@@ -832,7 +832,7 @@ public:
    * @brief In-place function to deserialize a `Ptxt<Scheme>` from a
    * `JsonWrapper` object.
    * @param jw `JsonWrapper` containing the serialized object.
-   * @throws IOError if the `JsonWrapper` object does not contains a valid
+   * @throws IOError if the `JsonWrapper` object does not contain a valid
    * serialization of a `Ptxt<Scheme>`.
    * @note `this` must be constructed with an appropriate context @b BEFORE
    * calling this function. For example,

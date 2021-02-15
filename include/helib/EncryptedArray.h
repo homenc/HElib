@@ -2373,16 +2373,123 @@ public:
   // this is here for consistency with Ctxt class
   void negate() { helib::negate(ea, pa); }
 
+  /**
+   * @brief Function to serialize `this` `PtxtArray`.
+   * @param os Output `std::ostream`.
+   * @note `PtxtArray` `context` is not serialized, see note of `readJSON`.
+   *
+   * The output stream will be a JSON where the `PtxtArray` content will be
+   * serialized in the `slots` field.\n
+   * Each slot of `PtxtArray` will be serialized in an element of such list by
+   * the JSON serializer function determined by the scheme.\n
+   * For example if we have a plaintext `pa` such that `pa[0]=slot0`,
+   * `pa[1]=slot1`, `pa[2]=slot2`, and `pa[i]=0` for `i>2`, it will be
+   * serialized as '['slot0', 'slot1', 'slot2', `0`, `0` ...]'.
+   **/
   void writeToJSON(std::ostream& os) const;
 
+  /**
+   * @brief Function to serialize `this` `PtxtArray`.
+   * @return The `JsonWrapper` containing the serialization.
+   * @note `PtxtArray` `context` is not serialized, see note of `readJSON`.
+   *
+   * The output JsonWrapper will be a JSON where the `PtxtArray` content will
+   * be serialized in the `slots` field.\n
+   * Each slot of `PtxtArray` will be serialized in an element of such list by
+   * the JSON serializer function determined by the scheme.\n
+   * For example if we have a plaintext `pa` such that `pa[0]=slot0`,
+   * `pa[1]=slot1`, `pa[2]=slot2`, and `pa[i]=0` for `i>2`, it will be
+   * serialized as '['slot0', 'slot1', 'slot2', `0`, `0`, ...]'.
+   **/
   JsonWrapper writeToJSON() const;
 
+  /**
+   * @brief Function to deserialize and return a `PtxtArray` from a JSON
+   * stream.
+   * @param is Input `std::istream`.
+   * @throws IOError if the stream is badly formatted (i.e. it does not contain
+   * a valid JSON).
+   * @code
+   * PtxtArray my_pa = PtxtArray::readFromJSON(std::cin, context);
+   * @endcode
+   *
+   * The input stream has to contain a valid typed JSON value.\n
+   * Each element of the content list will be deserialized as a slot of the type
+   * determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `pa` where `pa[0]=slot0`, `pa[1]=slot1`, `pa[2]=slot2`, and
+   * `pa[i]=0` for `i>2`.
+   **/
   static PtxtArray readFromJSON(std::istream& is, const Context& context);
 
+  /**
+   * @brief Function to deserialize and return a `PtxtArray` from a
+   * `JsonWrapper` object.
+   * @param jw `JsonWrapper` containing the serialized object.
+   * @throws IOError if the `JsonWrapper` object does not contains a valid
+   * serialization of a `PtxtArray`.
+   * @code
+   * PtxtArray my_pa = PtxtArray::readFromJSON(..., context);
+   * @endcode
+   *
+   * The `JsonWrapper` must contain a valid `PtxtArray` serialization.\n
+   * Each element of the content list will be deserialized as a slot of the
+   * type determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `pa` where `pa[0]=slot0`, `pa[1]=slot1`, `pa[2]=slot2` and
+   * `pa[i]=0` for `i>2`.
+   **/
   static PtxtArray readFromJSON(const JsonWrapper& jw, const Context& context);
 
+  /**
+   * @brief In-place function to deserialize a `PtxtArray` from a JSON stream.
+   * @param is Input `std::istream`.
+   * @throws IOError if the stream is badly formatted (i.e. it does not contain
+   * a valid JSON).
+   * @note `this` must be constructed with an appropriate context @b BEFORE
+   * calling this function. For example,
+   * @code
+   * PtxtArray my_pa(context);
+   * my_pa.readJSON(std::cin);
+   * @endcode
+   *
+   * The input stream has to contain a valid typed JSON value.\n
+   * Each element of the content list will be deserialized as a slot of the type
+   * determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `pa` where `pa[0]=slot0`, `pa[1]=slot1`, `pa[2]=slot2`, and
+   * `pa[i]=0` for `i>2`.
+   **/
   void readJSON(std::istream& is);
 
+  /**
+   * @brief In-place function to deserialize a `PtxtArray` from a `JsonWrapper`
+   * object.
+   * @param jw `JsonWrapper` containing the serialized object.
+   * @throws IOError if the `JsonWrapper` object does not contain a valid
+   * serialization of a `PtxtArray`.
+   * @note `this` must be constructed with an appropriate context @b BEFORE
+   * calling this function. For example,
+   * @code
+   * PtxtArray my_pa(context);
+   * my_pa.readJSON(...);
+   * @endcode
+   *
+   * The `JsonWrapper` must contain a valid `PtxtArray` serialization.\n
+   * Each element of the content list will be deserialized as a slot of the
+   * type determined by the scheme.\n
+   * If the number of tokens in the slot list is less than the number of slots,
+   * the remaining slots will be padded by 0.\n
+   * For example a slot list '['slot0', 'slot1', 'slot2']' will be deserialized
+   * as a plaintext `pa` where `pa[0]=slot0`, `pa[1]=slot1`, `pa[2]=slot2` and
+   * `pa[i]=0` for `i>2`.
+   **/
   void readJSON(const JsonWrapper& jw);
 
   friend std::istream& operator>>(std::istream& is, PtxtArray& pa);
