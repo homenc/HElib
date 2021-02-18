@@ -160,19 +160,39 @@ public:
   // VJS-FIXME: these routine have a number of issues and should
   // be deprecated in favor of the new EncodedPtxt-based routines
 
+  /**
+   * @deprecated This routine has a number of issues and is deprecated in favor
+   * of the new `EncodedPtxt`-based routine.\n
+   * Please use `PtxtArray::encrypt()` instead.
+   **/
   long Encrypt(Ctxt& ciphertxt,
                const NTL::ZZX& plaintxt,
                long ptxtSpace,
                bool highNoise) const;
+  /**
+   * @deprecated This routine has a number of issues and is deprecated in favor
+   * of the new `EncodedPtxt`-based routine.\n
+   * Please use `PtxtArray::encrypt()` instead.
+   **/
   long Encrypt(Ctxt& ciphertxt,
                const zzX& plaintxt,
                long ptxtSpace,
                bool highNoise) const;
 
+  /**
+   * @deprecated This routine has a number of issues and is deprecated in favor
+   * of the new `EncodedPtxt`-based routine.\n
+   * Please use `PtxtArray::encrypt()` instead.
+   **/
   void CKKSencrypt(Ctxt& ciphertxt,
                    const NTL::ZZX& plaintxt,
                    double ptxtSize = 1.0,
                    double scaling = 0.0) const;
+  /**
+   * @deprecated This routine has a number of issues and is deprecated in favor
+   * of the new `EncodedPtxt`-based routine.\n
+   * Please use `PtxtArray::encrypt()` instead.
+   **/
   void CKKSencrypt(Ctxt& ciphertxt,
                    const zzX& plaintxt,
                    double ptxtSize = 1.0,

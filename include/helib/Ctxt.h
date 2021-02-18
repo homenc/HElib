@@ -607,6 +607,9 @@ public:
    * @brief Times equals operator with a `ZZX`.
    * @param poly Element by which to multiply.
    * @return Reference to `*this` post multiplication.
+   * @deprecated This function is deprecated in favor of a new
+   * `EncodedPtxt`-based API.\n
+   * Please use `Ctxt::operator*=(const EncodedPtxt& ptxt)` instead.
    **/
   // [[deprecated]]
   Ctxt& operator*=(const NTL::ZZX& poly);
@@ -648,8 +651,16 @@ public:
   }
 
   //! add a rational number in the form a/b, a,b are long
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator+=(double ptxt)` instead.
+   **/
   // [[deprecated]]
   void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator+=(double ptxt)` instead.
+   **/
   // [[deprecated]]
   void addConstantCKKS(double x)
   { // FIXME: not enough precision when x is large
@@ -657,25 +668,43 @@ public:
         rationalApprox(x, /*denomBound=*/1L << getContext().getAlMod().getR()));
   }
 
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator+=(const FatEncodedPtxt& ptxt)` instead.
+   **/
   // [[deprecated]]
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
 
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator+=(const EncodedPtxt& ptxt)` instead.
+   **/
   // [[deprecated]]
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
 
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator+=(const PtxtArray& ptxt)` instead.
+   **/
   // [[deprecated]]
   void addConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   /**
    * @brief Add a `CKKS` plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object with which to add.
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator+=(const PtxtArray& ptxt)` instead.
    **/
   // [[deprecated]]
   void addConstantCKKS(const Ptxt<CKKS>& ptxt);
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator+=(const NTL::ZZ& ptxt)` instead.
+   **/
   // [[deprecated]]
   void addConstantCKKS(const NTL::ZZ& c);
 
@@ -1061,6 +1090,10 @@ public:
   }
 
   //! multiply by a rational number or floating point
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator*=(double ptxt)` instead.
+   **/
   // [[deprecated]]
   void multByConstantCKKS(double x)
   {
@@ -1082,18 +1115,30 @@ public:
       this->negate();
   }
 
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator*=(double ptxt)` instead.
+   **/
   // [[deprecated]]
   void multByConstantCKKS(std::pair<long, long> num) // rational number
   {
     multByConstantCKKS(double(num.first) / num.second);
   }
 
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator*=(const FatEncodedPtxt& ptxt)` instead.
+   **/
   // [[deprecated]]
   void multByConstantCKKS(const DoubleCRT& dcrt,
                           NTL::xdouble size = NTL::xdouble(-1.0),
                           NTL::xdouble factor = NTL::xdouble(-1.0),
                           double roundingErr = -1.0);
 
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator*=(const EncodedPtxt& ptxt)` instead.
+   **/
   // [[deprecated]]
   void multByConstantCKKS(const NTL::ZZX& poly,
                           NTL::xdouble size = NTL::xdouble(-1.0),
@@ -1109,9 +1154,15 @@ public:
   /**
    * @brief Multiply a `CKKS` plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object polynomial with which to multiply.
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator*=(const PtxtArray& ptxt)` instead.
    **/
   // [[deprecated]]
   void multByConstantCKKS(const Ptxt<CKKS>& ptxt);
+  /**
+   * @deprecated This function is deprecated in favor of a newer API.
+   * Please use `Ctxt::operator*=(const PtxtArray& ptxt)` instead.
+   **/
   // [[deprecated]]
   void multByConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
@@ -1339,7 +1390,10 @@ public:
     return 0; // just to keep the compiler happy
   }
 
-  //! @brief Returns log(noiseBound) - log(q)
+  /**
+   * @brief Returns log(noiseBound) - log(q)
+   * @deprecated This is deprecated. Please use `Ctxt::capacity()` instead.
+   **/
   // [[deprecated]] // use capacity()
   double log_of_ratio() const
   {

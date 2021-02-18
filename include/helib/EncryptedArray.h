@@ -1148,11 +1148,23 @@ public:
   // VJS-FIXME: these routine have a number of issues and should
   // be deprecated in favor of the new EncodedPtxt-based routines
 
+  /**
+   * @brief Function for encoding a `double` into a `zzX`.
+   * @deprecated This routine has a number of issues and is deprecated in favor
+   * of the new `EncodedPtxt`-based routine.\n
+   * Please use `PtxtArray::encode()` instead.
+   **/
   double encode(zzX& ptxt,
                 double aSingleNumber,
                 double useThisSize = -1,
                 long precision = -1) const;
 
+  /**
+   * @brief Function for encoding a `double` into a `zzX`.
+   * @deprecated This routine has a number of issues and is deprecated in favor
+   * of the new `EncodedPtxt`-based routine.\n
+   * Please use `PtxtArray::encode()` instead.
+   **/
   template <typename PTXT>
   double encode(NTL::ZZX& ptxt,
                 const PTXT& pt,
@@ -1365,6 +1377,10 @@ public:
     project(array, v);
   }
 
+  /**
+   * @deprecated This routine has a number of issues and is deprecated in favor
+   * of either `RandomComplex()` or `PtxtArray::random()`.
+   **/
   void random(std::vector<cx_double>& array, double rad = 1.0) const;
   void random(std::vector<double>& array, double rad = 1.0) const
   {
@@ -1990,6 +2006,12 @@ public:
   virtual void print(std::ostream& s) const { s << data; }
 };
 
+/**
+ * @deprecated There is a somewhat "friendlier" interface available in
+ * `PtxtArray` as it carries with it a reference to an `EncryptedArray`.
+ * It is recommended that `PlaintextArray` be deprecated in favor of
+ * `PtxtArray`.
+ **/
 class PlaintextArray
 {
 private:
