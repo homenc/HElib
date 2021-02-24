@@ -93,7 +93,9 @@ addons:
     - cmake
     - bats-core
     - ccache
-    update: true
+#    update: true
+# Uncomment this line if the latest update of homebrew is required.  This will
+# increase the overall build time of each platform.
 
 # activating ccache on MacOS.
 before_install:

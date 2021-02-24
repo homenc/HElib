@@ -14,7 +14,8 @@
 #define HELIB_FHE_H
 /**
    @file FHE.h
-   @brief Deprecated entry point header for HElib (legacy alias of helib.h)
+   @brief Deprecated entry point header for HElib (legacy alias of `helib.h`)
+   @deprecated This header is a deprecated alias of `helib.h`.
 */
 
 #include <helib/helib.h>
