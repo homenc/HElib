@@ -164,9 +164,9 @@ int main(int argc, char* argv[])
   // And multiply by constants
   // [1] [1] [1] ... [1] [1]
   // -> [1*1] [1*1] [1*1] ... [1*1] [1*1] = [1] [1] [1] ... [1] [1]
-  ctxt *= NTL::ZZX(1l);
+  ctxt *= 1l;
   // Plaintext version
-  ptxt *= NTL::ZZX(1l);
+  ptxt *= 1l;
 
   // We can also perform ciphertext-plaintext operations
   // ctxt = [1] [1] [1] ... [1] [1], ptxt = [1] [1] [1] ... [1] [1]

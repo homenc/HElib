@@ -419,9 +419,9 @@ void EncryptedArrayCx::random(std::vector<cx_double>& array, double rad) const
 void EncryptedArrayCx::extractRealPart(Ctxt& c) const
 {
   Ctxt tmp = c;
-  tmp.complexConj();         // the complex conjugate of c
-  c += tmp;                  // c + conj(c) = 2*real(c)
-  c.multByConstantCKKS(0.5); // divide by two
+  tmp.complexConj(); // the complex conjugate of c
+  c += tmp;          // c + conj(c) = 2*real(c)
+  c *= 0.5;          // divide by two
 }
 
 // Note: If called with dcrt==nullptr, it will perform FFT's when
@@ -446,7 +446,7 @@ void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
     iDcrtPtr = &tmpDcrt;
   }
   c.multByConstantCKKS(*iDcrtPtr); // multiply by i
-  c.multByConstantCKKS(0.5);       // divide by two
+  c *= 0.5;                        // divide by two
 }
 
 void EncryptedArrayCx::buildLinPolyCoeffs(std::vector<zzX>& C,

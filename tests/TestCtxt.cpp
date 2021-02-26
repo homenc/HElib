@@ -122,12 +122,16 @@ TEST_P(TestCtxt, timesEqualsWithLongWorks)
   EXPECT_EQ(decrypted_result, expected_result);
 }
 
-TEST_P(TestCtxt, timesEqualsWithZZXWorks)
+TEST_P(TestCtxt, timesEqualsWithEncodedPtxtWorks)
 {
   helib::Ptxt<helib::BGV> ptxt(context, std::vector<long>(ea.size(), 5));
   helib::Ctxt ctxt(publicKey);
   publicKey.Encrypt(ctxt, ptxt);
-  ctxt *= NTL::ZZX(2l);
+
+  helib::PtxtArray pa(context, NTL::ZZX(2l));
+  helib::EncodedPtxt eptxt; // Container for holding a polynomial i.e. NTL::ZZX
+  pa.encode(eptxt);
+  ctxt *= eptxt; // Same as the deprecated function ctxt *= NTL::ZZX(2l);
 
   helib::Ptxt<helib::BGV> expected_result(context,
                                           std::vector<long>(ea.size(), 10));
