@@ -42,7 +42,7 @@ See below for more details.
 //#warning "HAVE_AVX"
 #endif
 
-#ifdef __AVX2__
+#if defined(__AVX2__) && defined(__FMA__)
 #define HAVE_AVX2
 //#warning "HAVE_AVX2"
 #endif
