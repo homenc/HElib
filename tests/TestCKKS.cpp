@@ -225,7 +225,7 @@ TEST_P(TestCKKS, addingPolyConstantToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
-  NTL::ZZX poly;
+  helib::EncodedPtxt eptxt; // Containing holding a polynomial i.e. NTL::ZZX
   NTL::xdouble rf, pm;
 
   ea.random(vd1);
@@ -233,8 +233,9 @@ TEST_P(TestCKKS, addingPolyConstantToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd2, /*size=*/1.0);
-  c1.addConstantCKKS(poly);
+  helib::PtxtArray pa(context, vd2);
+  pa.encode(eptxt, /*mag=*/1.0); // Encode polynomial
+  c1 += eptxt;
   ea.decrypt(c1, secretKey, vd3);
 
   add(vd1, vd2);
@@ -250,7 +251,7 @@ TEST_P(TestCKKS, addingNegatedPolyConstantToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
-  NTL::ZZX poly;
+  helib::EncodedPtxt eptxt; // Containing holding a polynomial i.e. NTL::ZZX
   NTL::xdouble rf, pm;
 
   ea.random(vd1);
@@ -259,8 +260,9 @@ TEST_P(TestCKKS, addingNegatedPolyConstantToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd2, /*size=*/1.0);
-  c1.addConstantCKKS(poly);
+  helib::PtxtArray pa(context, vd2);
+  pa.encode(eptxt, /*mag=*/1.0); // Encode polynomial
+  c1 += eptxt;
   ea.decrypt(c1, secretKey, vd3);
 
   add(vd1, vd2);
@@ -277,7 +279,7 @@ TEST_P(TestCKKS, multiplyingPolyConstantToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
-  NTL::ZZX poly;
+  helib::EncodedPtxt eptxt; // Container holding a polynomial i.e. NTL::ZZX
   NTL::xdouble rf, pm;
 
   ea.random(vd1);
@@ -285,8 +287,9 @@ TEST_P(TestCKKS, multiplyingPolyConstantToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd2, /*size=*/1.0);
-  c1.multByConstantCKKS(poly);
+  helib::PtxtArray pa(context, vd2);
+  pa.encode(eptxt, /*mag*/ 1.0); // Encode polynomial
+  c1 *= eptxt;
   ea.decrypt(c1, secretKey, vd3);
 
   mul(vd1, vd2);
@@ -313,7 +316,7 @@ TEST_P(TestCKKS, addingDoubleToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  c1.addConstantCKKS(vd[0]);
+  c1 += vd[0]; // Same as depcrecated c1.addConstantCKKS(vd[0]);
   ea.decrypt(c1, secretKey, vd2);
 
   add(vd1, vd[0]);
@@ -338,8 +341,7 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  c1.multByConstantCKKS(vd[0]);
-  // c1 *= vd[0];
+  c1 *= vd[0]; // Same as deprecated c1.multByConstantCKKS(vd[0]);
   ea.decrypt(c1, secretKey, vd2);
 
   mul(vd1, vd[0]);
@@ -564,7 +566,9 @@ TEST_P(
   ea.random(vd2);
   ea.encrypt(c1, publicKey, vd1);
   ea.encrypt(c2, publicKey, vd2);
-  c1.multByConstantCKKS(std::make_pair<long, long>(-5, 2));
+  // Same as deprecated function
+  // c1.multByConstantCKKS(std::make_pair<long, long>(-5, 2));
+  c1 *= -5.0 / 2.0;
   c1 += c2;
   ea.decrypt(c1, secretKey, vd4);
 
@@ -585,7 +589,7 @@ TEST_P(TestCKKS, multiplyingByConstantNeverProducesNegativeRatFactor)
 
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1);
-  c1.multByConstantCKKS(-2.0);
+  c1 *= -2.0; // Same as deprecated c1.multByConstantCKKS(-2.0);
 
   EXPECT_GT(c1.getRatFactor(), 0);
 }
@@ -599,7 +603,8 @@ TEST_P(TestCKKS, multiplyBySmallNegativeConstantFollowedByOperationWorks)
   ea.random(vd2);
   ea.encrypt(c1, publicKey, vd1);
   ea.encrypt(c2, publicKey, vd2);
-  c1.multByConstantCKKS(-2.0 / 10.0);
+  // Same as deprecated c1.multByConstantCKKS(-2.0 / 10.0);
+  c1 *= (-2.0 / 10.0);
   c1 -= c2;
   ea.decrypt(c1, secretKey, vd3);
 
