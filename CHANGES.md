@@ -1,6 +1,17 @@
 Release Changes
 ===============
 
+HElib 2.1.0, March 2021
+=========================
+(tagged as v2.1.0)
+
+* Deprecated APIs
+  * Documentation update: deprecated list
+  * Marked functions as deprecated
+  * Updated examples
+* Documentation update: PtxtArray JSON IO
+* Bug fixes
+
 HElib 2.0.0, January 2021
 =========================
 (tagged as v2.0.0)
