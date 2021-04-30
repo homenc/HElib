@@ -20,24 +20,30 @@
 #include <helib/ArgMap.h>
 #include <NTL/BasicThreadPool.h>
 
-void add(helib::Ctxt ctxt, int iter)
+void add(helib::Ctxt& ctxt, int iter)
 {
   for (int i = 0; i < iter; ++i) {
-    ctxt += ctxt;
+    // Create tmp to avoid noise growth.
+    helib::Ctxt tmp(ctxt);
+    tmp += ctxt;
   }
 }
 
-void mult(helib::Ctxt ctxt, int iter)
+void mult(helib::Ctxt& ctxt, int iter)
 {
   for (int i = 0; i < iter; ++i) {
-    ctxt *= ctxt;
+    // Create tmp to avoid noise growth.
+    helib::Ctxt tmp(ctxt);
+    tmp *= ctxt;
   }
 }
 
-void rotate(helib::Ctxt ctxt, const helib::EncryptedArray& ea, int iter)
+void rotate(helib::Ctxt& ctxt, const helib::EncryptedArray& ea, int iter)
 {
   for (int i = 0; i < iter; ++i) {
-    ea.rotate(ctxt, 1);
+    // Create tmp to avoid noise growth.
+    helib::Ctxt tmp(ctxt);
+    ea.rotate(tmp, 1);
   }
 }
 
