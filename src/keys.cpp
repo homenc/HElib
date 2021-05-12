@@ -1742,6 +1742,16 @@ void SecKey::writeTo(std::ostream& str) const
   writeEyeCatcher(str, EyeCatcher::SK_END);
 }
 
+void SecKey::writeOnlySecretKeyTo(std::ostream& str) const
+{
+  SerializeHeader<SecKey>().writeTo(str);
+  writeEyeCatcher(str, EyeCatcher::SK_BEGIN);
+
+  write_raw_vector<DoubleCRT>(str, this->sKeys);
+
+  writeEyeCatcher(str, EyeCatcher::SK_END);
+}
+
 SecKey SecKey::readFrom(std::istream& str, const Context& context)
 {
   const auto header = SerializeHeader<SecKey>::readFrom(str);
@@ -1759,6 +1769,29 @@ SecKey SecKey::readFrom(std::istream& str, const Context& context)
 
   // Set the secret part of the secret key.
   ret.sKeys = read_raw_vector<DoubleCRT>(str, context);
+
+  eyeCatcherFound = readEyeCatcher(str, EyeCatcher::SK_END);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find post-secret key eyecatcher");
+
+  return ret;
+}
+
+SecKey SecKey::readOnlySecretKeyFrom(std::istream& str, const PubKey &pubKey)
+{
+  const auto header = SerializeHeader<SecKey>::readFrom(str);
+  assertEq<IOError>(header.version,
+                    Binio::VERSION_0_0_1_0,
+                    "Header: version " + header.versionString() +
+                        " not supported");
+
+  bool eyeCatcherFound = readEyeCatcher(str, EyeCatcher::SK_BEGIN);
+  assertTrue<IOError>(eyeCatcherFound,
+                      "Could not find pre-secret key eyecatcher");
+
+  SecKey ret(pubKey);
+  // Set the secret part of the secret key.
+  ret.sKeys = read_raw_vector<DoubleCRT>(str, ret.context);
 
   eyeCatcherFound = readEyeCatcher(str, EyeCatcher::SK_END);
   assertTrue<IOError>(eyeCatcherFound,
