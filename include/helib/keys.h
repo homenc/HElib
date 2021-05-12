@@ -427,12 +427,29 @@ public:
   void writeTo(std::ostream& str) const;
 
   /**
+   * @brief Write out only the secret key part of the `SecKey` object in binary format.
+   * @param str Output `std::ostream`.
+   **/
+  void writeOnlySecretKeyTo(std::ostream& str) const;
+
+
+  /**
    * @brief Read from the stream the serialized `SecKey` object in binary
    * format.
    * @param str Input `std::istream`.
    * @return The deserialized `SecKey` object.
    **/
   static SecKey readFrom(std::istream& str, const Context& context);
+
+  /**
+   * @brief Read from the stream only the serialized secret key in binary
+   * format and add it to a PubKey to get a SecKey object.
+   * @param str Input `std::istream`.
+   * @param pubKey Public key matching the secret key.
+   * @return The deserialized `SecKey` object.
+   **/
+  static SecKey readOnlySecretKeyFrom(std::istream& str, const PubKey &pubKey);
+
 
   /**
    * @brief Write out the secret key (`SecKey`) object to the output
