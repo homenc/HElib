@@ -27,18 +27,6 @@
 #include <helib/ArgMap.h>
 #include <NTL/BasicThreadPool.h>
 
-// Utility function to print polynomials
-void printPoly(NTL::ZZX& poly)
-{
-  for (int i = NTL::deg(poly); i >= 0; i--) {
-    std::cout << poly[i] << "x^" << i;
-    if (i > 0)
-      std::cout << " + ";
-    else
-      std::cout << "\n";
-  }
-}
-
 // Utility function to read <K,V> CSV data from file
 std::vector<std::pair<std::string, std::string>> read_csv(std::string filename)
 {
