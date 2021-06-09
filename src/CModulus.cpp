@@ -398,7 +398,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
       y_copyp[i] = 0;
     }
 
-    for (long i = 0; i <= phim; ++i) {
+    for (long i = 0; i < phim; ++i) {
       std::cout << (i == 0? "\n" : "");
       std::cout << "HEXL FFTFwd input " << i << ": " << y_copyp[i] << std::endl;
       std::cout << "NTL FFTFwd input " << i << ":  " << yp[i] << std::endl << std::endl;
@@ -409,7 +409,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     // NTL FFT
     FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 
-    for (long i = 0; i <= phim; ++i) {
+    for (long i = 0; i < phim; ++i) {
       std::cout << (i == 0? "\nNOT BIT REVERSED!\n" : "");
       std::cout << "HEXL FFTFwd result " << i << ": " << y_copyp[i] << std::endl;
       std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] << std::endl << std::endl;
