@@ -10,7 +10,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
-cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
+# TODO: Change this back to 3.10.2 (Remove add_compile_definitions)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 project(helib_superbuild LANGUAGES C CXX)
 
@@ -125,6 +126,7 @@ option(HELIB_DEBUG
        "Build with HELIB_DEBUG (enables extra debugging info, but needs to be initialized)"
        OFF)
 option(ENABLE_TEST "Enable tests" OFF)
+option(USE_INTEL_HEXL "Use Intel HEXL library" OFF)
 option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" ON)
 
 # Add properties dependent to PACKAGE_BUILD
@@ -175,6 +177,22 @@ find_package(Threads)
 if (ENABLE_THREADS AND Threads_NOTFOUND)
   message(FATAL_ERROR "Cannot find pthreads (ENABLE_THREADS is ON).")
 endif ()
+
+# Build optional Intel HEXL library
+if(USE_INTEL_HEXL)
+  #add_library(hexl STATIC)
+  #set_target_properties(hexl PROPERTIES IMPORTED_LOCATION ${HEXL_HINT_DIR}/libhexl.a)
+  find_package(HEXL 1.0.1 HINTS ${HEXL_HINT_DIR})
+  include_directories(${HEXL_INCLUDE_DIRS})
+  if (NOT TARGET HEXL::hexl)
+    message("Intel HEXL: not found. Fetching...")
+    #include(cmake/intel-hexl.cmake)
+    #install(
+    #  DIRECTORY ${hexl_SOURCE_DIR}/hexl/include/intel-hexl
+    #  DESTINATION ${SEAL_INCLUDES_INSTALL_DIR})
+  endif()
+  add_compile_definitions(USE_INTEL_HEXL)
+endif(USE_INTEL_HEXL)
 
 # NOTE: Consider reconfiguring everything when PACKAGE_BUILD changes value.
 # Options from the previous value will remain otherwise.
@@ -334,6 +352,7 @@ if (PACKAGE_BUILD)
                -DFETCH_GMP=${FETCH_GMP}
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
+               -DUSE_INTEL_HEXL=${USE_INTEL_HEXL}
                -DHELIB_PROJECT_ROOT_DIR=${HELIB_PROJECT_ROOT_DIR}
                -DHELIB_CMAKE_EXTRA_DIR=${HELIB_CMAKE_EXTRA_DIR}
                -DHELIB_INCLUDE_DIR=${HELIB_INCLUDE_DIR}

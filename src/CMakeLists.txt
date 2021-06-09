@@ -297,6 +297,21 @@ target_link_libraries(
          # Add pthread if required
          $<$<BOOL:${HELIB_REQUIRES_PTHREADS}>:Threads::Threads>)
 
+# Link hexl
+if (USE_INTEL_HEXL)
+  #target_link_libraries(helib PUBLIC ${HEXL_HINT_DIR}/libhexl.a)
+  #target_include_directories(helib PUBLIC ${HEXL_HINT_DIR}/../include/hexl/)
+  #include_directories(${HEXL_HINT_DIR}/../include/hexl/)
+#  message("HEXL HEADERS="${HEXL_INCLUDE_DIR})
+#  target_include_directories(helib PUBLIC ${HEXL_INCLUDE_DIR})
+  target_link_libraries(helib PRIVATE HEXL::hexl)
+  get_target_property(
+    HEXL_INCLUDE_DIR
+    HEXL::hexl
+    INTERFACE_INCLUDE_DIRECTORIES)
+  target_include_directories(helib PUBLIC ${HEXL_INCLUDE_DIR})
+endif()
+
 # FIX RPATH
 if (BUILD_SHARED)
   # RPATH will be empty since ntl, gmp, and helib are all in PACKAGE_DIR/lib

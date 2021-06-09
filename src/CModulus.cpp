@@ -27,6 +27,10 @@
 #include <helib/CModulus.h>
 #include <helib/timing.h>
 
+#ifdef USE_INTEL_HEXL
+#include <helib/intelExt.h>
+#endif
+
 namespace helib {
 
 // It is assumed that m,q,context, and root are already set. If root is set
@@ -353,6 +357,8 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     long phim = (1L << (k - 1));
     long dx = deg(tmp);
     long p = NTL::zz_p::modulus();
+    std::cout << "*** p = " << p << std::endl;
+    std::cout << "*** q = " << this->q << std::endl;
 
     const NTL::zz_p* powers_p = (*powers).rep.elts();
     const NTL::mulmod_precon_t* powers_aux_p = powers_aux.elts();
@@ -362,13 +368,53 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 
     NTL::zz_p* tmp_p = tmp.rep.elts();
 
-    for (long i = 0; i <= dx; i++)
+    for (long i = 0; i <= dx; i++) {
       yp[i] = NTL::MulModPrecon(rep(tmp_p[i]),
                                 rep(powers_p[i]),
                                 p,
                                 powers_aux_p[i]);
-    for (long i = dx + 1; i < phim; i++)
+    }
+
+    for (long i = dx + 1; i < phim; i++) {
       yp[i] = 0;
+    }
+
+// FIXME: Change to HELIB_HEXL
+#ifdef USE_INTEL_HEXL
+    std::cout << "*** USE HEXL!!! ***\n";
+
+    NTL::vec_long y_copy(y);
+    y_copy.SetLength(phim);
+    long* y_copyp = y_copy.elts();
+
+    for (long i = 0; i <= dx; i++) {
+      y_copyp[i] = NTL::MulModPrecon(rep(tmp_p[i]),
+                                rep(powers_p[i]),
+                                p,
+                                powers_aux_p[i]);
+    }
+
+    for (long i = dx + 1; i < phim; i++) {
+      y_copyp[i] = 0;
+    }
+
+    for (long i = 0; i <= phim; ++i) {
+      std::cout << (i == 0? "\n" : "");
+      std::cout << "HEXL FFTFwd input " << i << ": " << y_copyp[i] << std::endl;
+      std::cout << "NTL FFTFwd input " << i << ":  " << yp[i] << std::endl << std::endl;
+    }
+
+    intel::AltFFTFwd(y_copyp, y_copyp, phim, p, this->root);
+
+    // NTL FFT
+    FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+
+    for (long i = 0; i <= phim; ++i) {
+      std::cout << (i == 0? "\nNOT BIT REVERSED!\n" : "");
+      std::cout << "HEXL FFTFwd result " << i << ": " << y_copyp[i] << std::endl;
+      std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] << std::endl << std::endl;
+    }
+#else
 
 #ifdef HELIB_OPENCL
     AltFFTFwd(yp, yp, k - 1, *altFFTInfo);
@@ -379,11 +425,17 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 #else
 
     FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+
+#endif
+
+#endif
+
+#endif
+
     // Now we have to bit reverse the result
     // The BitReverseCopy routine does not allow aliasing, so
     // we have to do an extra copy here.
     // We use the fact tmp1 and y do not alias.
-
     NTL::vec_long& tmp1 = Cmodulus::getScratch_vec_long();
     tmp1.SetLength(phim);
     long* tmp1_p = tmp1.elts();
@@ -391,10 +443,6 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     BitReverseCopy(tmp1_p, yp, k - 1);
     for (long i = 0; i < phim; i++)
       yp[i] = tmp1_p[i];
-
-#endif
-
-#endif
 
     return;
   }
@@ -470,6 +518,16 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     tmp.SetLength(phim);
     long* tmp_p = tmp.elts();
 
+    // We have to bit reverse the inputs to FFTRev1
+    // The BitReverseCopy routine does not allow aliasing.
+    // We use the fact that y and tmp do not alias
+
+    BitReverseCopy(tmp_p, yp, k - 1);
+
+#ifdef USE_INTEL_HEXL
+    ::intel::AltFFTRev1(tmp_p, yp, phim, p, this->root);
+#else
+
 #ifdef HELIB_OPENCL
     AltFFTRev1(tmp_p, yp, k - 1, *altFFTInfo);
 #else
@@ -477,12 +535,9 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 #ifndef NTL_PROVIDES_TRUNC_FFT
     FFTRev1(tmp_p, yp, k - 1, *NTL::zz_pInfo->p_info);
 #else
-    // We have to bit reverse the inputs to FFTRev1
-    // The BitReverseCopy routine does not allow aliasing.
-    // We use the fact that y and tmp do not alias
-
-    BitReverseCopy(tmp_p, yp, k - 1);
     FFTRev1(tmp_p, tmp_p, k - 1, *NTL::zz_pInfo->p_info);
+#endif
+
 #endif
 
 #endif
