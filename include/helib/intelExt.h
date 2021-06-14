@@ -14,7 +14,6 @@
 #ifndef HELIB_INTELEXT_H
 #define HELIB_INTELEXT_H
 
-#ifdef USE_INTEL_HEXL
 #include <hexl/hexl.hpp>
 
 namespace intel {
@@ -43,8 +42,5 @@ namespace intel {
   }
 
 } // namespace intel
-
-
-#endif // USE_INTEL_HEXL
 
 #endif // ifndef HELIB_INTELEXT_H
