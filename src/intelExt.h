@@ -14,19 +14,20 @@
 #ifndef HELIB_INTELEXT_H
 #define HELIB_INTELEXT_H
 
-#ifdef USE_INTEL_HEXL
 #include <hexl/hexl.hpp>
+
+#include <iostream>
 
 namespace intel {
 
   // TODO: Create a lookup table to avoid re-creating previously created NTTs?
   // Use a hash map?
-  intel::hexl::NTT initNTT(uint64_t degree, uint64_t q, uint64_t root)
+  inline intel::hexl::NTT initNTT(uint64_t degree, uint64_t q, uint64_t root)
   {
     return intel::hexl::NTT(degree, q, root);
   }
 
-  void AltFFTFwd(long* output, const long* input, long n, long q, long root)//, const helib::FFTPrimeInfo& info)
+  inline void AltFFTFwd(long* output, const long* input, long n, long q, long root)//, const helib::FFTPrimeInfo& info)
   {
     std::cout << "HEXL Fwd\n";
     initNTT(/*degree=*/n, /*modulus=*/q, /*root=*/root)
@@ -34,7 +35,7 @@ namespace intel {
     return;
   }
 
-  void AltFFTRev1(long* output, const long* input, long n, long q, long root)//, const helib::FFTPrimeInfo& info)
+  inline void AltFFTRev1(long* output, const long* input, long n, long q, long root)//, const helib::FFTPrimeInfo& info)
   {
     std::cout << "HEXL inverse\n";
     initNTT(/*degree=*/n, /*modulus=*/q, /*root=*/root)
@@ -43,8 +44,5 @@ namespace intel {
   }
 
 } // namespace intel
-
-
-#endif // USE_INTEL_HEXL
 
 #endif // ifndef HELIB_INTELEXT_H

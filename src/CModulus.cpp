@@ -28,7 +28,7 @@
 #include <helib/timing.h>
 
 #ifdef USE_INTEL_HEXL
-#include <helib/intelExt.h>
+#include "intelExt.h"
 #endif
 
 namespace helib {
