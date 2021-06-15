@@ -14,34 +14,19 @@
 #ifndef HELIB_INTELEXT_H
 #define HELIB_INTELEXT_H
 
-#include <hexl/hexl.hpp>
-
-#include <iostream>
+#include <stdint.h>
 
 namespace intel {
 
-  // TODO: Create a lookup table to avoid re-creating previously created NTTs?
-  // Use a hash map?
-  inline intel::hexl::NTT initNTT(uint64_t degree, uint64_t q, uint64_t root)
-  {
-    return intel::hexl::NTT(degree, q, root);
-  }
+namespace hexl {
+class NTT;
+}
 
-  inline void AltFFTFwd(long* output, const long* input, long n, long q, long root)//, const helib::FFTPrimeInfo& info)
-  {
-    std::cout << "HEXL Fwd\n";
-    initNTT(/*degree=*/n, /*modulus=*/q, /*root=*/root)
-      .ComputeForward(reinterpret_cast<uint64_t*>(output), reinterpret_cast<const uint64_t*>(input), /*input_mod_factor=*/4, /*output_mod_factor=*/4);
-    return;
-  }
+intel::hexl::NTT initNTT(uint64_t degree, uint64_t q);
 
-  inline void AltFFTRev1(long* output, const long* input, long n, long q, long root)//, const helib::FFTPrimeInfo& info)
-  {
-    std::cout << "HEXL inverse\n";
-    initNTT(/*degree=*/n, /*modulus=*/q, /*root=*/root)
-      .ComputeInverse(reinterpret_cast<uint64_t*>(output), reinterpret_cast<const uint64_t*>(input), /*input_mod_factor=*/2, /*output_mod_factor=*/2);
-    return;
-  }
+void AltFFTFwd(long* output, const long* input, long n, long q);
+
+void AltFFTRev1(long* output, const long* input, long n, long q);
 
 } // namespace intel
 

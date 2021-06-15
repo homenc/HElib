@@ -389,9 +389,9 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 
     for (long i = 0; i <= dx; i++) {
       y_copyp[i] = NTL::MulModPrecon(rep(tmp_p[i]),
-                                rep(powers_p[i]),
-                                p,
-                                powers_aux_p[i]);
+                                     rep(powers_p[i]),
+                                     p,
+                                     powers_aux_p[i]);
     }
 
     for (long i = dx + 1; i < phim; i++) {
@@ -399,20 +399,23 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     }
 
     for (long i = 0; i < phim; ++i) {
-      std::cout << (i == 0? "\n" : "");
+      std::cout << (i == 0 ? "\n" : "");
       std::cout << "HEXL FFTFwd input " << i << ": " << y_copyp[i] << std::endl;
-      std::cout << "NTL FFTFwd input " << i << ":  " << yp[i] << std::endl << std::endl;
+      std::cout << "NTL FFTFwd input " << i << ":  " << yp[i] << std::endl
+                << std::endl;
     }
 
-    intel::AltFFTFwd(y_copyp, y_copyp, phim, p, this->root);
+    intel::AltFFTFwd(y_copyp, y_copyp, phim, p);
 
     // NTL FFT
     FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 
     for (long i = 0; i < phim; ++i) {
-      std::cout << (i == 0? "\nNOT BIT REVERSED!\n" : "");
-      std::cout << "HEXL FFTFwd result " << i << ": " << y_copyp[i] << std::endl;
-      std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] << std::endl << std::endl;
+      std::cout << (i == 0 ? "\nNOT BIT REVERSED!\n" : "");
+      std::cout << "HEXL FFTFwd result " << i << ": " << y_copyp[i]
+                << std::endl;
+      std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] << std::endl
+                << std::endl;
     }
 #else
 
@@ -525,7 +528,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     BitReverseCopy(tmp_p, yp, k - 1);
 
 #ifdef USE_INTEL_HEXL
-    ::intel::AltFFTRev1(tmp_p, yp, phim, p, this->root);
+    ::intel::AltFFTRev1(tmp_p, yp, phim, p);
 #else
 
 #ifdef HELIB_OPENCL

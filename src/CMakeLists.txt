@@ -105,6 +105,7 @@ set(HELIB_SRCS
     "fhe_stats.cpp"
     "hypercube.cpp"
     "IndexSet.cpp"
+    "intelExt.cpp"
     "intraSlot.cpp"
     "JsonWrapper.cpp"
     "keys.cpp"
