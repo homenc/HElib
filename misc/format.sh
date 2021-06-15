@@ -16,7 +16,7 @@ FORMAT_PRG="${1:-"clang-format"}"
 FORMAT_CMD="${FORMAT_PRG} -style=file -i"
 
 # Check we can find clang-format
-if [ -z $(which $FORMAT_PRG) ]; then
+if [ -z "$(which $FORMAT_PRG)" ]; then
   echo "$FORMAT_PRG not found."
   exit 1
 fi
@@ -51,7 +51,7 @@ if [ "$(uname)" == "Darwin" ]; then
 fi
 
 previous_dir=""
-for file in $(find . $arg -type f -regex '.*\.(c|h|cpp|hpp)' \
+for file in $(find $arg . -type f -regex '.*\.(c|h|cpp|hpp)' \
               ! -path '*/misc/*' \
               ! -path '*/build/*' \
               ! -path '*/dependencies/*' \
