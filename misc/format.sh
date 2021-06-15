@@ -22,7 +22,8 @@ if [ -z $(which $FORMAT_PRG) ]; then
 fi
 
 # Check format program is correct major version
-if [ ! $($FORMAT_PRG --version | cut -d' ' -f3 | cut -d'.' -f1) -ge 9 ]; then
+# NOTE Some OSes print extra info, but the version number appears at the end.
+if [ ! $($FORMAT_PRG --version | awk '{print $NF}' | cut -d'.' -f1) -ge 9 ]; then
   >&2 echo "Clang-format version below 9. Require 9+."
   exit 2
 fi
@@ -43,8 +44,14 @@ function echo_header {
 
 echo "Using '${FORMAT_CMD}' to perform formatting."
 
+arg="-regextype posix-egrep"
+# find command differs between Mac and Linux
+if [ "$(uname)" == "Darwin" ]; then
+  arg="-E"
+fi
+
 previous_dir=""
-for file in $(find -E . -type f -regex '.*\.(c|h|cpp|hpp)' \
+for file in $(find . $arg -type f -regex '.*\.(c|h|cpp|hpp)' \
               ! -path '*/misc/*' \
               ! -path '*/build/*' \
               ! -path '*/dependencies/*' \
