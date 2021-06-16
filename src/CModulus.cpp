@@ -379,7 +379,6 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
       yp[i] = 0;
     }
 
-// FIXME: Change to HELIB_HEXL
 #ifdef USE_INTEL_HEXL
     std::cout << "*** USE HEXL!!! ***\n";
 
@@ -426,14 +425,12 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 #ifndef NTL_PROVIDES_TRUNC_FFT
     FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 #else
-
     FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
-
 #endif
 
-#endif
+#endif // HELIB_OPENCL
 
-#endif
+#endif // USE_INTEL_HEXL
 
     // Now we have to bit reverse the result
     // The BitReverseCopy routine does not allow aliasing, so
@@ -528,7 +525,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     BitReverseCopy(tmp_p, yp, k - 1);
 
 #ifdef USE_INTEL_HEXL
-    ::intel::AltFFTRev1(tmp_p, yp, phim, p);
+    intel::AltFFTRev1(tmp_p, yp, phim, p);
 #else
 
 #ifdef HELIB_OPENCL
