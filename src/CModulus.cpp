@@ -9,6 +9,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
 /* CModulus.cpp - supports forward and backward length-m FFT transformations
  *
  * This is a wrapper around the bluesteinFFT routines, for one modulus q.
@@ -406,8 +407,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 
     intel::AltFFTFwd(y_copyp, y_copyp, phim, p);
 
-    // NTL FFT
-    FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+    NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 
     for (long i = 0; i < phim; ++i) {
       std::cout << (i == 0 ? "\nNOT BIT REVERSED!\n" : "");
@@ -423,9 +423,9 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 #else
 
 #ifndef NTL_PROVIDES_TRUNC_FFT
-    FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+    NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 #else
-    FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+    NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 #endif
 
 #endif // HELIB_OPENCL
@@ -533,14 +533,14 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 #else
 
 #ifndef NTL_PROVIDES_TRUNC_FFT
-    FFTRev1(tmp_p, yp, k - 1, *NTL::zz_pInfo->p_info);
+    NTL::FFTRev1(tmp_p, yp, k - 1, *NTL::zz_pInfo->p_info);
 #else
-    FFTRev1(tmp_p, tmp_p, k - 1, *NTL::zz_pInfo->p_info);
+    NTL::FFTRev1(tmp_p, tmp_p, k - 1, *NTL::zz_pInfo->p_info);
 #endif
 
-#endif
+#endif // HELIB_OPENCL
 
-#endif
+#endif // USE_INTEL_HEXL
 
     x.rep.SetLength(phim);
     NTL::zz_p* xp = x.rep.elts();
