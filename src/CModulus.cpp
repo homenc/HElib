@@ -405,7 +405,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
                 << std::endl;
     }
 
-    intel::AltFFTFwd(y_copyp, y_copyp, phim, p);
+    intel::FFTFwd(y_copyp, y_copyp, phim, p);
 
     NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 
@@ -525,7 +525,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     BitReverseCopy(tmp_p, yp, k - 1);
 
 #ifdef USE_INTEL_HEXL
-    intel::AltFFTRev1(tmp_p, yp, phim, p);
+    intel::FFTRev1(tmp_p, yp, phim, p);
 #else
 
 #ifdef HELIB_OPENCL

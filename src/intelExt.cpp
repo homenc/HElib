@@ -28,7 +28,7 @@ intel::hexl::NTT initNTT(uint64_t degree, uint64_t q) //, uint64_t root)
   return intel::hexl::NTT(degree, q);
 }
 
-void AltFFTFwd(long* output,
+void FFTFwd(long* output,
                const long* input,
                long n,
                long q) //, long root)//, const helib::FFTPrimeInfo& info)
@@ -42,7 +42,7 @@ void AltFFTFwd(long* output,
   return;
 }
 
-void AltFFTRev1(long* output,
+void FFTRev1(long* output,
                 const long* input,
                 long n,
                 long q) //, long root)//, const helib::FFTPrimeInfo& info)

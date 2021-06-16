@@ -12,8 +12,8 @@ namespace {
 TEST(TestHEXL, hexlInUse)
 {
 
-  //long N = 8; // This is phi_m
-  //long modulus = 769;
+  long N = 8; // This is phi_m
+  long modulus = 769;
 
   // For powers of 2, 2N == 2phi_m == m
   // FindPrimitiveRoot(ZZ_p(2 * N, modulus), );
@@ -21,8 +21,8 @@ TEST(TestHEXL, hexlInUse)
   std::vector<long> args = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   auto expected_outputs = args;
 
-  //intel::TinkyWinky(args.data(), args.data(), N, modulus);
-  //intel::AltFFTRev1(args.data(), args.data(), N, modulus);
+  intel::FFTFwd(args.data(), args.data(), N, modulus);
+  intel::FFTRev1(args.data(), args.data(), N, modulus);
 
   EXPECT_TRUE(std::equal(args.begin(), args.end(), expected_outputs.begin()));
 }
