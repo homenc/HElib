@@ -23,36 +23,36 @@ namespace intel {
 
 // TODO: Create a lookup table to avoid re-creating previously created NTTs?
 // Use a hash map?
-intel::hexl::NTT initNTT(uint64_t degree, uint64_t q) //, uint64_t root)
+intel::hexl::NTT initNTT(uint64_t degree, uint64_t q, uint64_t root)
 {
-  return intel::hexl::NTT(degree, q);
+  return intel::hexl::NTT(degree, q, root);
 }
 
 void FFTFwd(long* output,
                const long* input,
                long n,
-               long q) //, long root)//, const helib::FFTPrimeInfo& info)
+               long q, 
+               long root)//, const helib::FFTPrimeInfo& info)
 {
-  std::cout << "HEXL Fwd\n";
-  initNTT(/*degree=*/n, /*modulus=*/q)
+  initNTT(/*degree=*/n, /*modulus=*/q, root)
       .ComputeForward(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),
-                      /*input_mod_factor=*/4,
-                      /*output_mod_factor=*/4);
+                      /*input_mod_factor=*/1,
+                      /*output_mod_factor=*/1);
   return;
 }
 
 void FFTRev1(long* output,
                 const long* input,
                 long n,
-                long q) //, long root)//, const helib::FFTPrimeInfo& info)
+                long q, 
+                long root)//, const helib::FFTPrimeInfo& info)
 {
-  std::cout << "HEXL inverse\n";
-  initNTT(/*degree=*/n, /*modulus=*/q)
+  initNTT(/*degree=*/n, /*modulus=*/q, root)
       .ComputeInverse(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),
-                      /*input_mod_factor=*/2,
-                      /*output_mod_factor=*/2);
+                      /*input_mod_factor=*/1,
+                      /*output_mod_factor=*/1);
   return;
 }
 

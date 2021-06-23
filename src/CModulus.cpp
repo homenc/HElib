@@ -268,8 +268,7 @@ static long* BRC_init(long k)
   long n = (1L << k);
   brc_mem[k].SetLength(n);
   long* rev = brc_mem[k].elts();
-  long i, j;
-  for (i = 0, j = 0; i < n; i++, j = RevInc(j, k))
+  for (long i = 0, j = 0; i < n; i++, j = RevInc(j, k))
     rev[i] = j;
   return rev;
 }
@@ -405,7 +404,10 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
                 << std::endl;
     }
 
-    intel::FFTFwd(y_copyp, y_copyp, phim, p);
+    std::cout << "*** k= " << k << '\n';
+    // Should be k-1 index, but HEXL expects k index
+    long root = NTL::zz_pInfo->p_info->RootTable[0][k];
+    intel::FFTFwd(y_copyp, y_copyp, phim, p, root);
 
     NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 
@@ -416,6 +418,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
       std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] << std::endl
                 << std::endl;
     }
+
 #else
 
 #ifdef HELIB_OPENCL
@@ -444,6 +447,26 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     for (long i = 0; i < phim; i++)
       yp[i] = tmp1_p[i];
 
+#ifdef USE_INTEL_HEXL
+    // Same again (BitReverse) for HEXL
+    NTL::vec_long& tmp2 = Cmodulus::getScratch_vec_long();
+    tmp1.SetLength(phim);
+    long* tmp2_p = tmp2.elts();
+
+    BitReverseCopy(tmp2_p, y_copyp, k - 1);
+    for (long i = 0; i < phim; i++)
+      y_copyp[i] = tmp2_p[i];       
+
+    for (long i = 0; i < phim; ++i) {
+      std::cout << (i == 0 ? "\nNTL & HEXL BIT REVERSED!\n" : "");
+      std::cout << "HEXL FFTFwd result " << i << ": " << y_copyp[i]
+                << std::endl;
+      std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] << std::endl
+                << std::endl;
+    }
+    std::cout << "After reverse" << std::endl;
+#endif // USE_INTEL_HEXL
+
     return;
   }
 
@@ -456,9 +479,8 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
   // copy the result to the output vector y, keeping only the
   // entries corresponding to primitive roots of unity
   y.SetLength(zMStar->getPhiM());
-  long i, j;
-  long m = getM();
-  for (i = j = 0; i < m; i++)
+  
+  for (long i = 0, j = 0; i < long(this->getM()); i++)
     if (zMStar->inZmStar(i))
       y[j++] = rep(coeff(tmp, i));
 }
@@ -525,7 +547,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     BitReverseCopy(tmp_p, yp, k - 1);
 
 #ifdef USE_INTEL_HEXL
-    intel::FFTRev1(tmp_p, yp, phim, p);
+    intel::FFTRev1(tmp_p, yp, phim, p, this->root);
 #else
 
 #ifdef HELIB_OPENCL
@@ -559,8 +581,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
   // convert input to zpx format, initializing only the coeffs i s.t. (i,m)=1
   x.rep.SetLength(m);
-  long i, j;
-  for (i = j = 0; i < m; i++)
+  for(long i = 0, j = 0; i < m; i++)
     if (zMStar->inZmStar(i))
       x.rep[i].LoopHole() = y[j++]; // DIRT: y[j] already reduced
   x.normalize();
