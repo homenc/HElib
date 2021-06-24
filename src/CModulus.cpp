@@ -228,10 +228,8 @@ Cmodulus& Cmodulus::operator=(const Cmodulus& other)
 
 static long RevInc(long a, long k)
 {
-  long j, m;
-
-  j = k;
-  m = 1L << (k - 1);
+  long j = k;
+  long m = 1L << (k - 1);
 
   while (j && (m & a)) {
     a ^= m;
@@ -444,18 +442,18 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     long* tmp1_p = tmp1.elts();
 
     BitReverseCopy(tmp1_p, yp, k - 1);
-    for (long i = 0; i < phim; i++)
-      yp[i] = tmp1_p[i];
+
+    std::copy(tmp1_p, tmp1_p + phim, yp);
 
 #ifdef USE_INTEL_HEXL
     // Same again (BitReverse) for HEXL
     NTL::vec_long& tmp2 = Cmodulus::getScratch_vec_long();
-    tmp1.SetLength(phim);
+    tmp2.SetLength(phim);
     long* tmp2_p = tmp2.elts();
 
     BitReverseCopy(tmp2_p, y_copyp, k - 1);
-    for (long i = 0; i < phim; i++)
-      y_copyp[i] = tmp2_p[i];       
+
+    std::copy(tmp2_p, tmp2_p + phim, yp);
 
     for (long i = 0; i < phim; ++i) {
       std::cout << (i == 0 ? "\nNTL & HEXL BIT REVERSED!\n" : "");
