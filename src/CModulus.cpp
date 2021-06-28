@@ -48,25 +48,22 @@ NTL::zz_pContext BuildContext(long p, long maxroot)
 
 // Constructor: it is assumed that zms is already set with m>1
 // If q == 0, then the current context is used
-Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
+Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt):
+q(qq), zMStar(&zms), root(rt)
 {
   assertTrue<InvalidArgument>(zms.getM() > 1,
                               "Bad Z_m^* modulus m (must be greater than 1)");
   bool explicitModulus = true;
 
-  if (qq == 0) {
-    q = NTL::zz_p::modulus();
+  // Correction for q == 0
+  if (this->q == 0) {
+    this->q = NTL::zz_p::modulus();
     explicitModulus = false;
-  } else
-    q = qq;
+  } 
 
   qinv = NTL::PrepMulMod(q);
 
-  zMStar = &zms;
-  root = rt;
-
-  long mm;
-  mm = zms.getM();
+  long mm = zms.getM();
   m_inv = NTL::InvMod(mm, q);
 
   NTL::zz_pBak bak;
