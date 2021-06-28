@@ -544,12 +544,12 @@ TEST_P(GTestGeneral, DISABLED_rotate1D)
 INSTANTIATE_TEST_SUITE_P(variousParameters, GTestGeneral, ::testing::Values(
     //         R, p, r, d, c,  k,   L, s,  m,        mvec,        gens,     ords, seed, nt
     //DEEP
-    Parameters(1, 3, 1, 2, 2, 10, 500, 0, 16,          {},          {},       {},    0,  1)//,
-//    Parameters(1, 2, 2, 1, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
-//    Parameters(1, 2, 1, 2, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
-//    Parameters(2, 7, 2, 1, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
-//    // Algebra with a bad dimension
-//    Parameters(1, 2, 1, 1, 2, 80, 500, 0, 2761, {11, 251}, {1256, 254}, {10, -5},    0,  1)
+    Parameters(1, 3, 1, 2, 2, 10, 500, 0, 16,          {},          {},       {},    0,  1),
+    Parameters(1, 2, 2, 1, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
+    Parameters(1, 2, 1, 2, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
+    Parameters(2, 7, 2, 1, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
+    // Algebra with a bad dimension
+    Parameters(1, 2, 1, 1, 2, 80, 500, 0, 2761, {11, 251}, {1256, 254}, {10, -5},    0,  1)
     //FAST
     //Parameters(1, 2, 1, 1, 2, 80, 500, 0, 91,        {},          {},       {},    0,  1)
     ));

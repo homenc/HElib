@@ -294,9 +294,10 @@ static void COBRA(long* NTL_RESTRICT B, const long* NTL_RESTRICT A, long k)
 
   long q = NTL_BRC_Q;
   long k1 = k - 2 * q;
-  long *NTL_RESTRICT rev_k1, *NTL_RESTRICT rev_q;
+  long* NTL_RESTRICT rev_k1;
+  long* NTL_RESTRICT rev_q;
   long* NTL_RESTRICT T;
-  long a, b, c, a1, b1, c1;
+  long a1, b1, c1;
 
   rev_k1 = brc_mem[k1].elts();
   if (!rev_k1)
@@ -312,17 +313,17 @@ static void COBRA(long* NTL_RESTRICT B, const long* NTL_RESTRICT A, long k)
     T = BRC_temp.elts();
   }
 
-  for (b = 0; b < (1L << k1); b++) {
+  for (long b = 0; b < (1L << k1); b++) {
     b1 = rev_k1[b];
-    for (a = 0; a < (1L << q); a++) {
+    for (long a = 0; a < (1L << q); a++) {
       a1 = rev_q[a];
-      for (c = 0; c < (1L << q); c++)
+      for (long c = 0; c < (1L << q); c++)
         T[(a1 << q) + c] = A[(a << (k1 + q)) + (b << q) + c];
     }
 
-    for (c = 0; c < (1L << q); c++) {
+    for (long c = 0; c < (1L << q); c++) {
       c1 = rev_q[c];
-      for (a1 = 0; a1 < (1L << q); a1++)
+      for (long a1 = 0; a1 < (1L << q); a1++)
         B[(c1 << (k1 + q)) + (b1 << q) + a1] = T[(a1 << q) + c];
     }
   }
