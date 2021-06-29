@@ -662,8 +662,8 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 //    for (long i = 0; i < phim; i++)
 //      xp[i].LoopHole() =
 //          NTL::MulModPrecon(tmp_p[i], rep(ipowers_p[i]), p, ipowers_aux_p[i]);
-//
-//    x.normalize();
+
+    x.normalize();
 
     return;
   }

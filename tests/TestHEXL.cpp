@@ -8,8 +8,8 @@
 
 // only run if HEXL has been linked.
 //#ifdef USE_INTEL_HEXL
-//#include "../src/intelExt.h" // Private header
-//
+#include "../src/intelExt.h" // Private header
+
 namespace {
 
 // FIXME Copied from GTestGeneral. Should really have common functionality.
