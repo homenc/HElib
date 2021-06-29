@@ -41,6 +41,8 @@ namespace helib {
  **/
 class Cmodulus
 {
+private:
+
   //! The modulus
   long q;
   //! PrepMulMod(q);
@@ -76,6 +78,9 @@ class Cmodulus
   // Allocate memory and compute roots
   void privateInit(const PAlgebra&, long rt);
 
+  // auxiliary routine used by the two FFT routines
+  void FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const;
+
 public:
 #ifdef HELIB_OPENCL
   SmartPtr<AltFFTPrimeInfo> altFFTInfo;
@@ -83,12 +88,8 @@ public:
   // is immutable
 #endif
 
-  // Destructor and constructors
-
   //! Default constructor
-  Cmodulus() {}
-
-  Cmodulus(const Cmodulus& other) { *this = other; }
+  Cmodulus() = default;
 
   /**
    * @brief Constructor
@@ -96,6 +97,9 @@ public:
    * current context is used
    */
   Cmodulus(const PAlgebra& zms, long qq, long rt);
+
+  //! Copy constructor
+  Cmodulus(const Cmodulus& other) = default;
 
   //! Copy assignment operator
   Cmodulus& operator=(const Cmodulus& other);
@@ -120,9 +124,6 @@ public:
   void FFT(NTL::vec_long& y, const NTL::ZZX& x) const;
   // y = FFT(x)
   void FFT(NTL::vec_long& y, const zzX& x) const;
-
-  // auxiliary routine used by above two routines
-  void FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const;
 
   // expects zp context to be set externally
   // x = FFT^{-1}(y)

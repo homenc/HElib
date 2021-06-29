@@ -56,6 +56,14 @@ void FFTRev1(long* output,
   return;
 }
 
+void BitReverseCopy(long* B, const long* A, long bit_width) 
+{   
+  // API as close to current HElib equiv API.
+  for(long i = 0; i < (1L << bit_width); ++i){
+    B[intel::hexl::ReverseBits(i, bit_width)] = A[i];
+  }
+}
+
 } // namespace intel
 
 #endif // USE_INTEL_HEXL
