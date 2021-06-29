@@ -102,15 +102,8 @@ q(qq), zMStar(&zms), root(rt)
     InitAltFFTPrimeInfo(*altFFTInfo, *zz_pInfo->p_info, k - 1);
 #endif
 
-//DEVHACK
-#ifdef USE_INTEL_HEXL
-    long w0 = NTL::zz_pInfo->p_info->RootTable[0][k+1];
-    long w1 = NTL::zz_pInfo->p_info->RootTable[1][k+1];
-    std::cout << "w0: " << w0 << std::endl;
-#else
     long w0 = NTL::zz_pInfo->p_info->RootTable[0][k];
     long w1 = NTL::zz_pInfo->p_info->RootTable[1][k];
-#endif
 
     powers->rep.SetLength(phim);
     powers_aux.SetLength(phim);
@@ -354,14 +347,12 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
   HELIB_TIMER_START;
 
   if (zMStar->getPow2()) {
-    // special case when m is a power of 2
+    // Special case: m is a power of 2
 
     long k = zMStar->getPow2();
     long phim = (1L << (k - 1));
     long dx = deg(tmp);
     long p = NTL::zz_p::modulus();
-    std::cout << "*** p = " << p << std::endl;
-    std::cout << "*** q = " << this->q << std::endl;
 
     const NTL::zz_p* powers_p = (*powers).rep.elts();
     const NTL::mulmod_precon_t* powers_aux_p = powers_aux.elts();
@@ -383,82 +374,22 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     }
 
 #ifdef USE_INTEL_HEXL
-    std::cout << "*** USE HEXL!!! ***\n";
 
     NTL::vec_long y_copy(y);
     y_copy.SetLength(phim);
     long* y_copyp = y_copy.elts();
 
-    // DEVHACK
-    for(long i=0;i<=dx;++i){
+    for(long i = 0; i <= dx; ++i){
       y_copyp[i] = rep(tmp_p[i]);
     }
 
-    for(long i=dx+1;i<phim;++i){
+    for(long i = dx + 1; i < phim; ++i){
       y_copyp[i] = 0;
     }
 
-    //for (long i = 0; i <= dx; i++) {
-    //  y_copyp[i] = NTL::MulModPrecon(rep(tmp_p[i]),
-    //                                 rep(powers_p[i]),
-    //                                 p,
-    //                                 powers_aux_p[i]);
-    //}
-
-    //for (long i = dx + 1; i < phim; i++) {
-    //  y_copyp[i] = 0;
-    //}
-    
-    // DEVHACK
-    if(!std::equal(y_copyp, y_copyp+phim, yp))
-      std::cout << "FFT: ycopy and yp are NOT EQUAL.\n";      
-
-
-    for (long i = 0; i < phim; ++i) {
-      std::cout << (i == 0 ? "\n" : "");
-      std::cout << "HEXL FFTFwd input " << i << ": " << y_copyp[i] 
-                << std::endl;
-      std::cout << "NTL FFTFwd input " << i << ":  " << yp[i] 
-                << std::endl << std::endl;
-    }
-
-    std::cout << "*** k= " << k << '\n';
     // Should be k-1 index, but HEXL expects k index
     long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
-    
-    std::cout << "Root passed to HEXL FFT: " << local_root << std::endl;
     intel::FFTFwd(y_copyp, y_copyp, phim, p, local_root);
-
-    //DEVHACK Sanity check
-    { // Block
-      std::vector<long> tmp_check(phim);
-      long* tmp_checkp = tmp_check.data();
-      intel::FFTRev1(tmp_checkp, y_copyp, phim, p, local_root);
-      if(!std::equal(tmp_checkp, tmp_checkp+phim, yp)){
-        std::cout << "Sanity Check FAIL\n";
-        for(long i = 0; i<phim; ++i){
-          std::cout << i << ": "
-                    << yp[i] << ", " << tmp_checkp[i] << '\n';
-        }
-        std::cout << "YCOPY\n";
-        for(long i = 0; i<phim; ++i){
-          std::cout << i << ": "
-                    << y_copyp[i] << '\n';
-        }
-      }
-
-//DEVHACK
-    } // End Block
-
-    NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
-
-    for (long i = 0; i < phim; ++i) {
-      std::cout << (i == 0 ? "\nNOT BIT REVERSED!\n" : "");
-      std::cout << "HEXL FFTFwd result " << i << ": " << y_copyp[i]
-                << std::endl;
-      std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] 
-                << std::endl << std::endl;
-    } 
 
 #else
 
@@ -496,26 +427,10 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     BitReverseCopy(tmp2_p, y_copyp, k - 1);
     std::copy_n(tmp2_p, phim, y_copyp);
 
-    for (long i = 0; i < phim; ++i) {
-      std::cout << (i == 0 ? "\nNTL & HEXL BIT REVERSED!\n" : "");
-      std::cout << "HEXL FFTFwd result " << i << ": " << y_copyp[i]
-                << std::endl;
-      std::cout << "NTL FFTFwd result " << i << ":  " << yp[i] 
-                << std::endl << std::endl;
-    }
-    std::cout << "After reverse" << std::endl;
-
     // DEVHACK. Dont forget to give the output.
     std::copy_n(y_copyp, phim, yp);
    
 #endif // USE_INTEL_HEXL
-
-    //DEVHACK
-    for (long i = 0; i<phim; ++i){
-      std::cout << "CModulus::FFT Final Ouput " << i << ": " 
-                << yp[i] << '\n'; 
-    }
-    std::cout << std::endl;
 
     return;
   }
@@ -533,17 +448,6 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
   for (long i = 0, j = 0; i < long(this->getM()); i++)
     if (zMStar->inZmStar(i))
       y[j++] = rep(coeff(tmp, i));
-}
-
-void printRootTable(long N/*phim*/)
-{
-  std::cout << "Root Table\n";
-  for(long i=0;i<2;++i) {
-    for(long j =0;j<=N;++j) {
-      std::cout << NTL::zz_pInfo->p_info->RootTable[i][j] << ' ';
-    }
-  std::cout << '\n';
-  }
 }
 
 void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
@@ -585,9 +489,6 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
   bak.save();
   context.restore();
 
-  //DEVHACK
-  std::cout << "*** q = " << this->q << std::endl;
-
   if (zMStar->getPow2()) {
     // special case when m is a power of 2
 
@@ -600,12 +501,6 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
     const long* yp = y.elts();
 
-    //DEVHACK
-    for (long i = 0; i<phim; ++i){
-      std::cout << "CModulus::iFFT Actual Input " << i << ": " << yp[i] << '\n'; 
-    }
-    std::cout << std::endl;
-
     NTL::vec_long& tmp = Cmodulus::getScratch_vec_long();
     tmp.SetLength(phim);
     long* tmp_p = tmp.elts();
@@ -616,20 +511,10 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
     BitReverseCopy(tmp_p, yp, k - 1);
 
-    // DEVHACK
-    std::cout << "After initial bitreverse\n";
-    for(long i = 0; i<phim; ++i){
-      std::cout << i << ": " << tmp_p[i] << '\n';
-    }
-
 #ifdef USE_INTEL_HEXL
-    printRootTable(phim);
     // Should be k-1 index, but HEXL expects k index
     long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
-    std::cout << "Root passed to HEXL iFFT: " << local_root << std::endl;
-
     intel::FFTRev1(tmp_p, tmp_p, phim, p, local_root);
-    
 #else
 
 #ifdef HELIB_OPENCL
@@ -646,22 +531,18 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
 #endif // USE_INTEL_HEXL
 
-    // DEVHACK
-    std::cout << "Before setting output x\n";
-    for(long i = 0; i<phim; ++i){
-      std::cout << i << ": " << tmp_p[i] << '\n';
-    }
-
     x.rep.SetLength(phim);
     NTL::zz_p* xp = x.rep.elts();
-  
-    for(long i=0;i<phim;++i){
-      xp[i].LoopHole() = tmp_p[i];
-    }
 
-//    for (long i = 0; i < phim; i++)
-//      xp[i].LoopHole() =
-//          NTL::MulModPrecon(tmp_p[i], rep(ipowers_p[i]), p, ipowers_aux_p[i]);
+    // TODO Improve this preprocessor directives
+    for(long i = 0; i < phim; ++i) {
+#ifdef USE_INTEL_HEXL
+      xp[i].LoopHole() = tmp_p[i];
+#else
+      xp[i].LoopHole() =
+          NTL::MulModPrecon(tmp_p[i], rep(ipowers_p[i]), p, ipowers_aux_p[i]);
+#endif
+    }
 
     x.normalize();
 

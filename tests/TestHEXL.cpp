@@ -7,7 +7,7 @@
 #include "test_common.h"
 
 // only run if HEXL has been linked.
-//#ifdef USE_INTEL_HEXL
+#ifdef USE_INTEL_HEXL
 #include "../src/intelExt.h" // Private header
 
 namespace {
@@ -142,8 +142,6 @@ TEST_P(TestHEXL_BGV, encryptDecrypt)
     NTL::SetNumThreads(1);
   helib::PtxtArray p0(ea);
  
-  //std::vector<long> v0 = {1,2,3};
-  //std::vector<long> v0 = {1,1,1,1,1,1,1,1};
   std::vector<long> v0 = {0,5};
 
   p0.load(v0);
@@ -189,12 +187,12 @@ INSTANTIATE_TEST_SUITE_P(typicalParameters, TestHEXL_BGV, ::testing::Values(
 
 } // namespace
 
-//#else
-//
-//namespace {
-//
-//TEST(TestHEXL, noTestRequired) {}
-//
-//} // namespace
-//
-//#endif // USE_INTEL_HEXL
+#else
+
+namespace {
+
+TEST(TestHEXL, noTestRequired) {}
+
+} // namespace
+
+#endif // USE_INTEL_HEXL
