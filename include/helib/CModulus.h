@@ -99,7 +99,7 @@ public:
   Cmodulus(const PAlgebra& zms, long qq, long rt);
 
   //! Copy constructor
-  Cmodulus(const Cmodulus& other) = default;
+  Cmodulus(const Cmodulus& other) { *this = other; };
 
   //! Copy assignment operator
   Cmodulus& operator=(const Cmodulus& other);

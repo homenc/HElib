@@ -18,11 +18,11 @@
 #include <hexl/hexl.hpp>
 
 #include <iostream>
+//#include <unordered_map>
 
 namespace intel {
 
 // TODO: Create a lookup table to avoid re-creating previously created NTTs?
-// Use a hash map?
 intel::hexl::NTT initNTT(uint64_t degree, uint64_t q, uint64_t root)
 {
   return intel::hexl::NTT(degree, q, root);
@@ -37,7 +37,7 @@ void FFTFwd(long* output,
   initNTT(/*degree=*/n, /*modulus=*/q, root)
       .ComputeForward(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),
-                      /*input_mod_factor=*/1,
+                      /*input_mod_factor=*/4,
                       /*output_mod_factor=*/1);
   return;
 }
@@ -51,17 +51,9 @@ void FFTRev1(long* output,
   initNTT(/*degree=*/n, /*modulus=*/q, root)
       .ComputeInverse(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),
-                      /*input_mod_factor=*/1,
+                      /*input_mod_factor=*/2,
                       /*output_mod_factor=*/1);
   return;
-}
-
-void BitReverseCopy(long* B, const long* A, long bit_width) 
-{   
-  // API as close to current HElib equiv API.
-  for(long i = 0; i < (1L << bit_width); ++i){
-    B[intel::hexl::ReverseBits(i, bit_width)] = A[i];
-  }
 }
 
 } // namespace intel

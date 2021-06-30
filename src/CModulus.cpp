@@ -494,6 +494,14 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     // Should be k-1 index, but HEXL expects k index
     long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
     intel::FFTRev1(tmp_p, tmp_p, phim, p, local_root);
+
+    x.rep.SetLength(phim);
+    NTL::zz_p* xp = x.rep.elts();
+
+    for(long i = 0; i < phim; ++i) {
+      xp[i].LoopHole() = tmp_p[i];
+    }
+    
 #else
 
     const NTL::zz_p* ipowers_p = (*ipowers).rep.elts();
@@ -511,20 +519,15 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
 #endif // HELIB_OPENCL
 
-#endif // USE_INTEL_HEXL
-
     x.rep.SetLength(phim);
     NTL::zz_p* xp = x.rep.elts();
 
-    // TODO Improve this preprocessor directives
     for(long i = 0; i < phim; ++i) {
-#ifdef USE_INTEL_HEXL
-      xp[i].LoopHole() = tmp_p[i];
-#else
       xp[i].LoopHole() =
           NTL::MulModPrecon(tmp_p[i], rep(ipowers_p[i]), p, ipowers_aux_p[i]);
-#endif
     }
+
+#endif // USE_INTEL_HEXL
 
     x.normalize();
 
