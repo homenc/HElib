@@ -354,13 +354,29 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     long dx = deg(tmp);
     long p = NTL::zz_p::modulus();
 
-    const NTL::zz_p* powers_p = (*powers).rep.elts();
-    const NTL::mulmod_precon_t* powers_aux_p = powers_aux.elts();
-
     y.SetLength(phim);
     long* yp = y.elts();
 
     NTL::zz_p* tmp_p = tmp.rep.elts();
+
+#ifdef USE_INTEL_HEXL
+
+    for(long i = 0; i <= dx; ++i){
+      yp[i] = rep(tmp_p[i]);
+    }
+
+    for(long i = dx + 1; i < phim; ++i){
+      yp[i] = 0;
+    }
+
+    // Should be k-1 index, but HEXL expects k index
+    long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
+    intel::FFTFwd(yp, yp, phim, p, local_root);
+
+#else
+
+    const NTL::zz_p* powers_p = (*powers).rep.elts();
+    const NTL::mulmod_precon_t* powers_aux_p = powers_aux.elts();
 
     for (long i = 0; i <= dx; i++) {
       yp[i] = NTL::MulModPrecon(rep(tmp_p[i]),
@@ -372,26 +388,6 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     for (long i = dx + 1; i < phim; i++) {
       yp[i] = 0;
     }
-
-#ifdef USE_INTEL_HEXL
-
-    NTL::vec_long y_copy(y);
-    y_copy.SetLength(phim);
-    long* y_copyp = y_copy.elts();
-
-    for(long i = 0; i <= dx; ++i){
-      y_copyp[i] = rep(tmp_p[i]);
-    }
-
-    for(long i = dx + 1; i < phim; ++i){
-      y_copyp[i] = 0;
-    }
-
-    // Should be k-1 index, but HEXL expects k index
-    long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
-    intel::FFTFwd(y_copyp, y_copyp, phim, p, local_root);
-
-#else
 
 #ifdef HELIB_OPENCL
     AltFFTFwd(yp, yp, k - 1, *altFFTInfo);
@@ -411,26 +407,12 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     // The BitReverseCopy routine does not allow aliasing, so
     // we have to do an extra copy here.
     // We use the fact tmp1 and y do not alias.
-    NTL::vec_long& tmp1 = Cmodulus::getScratch_vec_long();
-    tmp1.SetLength(phim);
-    long* tmp1_p = tmp1.elts();
+    NTL::vec_long& bit_reversed = Cmodulus::getScratch_vec_long();
+    bit_reversed.SetLength(phim);
+    long* bit_reversed_p = bit_reversed.elts();
 
-    BitReverseCopy(tmp1_p, yp, k - 1);
-    std::copy_n(tmp1_p, phim, yp);
-
-#ifdef USE_INTEL_HEXL
-    // Same again (BitReverse) for HEXL
-    NTL::vec_long& tmp2 = Cmodulus::getScratch_vec_long();
-    tmp2.SetLength(phim);
-    long* tmp2_p = tmp2.elts();
-
-    BitReverseCopy(tmp2_p, y_copyp, k - 1);
-    std::copy_n(tmp2_p, phim, y_copyp);
-
-    // DEVHACK. Dont forget to give the output.
-    std::copy_n(y_copyp, phim, yp);
-   
-#endif // USE_INTEL_HEXL
+    BitReverseCopy(bit_reversed_p, yp, k - 1);
+    std::copy_n(bit_reversed_p, phim, yp);
 
     return;
   }
@@ -496,9 +478,6 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     long phim = (1L << (k - 1));
     long p = NTL::zz_p::modulus();
 
-    const NTL::zz_p* ipowers_p = (*ipowers).rep.elts();
-    const NTL::mulmod_precon_t* ipowers_aux_p = ipowers_aux.elts();
-
     const long* yp = y.elts();
 
     NTL::vec_long& tmp = Cmodulus::getScratch_vec_long();
@@ -516,6 +495,9 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
     intel::FFTRev1(tmp_p, tmp_p, phim, p, local_root);
 #else
+
+    const NTL::zz_p* ipowers_p = (*ipowers).rep.elts();
+    const NTL::mulmod_precon_t* ipowers_aux_p = ipowers_aux.elts();
 
 #ifdef HELIB_OPENCL
     AltFFTRev1(tmp_p, yp, k - 1, *altFFTInfo);
