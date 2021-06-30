@@ -26,10 +26,13 @@
 #include <iostream>
 #include <unordered_map>
 #include <functional>
+#include <mutex>
 
 namespace intel {
 
 using intel::hexl::NTT;
+
+std::mutex table_mutex;
 
 struct Key {
   uint64_t degree;
@@ -55,7 +58,6 @@ struct Hash {
 
 // Lookup table to avoid re-creating previously created NTTs
 // For life of program.
-// FIXME make thread safe.
 static std::unordered_map<Key, NTT, Hash> table;
 
 NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
@@ -66,6 +68,8 @@ NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
     return it->second;
   }
   else {
+    // Lock the table for writing
+    std::scoped_lock table_lock(table_mutex);
     auto ret = table.emplace(key, NTT(degree, q, root));
     return (ret.first)->second; // The NTT object just created.
   }
