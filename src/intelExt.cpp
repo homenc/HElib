@@ -11,6 +11,12 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+/*
+  Some simple wrappers to enable HElib to use HEXL.
+  For HEXL's NTTs we make use of roots that HElib have already computated for
+  the qs.
+*/
+
 #ifdef USE_INTEL_HEXL
 
 #include "intelExt.h"
@@ -18,14 +24,51 @@
 #include <hexl/hexl.hpp>
 
 #include <iostream>
-//#include <unordered_map>
+#include <unordered_map>
+#include <functional>
 
 namespace intel {
 
-// TODO: Create a lookup table to avoid re-creating previously created NTTs?
-intel::hexl::NTT initNTT(uint64_t degree, uint64_t q, uint64_t root)
-{
-  return intel::hexl::NTT(degree, q, root);
+using intel::hexl::NTT;
+
+struct Key {
+  uint64_t degree;
+  uint64_t q;
+  uint64_t root;
+
+  bool operator==(const Key& other) const
+  {
+    return this->degree == other.degree &&
+           this->q == other.q &&
+           this->root == other.root;
+  }
+};
+
+struct Hash {      
+  size_t operator()(const Key& key) const 
+  {
+    return std::hash<uint64_t>{}(key.degree) ^
+           (std::hash<uint64_t>{}(key.q) ^
+           (std::hash<uint64_t>{}(key.root) << 1) << 1 );
+  }
+};
+
+// Lookup table to avoid re-creating previously created NTTs
+// For life of program.
+// FIXME make thread safe.
+static std::unordered_map<Key, NTT, Hash> table;
+
+NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
+{       
+  Key key = {degree, q, root};
+  auto it = table.find(key);
+  if(it != table.end()) {
+    return it->second;
+  }
+  else {
+    auto ret = table.emplace(key, NTT(degree, q, root));
+    return (ret.first)->second; // The NTT object just created.
+  }
 }
 
 void FFTFwd(long* output,

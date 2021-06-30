@@ -22,7 +22,7 @@ namespace hexl {
 class NTT;
 }
 
-intel::hexl::NTT initNTT(uint64_t degree, uint64_t q, uint64_t root);
+intel::hexl::NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root);
 void FFTFwd(long* output, const long* input, long n, long q, long root);
 void FFTRev1(long* output, const long* input, long n, long q, long root);
 
