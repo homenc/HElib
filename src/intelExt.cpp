@@ -103,17 +103,72 @@ void FFTRev1(long* output,
   return;
 }
 
+void EltwiseAddMod(long* result, const long* operand1,
+                    const long* operand2, long n, long modulus)
+{
+  intel::hexl::EltwiseAddMod(reinterpret_cast<uint64_t*>(result), 
+                        reinterpret_cast<const uint64_t*>(operand1),
+                        reinterpret_cast<const uint64_t*>(operand2), 
+                        n, 
+                        modulus);
+}
+
+void EltwiseAddMod(long* result, const long* operand,
+                    long scalar, long n, long modulus)
+{
+  intel::hexl::EltwiseAddMod(reinterpret_cast<uint64_t*>(result), 
+                        reinterpret_cast<const uint64_t*>(operand),
+                        scalar, 
+                        n, 
+                        modulus);
+}
+
+
+void EltwiseSubMod(long* result, const long* operand1,
+                    const long* operand2, long n, long modulus)
+{
+  intel::hexl::EltwiseSubMod(reinterpret_cast<uint64_t*>(result), 
+                        reinterpret_cast<const uint64_t*>(operand1),
+                        reinterpret_cast<const uint64_t*>(operand2), 
+                        n, 
+                        modulus);
+}
+
+void EltwiseSubMod(long* result, const long* operand,
+                    long scalar, long n, long modulus)
+{
+  intel::hexl::EltwiseSubMod(reinterpret_cast<uint64_t*>(result), 
+                        reinterpret_cast<const uint64_t*>(operand),
+                        scalar, 
+                        n, 
+                        modulus);
+}
+
+
 void EltwiseMultMod(long* result, const long* operand1,
-                    const long* operand2, long n, long modulus,
-                    long input_mod_factor) 
+                    const long* operand2, long n, long modulus)
 {
   intel::hexl::EltwiseMultMod(reinterpret_cast<uint64_t*>(result), 
                         reinterpret_cast<const uint64_t*>(operand1),
                         reinterpret_cast<const uint64_t*>(operand2), 
                         n, 
                         modulus, 
-                        input_mod_factor);
+                        /*input_mod_factor=*/1);
 }
+
+void EltwiseMultMod(long* result, const long* operand,
+                    long scalar, long n, long modulus)
+{
+  // HEXL currently doesnt have a scalar multiply.
+  std::vector<uint64_t> scalar_array(n, scalar);
+  intel::hexl::EltwiseMultMod(reinterpret_cast<uint64_t*>(result), 
+                        reinterpret_cast<const uint64_t*>(operand),
+                        scalar_array.data(), 
+                        n, 
+                        modulus,
+                        /*input_mod_factor=*/1);
+}
+
 
 
 } // namespace intel

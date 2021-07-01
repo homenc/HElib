@@ -118,8 +118,64 @@ void DoubleCRT::verify()
   }
 }
 
-// Arithmetic operations. Only the "destructive" versions are used,
-// i.e., a += b is implemented but not a + b.
+#ifdef USE_INTEL_HEXL
+struct AddFun
+{
+  void apply(long* result, const long* a, const long* b, long size, long modulus) const 
+    { 
+      intel::EltwiseAddMod(result, a, b, size, modulus); 
+    }
+
+  void apply(long* result, const long* a, long scalar, long size, long modulus) const 
+    { 
+      intel::EltwiseAddMod(result, a, scalar, size, modulus); 
+    }
+};
+
+struct SubFun
+{
+  void apply(long* result, const long* a, const long* b, long size, long modulus) const 
+    { 
+      intel::EltwiseSubMod(result, a, b, size, modulus); 
+    }
+
+  void apply(long* result, const long* a, long scalar, long size, long modulus) const 
+    { 
+      intel::EltwiseSubMod(result, a, scalar, size, modulus); 
+    }
+};
+
+struct MulFun
+{
+  void apply(long* result, const long* a, const long* b, long size, long modulus) const 
+    { 
+      intel::EltwiseMultMod(result, a, b, size, modulus); 
+    }
+
+  void apply(long* result, const long* a, long scalar, long size, long modulus) const 
+    { 
+      intel::EltwiseMultMod(result, a, scalar, size, modulus); 
+    }
+};
+#else
+struct AddFun
+{
+  long apply(long a, long b, long n) const 
+    { return NTL::AddMod(a, b, n); }
+};
+
+struct SubFun
+{
+  long apply(long a, long b, long n) const 
+    { return NTL::SubMod(a, b, n); }
+};
+
+struct MulFun
+{
+  long apply(long a, long b, long n) const 
+    { return NTL::MulMod(a, b, n); }
+};
+#endif
 
 // Generic operation, Fnc is AddMod, SubMod, or MulMod (from NTL's ZZ module)
 template <typename Fun>
@@ -171,8 +227,12 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT& other, Fun fun, bool matchIndexSets)
     NTL::vec_long& row = map[i];
     const NTL::vec_long& other_row = (*other_map)[i];
 
+#ifdef USE_INTEL_HEXL
+    fun.apply(row.elts(), row.elts(), other_row.elts(), phim, pi);
+#else
     for (long j : range(phim))
       row[j] = fun.apply(row[j], other_row[j], pi);
+#endif
   }
   return *this;
 }
@@ -235,8 +295,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
                           row.elts(), 
                           other_row.elts(), 
                           phim, 
-                          pi, 
-                          1);
+                          pi);
 #else
     NTL::mulmod_t pi_inv = context.ithModulus(i).getQInv();
     for (long j : range(phim))
@@ -247,19 +306,6 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
   return *this;
 }
 
-#if 0
-template
-DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const DoubleCRT &other, MulFun fun,
-			 bool matchIndexSets);
-#endif
-
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const DoubleCRT& other,
-                                                     AddFun fun,
-                                                     bool matchIndexSets);
-
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const DoubleCRT& other,
-                                                     SubFun fun,
-                                                     bool matchIndexSets);
 
 template <typename Fun>
 DoubleCRT& DoubleCRT::Op(const NTL::ZZ& num, Fun fun)
@@ -274,20 +320,16 @@ DoubleCRT& DoubleCRT::Op(const NTL::ZZ& num, Fun fun)
     long pi = context.ithPrime(i);
     long n = rem(num, pi); // n = num % pi
     NTL::vec_long& row = map[i];
+// TODO Add HEXL
+#ifdef USE_INTEL_HEXL
+    fun.apply(row.elts(), row.elts(), n, phim, pi);
+#else
     for (long j : range(phim))
       row[j] = fun.apply(row[j], n, pi);
+#endif
   }
   return *this;
 }
-
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const NTL::ZZ& num,
-                                                     MulFun fun);
-
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const NTL::ZZ& num,
-                                                     AddFun fun);
-
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const NTL::ZZ& num,
-                                                     SubFun fun);
 
 DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
 {
@@ -324,14 +366,51 @@ DoubleCRT& DoubleCRT::Op(const NTL::ZZX& poly, Fun fun)
   return Op(other, fun);
 }
 
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const NTL::ZZX& poly,
-                                                     MulFun fun);
+// overloaded ops
+DoubleCRT& DoubleCRT::operator+=(const DoubleCRT& other) { return Op(other, AddFun()); }
 
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const NTL::ZZX& poly,
-                                                     AddFun fun);
+DoubleCRT& DoubleCRT::operator+=(const NTL::ZZX& poly) { return Op(poly, AddFun()); }
 
-template DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const NTL::ZZX& poly,
-                                                     SubFun fun);
+DoubleCRT& DoubleCRT::operator+=(const NTL::ZZ& num) { return Op(num, AddFun()); }
+
+DoubleCRT& DoubleCRT::operator+=(long num) { return Op(NTL::to_ZZ(num), AddFun()); }
+
+DoubleCRT& DoubleCRT::operator-=(const DoubleCRT& other) { return Op(other, SubFun()); }
+
+DoubleCRT& DoubleCRT::operator-=(const NTL::ZZX& poly) { return Op(poly, SubFun()); }
+
+DoubleCRT& DoubleCRT::operator-=(const NTL::ZZ& num) { return Op(num, SubFun()); }
+
+DoubleCRT& DoubleCRT::operator-=(long num) { return Op(NTL::to_ZZ(num), SubFun()); }
+
+DoubleCRT& DoubleCRT::operator*=(const DoubleCRT& other)
+{
+  // return Op(other,MulFun());
+  return do_mul(other);
+}
+
+DoubleCRT& DoubleCRT::operator*=(const NTL::ZZX& poly) { return Op(poly, MulFun()); }
+
+DoubleCRT& DoubleCRT::operator*=(const NTL::ZZ& num) { return Op(num, MulFun()); }
+
+DoubleCRT& DoubleCRT::operator*=(long num) { return Op(NTL::to_ZZ(num), MulFun()); }
+
+// Function versions
+void DoubleCRT::Add(const DoubleCRT& other, bool matchIndexSets)
+{
+  Op(other, AddFun(), matchIndexSets);
+}
+
+void DoubleCRT::Sub(const DoubleCRT& other, bool matchIndexSets)
+{
+  Op(other, SubFun(), matchIndexSets);
+}
+
+void DoubleCRT::Mul(const DoubleCRT& other, bool matchIndexSets)
+{
+  // Op(other, MulFun(), matchIndexSets);
+  do_mul(other, matchIndexSets);
+}
 
 // break *this into n digits,according to the primeSets in context.digits
 // returns the sum of the canonical embedding norms of the digits

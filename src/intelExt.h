@@ -22,9 +22,20 @@ namespace intel {
 void FFTFwd(long* output, const long* input, long n, long q, long root);
 void FFTRev1(long* output, const long* input, long n, long q, long root);
 
+void EltwiseAddMod(long* result, const long* operand1,
+                    const long* operand2, long n, long modulus);
+void EltwiseAddMod(long* result, const long* operand,
+                    long scalar, long n, long modulus);
+
+void EltwiseSubMod(long* result, const long* operand1,
+                    const long* operand2, long n, long modulus);
+void EltwiseSubMod(long* result, const long* operand,
+                    long scalar, long n, long modulus);
+
 void EltwiseMultMod(long* result, const long* operand1,
-                    const long* operand2, long n, long modulus,
-                    long input_mod_factor);
+                    const long* operand2, long n, long modulus);
+void EltwiseMultMod(long* result, const long* operand,
+                    long scalar, long n, long modulus);
 
 } // namespace intel
 
