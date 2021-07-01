@@ -23,6 +23,7 @@
 
 #include "binio.h"
 #include "io.h"
+#include "intelExt.h"
 
 #include <helib/timing.h>
 #include <helib/sample.h>
@@ -226,12 +227,22 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i : s) {
     long pi = context.ithPrime(i);
-    NTL::mulmod_t pi_inv = context.ithModulus(i).getQInv();
     NTL::vec_long& row = map[i];
     const NTL::vec_long& other_row = (*other_map)[i];
 
+#ifdef USE_INTEL_HEXL
+    intel::EltwiseMultMod(row.elts(), 
+                          row.elts(), 
+                          other_row.elts(), 
+                          phim, 
+                          pi, 
+                          1);
+#else
+    NTL::mulmod_t pi_inv = context.ithModulus(i).getQInv();
     for (long j : range(phim))
       row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
+#endif // USE_INTEL_HEXL
+
   }
   return *this;
 }

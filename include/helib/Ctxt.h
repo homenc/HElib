@@ -568,22 +568,12 @@ public:
   // Multiply by another ciphertext
   void multLowLvl(const Ctxt& other, bool destructive = false);
 
-#if 0
-  [[deprecated]]
-  Ctxt& operator*=(const Ctxt& other)
-  {
-    multLowLvl(other);
-    return *this;
-  }
-#else
-  // we now do the high-level mul
+  // This is a high-level mul with relinearisation
   Ctxt& operator*=(const Ctxt& other)
   {
     multiplyBy(other);
     return *this;
   }
-
-#endif
 
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k)

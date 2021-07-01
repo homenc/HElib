@@ -532,7 +532,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     x.normalize();
 
     return;
-  }
+  } // End of special case if m is power of 2
 
   NTL::zz_p rt;
   long m = getM();

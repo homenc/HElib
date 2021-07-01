@@ -60,7 +60,7 @@ struct Hash {
 // For life of program.
 static std::unordered_map<Key, NTT, Hash> table;
 
-NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
+static NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
 {       
   Key key = {degree, q, root};
   auto it = table.find(key);
@@ -102,6 +102,19 @@ void FFTRev1(long* output,
                       /*output_mod_factor=*/1);
   return;
 }
+
+void EltwiseMultMod(long* result, const long* operand1,
+                    const long* operand2, long n, long modulus,
+                    long input_mod_factor) 
+{
+  intel::hexl::EltwiseMultMod(reinterpret_cast<uint64_t*>(result), 
+                        reinterpret_cast<const uint64_t*>(operand1),
+                        reinterpret_cast<const uint64_t*>(operand2), 
+                        n, 
+                        modulus, 
+                        input_mod_factor);
+}
+
 
 } // namespace intel
 

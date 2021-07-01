@@ -18,13 +18,13 @@
 
 namespace intel {
 
-namespace hexl {
-class NTT;
-}
-
-intel::hexl::NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root);
+// Simple wrappers around HEXL 
 void FFTFwd(long* output, const long* input, long n, long q, long root);
 void FFTRev1(long* output, const long* input, long n, long q, long root);
+
+void EltwiseMultMod(long* result, const long* operand1,
+                    const long* operand2, long n, long modulus,
+                    long input_mod_factor);
 
 } // namespace intel
 
