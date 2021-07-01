@@ -34,25 +34,26 @@ using intel::hexl::NTT;
 
 std::mutex table_mutex;
 
-struct Key {
+struct Key
+{
   uint64_t degree;
   uint64_t q;
   uint64_t root;
 
   bool operator==(const Key& other) const
   {
-    return this->degree == other.degree &&
-           this->q == other.q &&
+    return this->degree == other.degree && this->q == other.q &&
            this->root == other.root;
   }
 };
 
-struct Hash {      
-  size_t operator()(const Key& key) const 
+struct Hash
+{
+  size_t operator()(const Key& key) const
   {
     return std::hash<uint64_t>{}(key.degree) ^
            (std::hash<uint64_t>{}(key.q) ^
-           (std::hash<uint64_t>{}(key.root) << 1) << 1 );
+            (std::hash<uint64_t>{}(key.root) << 1) << 1);
   }
 };
 
@@ -61,13 +62,12 @@ struct Hash {
 static std::unordered_map<Key, NTT, Hash> table;
 
 static NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
-{       
+{
   Key key = {degree, q, root};
   auto it = table.find(key);
-  if(it != table.end()) {
+  if (it != table.end()) {
     return it->second;
-  }
-  else {
+  } else {
     // Lock the table for writing
     std::scoped_lock table_lock(table_mutex);
     auto ret = table.emplace(key, NTT(degree, q, root));
@@ -76,10 +76,10 @@ static NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
 }
 
 void FFTFwd(long* output,
-               const long* input,
-               long n,
-               long q, 
-               long root)//, const helib::FFTPrimeInfo& info)
+            const long* input,
+            long n,
+            long q,
+            long root) //, const helib::FFTPrimeInfo& info)
 {
   initNTT(/*degree=*/n, /*modulus=*/q, root)
       .ComputeForward(reinterpret_cast<uint64_t*>(output),
@@ -90,10 +90,10 @@ void FFTFwd(long* output,
 }
 
 void FFTRev1(long* output,
-                const long* input,
-                long n,
-                long q, 
-                long root)//, const helib::FFTPrimeInfo& info)
+             const long* input,
+             long n,
+             long q,
+             long root) //, const helib::FFTPrimeInfo& info)
 {
   initNTT(/*degree=*/n, /*modulus=*/q, root)
       .ComputeInverse(reinterpret_cast<uint64_t*>(output),
@@ -103,73 +103,87 @@ void FFTRev1(long* output,
   return;
 }
 
-void EltwiseAddMod(long* result, const long* operand1,
-                    const long* operand2, long n, long modulus)
+void EltwiseAddMod(long* result,
+                   const long* operand1,
+                   const long* operand2,
+                   long n,
+                   long modulus)
 {
-  intel::hexl::EltwiseAddMod(reinterpret_cast<uint64_t*>(result), 
-                        reinterpret_cast<const uint64_t*>(operand1),
-                        reinterpret_cast<const uint64_t*>(operand2), 
-                        n, 
-                        modulus);
+  intel::hexl::EltwiseAddMod(reinterpret_cast<uint64_t*>(result),
+                             reinterpret_cast<const uint64_t*>(operand1),
+                             reinterpret_cast<const uint64_t*>(operand2),
+                             n,
+                             modulus);
 }
 
-void EltwiseAddMod(long* result, const long* operand,
-                    long scalar, long n, long modulus)
+void EltwiseAddMod(long* result,
+                   const long* operand,
+                   long scalar,
+                   long n,
+                   long modulus)
 {
-  intel::hexl::EltwiseAddMod(reinterpret_cast<uint64_t*>(result), 
-                        reinterpret_cast<const uint64_t*>(operand),
-                        scalar, 
-                        n, 
-                        modulus);
+  intel::hexl::EltwiseAddMod(reinterpret_cast<uint64_t*>(result),
+                             reinterpret_cast<const uint64_t*>(operand),
+                             scalar,
+                             n,
+                             modulus);
 }
 
-
-void EltwiseSubMod(long* result, const long* operand1,
-                    const long* operand2, long n, long modulus)
+void EltwiseSubMod(long* result,
+                   const long* operand1,
+                   const long* operand2,
+                   long n,
+                   long modulus)
 {
-  intel::hexl::EltwiseSubMod(reinterpret_cast<uint64_t*>(result), 
-                        reinterpret_cast<const uint64_t*>(operand1),
-                        reinterpret_cast<const uint64_t*>(operand2), 
-                        n, 
-                        modulus);
+  intel::hexl::EltwiseSubMod(reinterpret_cast<uint64_t*>(result),
+                             reinterpret_cast<const uint64_t*>(operand1),
+                             reinterpret_cast<const uint64_t*>(operand2),
+                             n,
+                             modulus);
 }
 
-void EltwiseSubMod(long* result, const long* operand,
-                    long scalar, long n, long modulus)
+void EltwiseSubMod(long* result,
+                   const long* operand,
+                   long scalar,
+                   long n,
+                   long modulus)
 {
-  intel::hexl::EltwiseSubMod(reinterpret_cast<uint64_t*>(result), 
-                        reinterpret_cast<const uint64_t*>(operand),
-                        scalar, 
-                        n, 
-                        modulus);
+  intel::hexl::EltwiseSubMod(reinterpret_cast<uint64_t*>(result),
+                             reinterpret_cast<const uint64_t*>(operand),
+                             scalar,
+                             n,
+                             modulus);
 }
 
-
-void EltwiseMultMod(long* result, const long* operand1,
-                    const long* operand2, long n, long modulus)
+void EltwiseMultMod(long* result,
+                    const long* operand1,
+                    const long* operand2,
+                    long n,
+                    long modulus)
 {
-  intel::hexl::EltwiseMultMod(reinterpret_cast<uint64_t*>(result), 
-                        reinterpret_cast<const uint64_t*>(operand1),
-                        reinterpret_cast<const uint64_t*>(operand2), 
-                        n, 
-                        modulus, 
-                        /*input_mod_factor=*/1);
+  intel::hexl::EltwiseMultMod(reinterpret_cast<uint64_t*>(result),
+                              reinterpret_cast<const uint64_t*>(operand1),
+                              reinterpret_cast<const uint64_t*>(operand2),
+                              n,
+                              modulus,
+                              /*input_mod_factor=*/1);
 }
 
-void EltwiseMultMod(long* result, const long* operand,
-                    long scalar, long n, long modulus)
+void EltwiseMultMod(long* result,
+                    const long* operand,
+                    long scalar,
+                    long n,
+                    long modulus)
 {
   // HEXL currently doesnt have a scalar multiply.
   std::vector<uint64_t> scalar_array(n, scalar);
-  intel::hexl::EltwiseMultMod(reinterpret_cast<uint64_t*>(result), 
-                        reinterpret_cast<const uint64_t*>(operand),
-                        scalar_array.data(), 
-                        n, 
-                        modulus,
-                        /*input_mod_factor=*/1);
+  intel::hexl::EltwiseMultMod(reinterpret_cast<uint64_t*>(result),
+                              reinterpret_cast<const uint64_t*>(operand),
+                              scalar_array.data(),
+                              n,
+                              modulus,
+                              /*input_mod_factor=*/1);
 }
-
-
 
 } // namespace intel
 

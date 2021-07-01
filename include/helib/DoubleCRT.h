@@ -280,7 +280,7 @@ public:
   DoubleCRT& operator+=(const NTL::ZZ& num);
   DoubleCRT& operator+=(long num);
 
-  DoubleCRT& operator-=(const DoubleCRT& other); 
+  DoubleCRT& operator-=(const DoubleCRT& other);
   DoubleCRT& operator-=(const NTL::ZZX& poly);
   DoubleCRT& operator-=(const NTL::ZZ& num);
   DoubleCRT& operator-=(long num);

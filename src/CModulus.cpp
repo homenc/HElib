@@ -48,8 +48,8 @@ NTL::zz_pContext BuildContext(long p, long maxroot)
 
 // Constructor: it is assumed that zms is already set with m>1
 // If q == 0, then the current context is used
-Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt):
-q(qq), zMStar(&zms), root(rt)
+Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt) :
+    q(qq), zMStar(&zms), root(rt)
 {
   assertTrue<InvalidArgument>(zms.getM() > 1,
                               "Bad Z_m^* modulus m (must be greater than 1)");
@@ -59,7 +59,7 @@ q(qq), zMStar(&zms), root(rt)
   if (this->q == 0) {
     this->q = NTL::zz_p::modulus();
     explicitModulus = false;
-  } 
+  }
 
   qinv = NTL::PrepMulMod(q);
 
@@ -361,11 +361,11 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 
 #ifdef USE_INTEL_HEXL
 
-    for(long i = 0; i <= dx; ++i){
+    for (long i = 0; i <= dx; ++i) {
       yp[i] = rep(tmp_p[i]);
     }
 
-    for(long i = dx + 1; i < phim; ++i){
+    for (long i = dx + 1; i < phim; ++i) {
       yp[i] = 0;
     }
 
@@ -426,7 +426,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
   // copy the result to the output vector y, keeping only the
   // entries corresponding to primitive roots of unity
   y.SetLength(zMStar->getPhiM());
-  
+
   for (long i = 0, j = 0; i < long(this->getM()); i++)
     if (zMStar->inZmStar(i))
       y[j++] = rep(coeff(tmp, i));
@@ -498,10 +498,10 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     x.rep.SetLength(phim);
     NTL::zz_p* xp = x.rep.elts();
 
-    for(long i = 0; i < phim; ++i) {
+    for (long i = 0; i < phim; ++i) {
       xp[i].LoopHole() = tmp_p[i];
     }
-    
+
 #else
 
     const NTL::zz_p* ipowers_p = (*ipowers).rep.elts();
@@ -522,7 +522,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     x.rep.SetLength(phim);
     NTL::zz_p* xp = x.rep.elts();
 
-    for(long i = 0; i < phim; ++i) {
+    for (long i = 0; i < phim; ++i) {
       xp[i].LoopHole() =
           NTL::MulModPrecon(tmp_p[i], rep(ipowers_p[i]), p, ipowers_aux_p[i]);
     }
@@ -539,7 +539,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
   // convert input to zpx format, initializing only the coeffs i s.t. (i,m)=1
   x.rep.SetLength(m);
-  for(long i = 0, j = 0; i < m; i++)
+  for (long i = 0, j = 0; i < m; i++)
     if (zMStar->inZmStar(i))
       x.rep[i].LoopHole() = y[j++]; // DIRT: y[j] already reduced
   x.normalize();

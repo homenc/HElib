@@ -121,59 +121,80 @@ void DoubleCRT::verify()
 #ifdef USE_INTEL_HEXL
 struct AddFun
 {
-  void apply(long* result, const long* a, const long* b, long size, long modulus) const 
-    { 
-      intel::EltwiseAddMod(result, a, b, size, modulus); 
-    }
+  void apply(long* result,
+             const long* a,
+             const long* b,
+             long size,
+             long modulus) const
+  {
+    intel::EltwiseAddMod(result, a, b, size, modulus);
+  }
 
-  void apply(long* result, const long* a, long scalar, long size, long modulus) const 
-    { 
-      intel::EltwiseAddMod(result, a, scalar, size, modulus); 
-    }
+  void apply(long* result,
+             const long* a,
+             long scalar,
+             long size,
+             long modulus) const
+  {
+    intel::EltwiseAddMod(result, a, scalar, size, modulus);
+  }
 };
 
 struct SubFun
 {
-  void apply(long* result, const long* a, const long* b, long size, long modulus) const 
-    { 
-      intel::EltwiseSubMod(result, a, b, size, modulus); 
-    }
+  void apply(long* result,
+             const long* a,
+             const long* b,
+             long size,
+             long modulus) const
+  {
+    intel::EltwiseSubMod(result, a, b, size, modulus);
+  }
 
-  void apply(long* result, const long* a, long scalar, long size, long modulus) const 
-    { 
-      intel::EltwiseSubMod(result, a, scalar, size, modulus); 
-    }
+  void apply(long* result,
+             const long* a,
+             long scalar,
+             long size,
+             long modulus) const
+  {
+    intel::EltwiseSubMod(result, a, scalar, size, modulus);
+  }
 };
 
 struct MulFun
 {
-  void apply(long* result, const long* a, const long* b, long size, long modulus) const 
-    { 
-      intel::EltwiseMultMod(result, a, b, size, modulus); 
-    }
+  void apply(long* result,
+             const long* a,
+             const long* b,
+             long size,
+             long modulus) const
+  {
+    intel::EltwiseMultMod(result, a, b, size, modulus);
+  }
 
-  void apply(long* result, const long* a, long scalar, long size, long modulus) const 
-    { 
-      intel::EltwiseMultMod(result, a, scalar, size, modulus); 
-    }
+  void apply(long* result,
+             const long* a,
+             long scalar,
+             long size,
+             long modulus) const
+  {
+    intel::EltwiseMultMod(result, a, scalar, size, modulus);
+  }
 };
 #else
 struct AddFun
 {
-  long apply(long a, long b, long n) const 
-    { return NTL::AddMod(a, b, n); }
+  long apply(long a, long b, long n) const { return NTL::AddMod(a, b, n); }
 };
 
 struct SubFun
 {
-  long apply(long a, long b, long n) const 
-    { return NTL::SubMod(a, b, n); }
+  long apply(long a, long b, long n) const { return NTL::SubMod(a, b, n); }
 };
 
 struct MulFun
 {
-  long apply(long a, long b, long n) const 
-    { return NTL::MulMod(a, b, n); }
+  long apply(long a, long b, long n) const { return NTL::MulMod(a, b, n); }
 };
 #endif
 
@@ -291,21 +312,15 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
     const NTL::vec_long& other_row = (*other_map)[i];
 
 #ifdef USE_INTEL_HEXL
-    intel::EltwiseMultMod(row.elts(), 
-                          row.elts(), 
-                          other_row.elts(), 
-                          phim, 
-                          pi);
+    intel::EltwiseMultMod(row.elts(), row.elts(), other_row.elts(), phim, pi);
 #else
     NTL::mulmod_t pi_inv = context.ithModulus(i).getQInv();
     for (long j : range(phim))
       row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
 #endif // USE_INTEL_HEXL
-
   }
   return *this;
 }
-
 
 template <typename Fun>
 DoubleCRT& DoubleCRT::Op(const NTL::ZZ& num, Fun fun)
@@ -367,21 +382,45 @@ DoubleCRT& DoubleCRT::Op(const NTL::ZZX& poly, Fun fun)
 }
 
 // overloaded ops
-DoubleCRT& DoubleCRT::operator+=(const DoubleCRT& other) { return Op(other, AddFun()); }
+DoubleCRT& DoubleCRT::operator+=(const DoubleCRT& other)
+{
+  return Op(other, AddFun());
+}
 
-DoubleCRT& DoubleCRT::operator+=(const NTL::ZZX& poly) { return Op(poly, AddFun()); }
+DoubleCRT& DoubleCRT::operator+=(const NTL::ZZX& poly)
+{
+  return Op(poly, AddFun());
+}
 
-DoubleCRT& DoubleCRT::operator+=(const NTL::ZZ& num) { return Op(num, AddFun()); }
+DoubleCRT& DoubleCRT::operator+=(const NTL::ZZ& num)
+{
+  return Op(num, AddFun());
+}
 
-DoubleCRT& DoubleCRT::operator+=(long num) { return Op(NTL::to_ZZ(num), AddFun()); }
+DoubleCRT& DoubleCRT::operator+=(long num)
+{
+  return Op(NTL::to_ZZ(num), AddFun());
+}
 
-DoubleCRT& DoubleCRT::operator-=(const DoubleCRT& other) { return Op(other, SubFun()); }
+DoubleCRT& DoubleCRT::operator-=(const DoubleCRT& other)
+{
+  return Op(other, SubFun());
+}
 
-DoubleCRT& DoubleCRT::operator-=(const NTL::ZZX& poly) { return Op(poly, SubFun()); }
+DoubleCRT& DoubleCRT::operator-=(const NTL::ZZX& poly)
+{
+  return Op(poly, SubFun());
+}
 
-DoubleCRT& DoubleCRT::operator-=(const NTL::ZZ& num) { return Op(num, SubFun()); }
+DoubleCRT& DoubleCRT::operator-=(const NTL::ZZ& num)
+{
+  return Op(num, SubFun());
+}
 
-DoubleCRT& DoubleCRT::operator-=(long num) { return Op(NTL::to_ZZ(num), SubFun()); }
+DoubleCRT& DoubleCRT::operator-=(long num)
+{
+  return Op(NTL::to_ZZ(num), SubFun());
+}
 
 DoubleCRT& DoubleCRT::operator*=(const DoubleCRT& other)
 {
@@ -389,11 +428,20 @@ DoubleCRT& DoubleCRT::operator*=(const DoubleCRT& other)
   return do_mul(other);
 }
 
-DoubleCRT& DoubleCRT::operator*=(const NTL::ZZX& poly) { return Op(poly, MulFun()); }
+DoubleCRT& DoubleCRT::operator*=(const NTL::ZZX& poly)
+{
+  return Op(poly, MulFun());
+}
 
-DoubleCRT& DoubleCRT::operator*=(const NTL::ZZ& num) { return Op(num, MulFun()); }
+DoubleCRT& DoubleCRT::operator*=(const NTL::ZZ& num)
+{
+  return Op(num, MulFun());
+}
 
-DoubleCRT& DoubleCRT::operator*=(long num) { return Op(NTL::to_ZZ(num), MulFun()); }
+DoubleCRT& DoubleCRT::operator*=(long num)
+{
+  return Op(NTL::to_ZZ(num), MulFun());
+}
 
 // Function versions
 void DoubleCRT::Add(const DoubleCRT& other, bool matchIndexSets)

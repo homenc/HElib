@@ -42,7 +42,6 @@ namespace helib {
 class Cmodulus
 {
 private:
-
   //! The modulus
   long q;
   //! PrepMulMod(q);

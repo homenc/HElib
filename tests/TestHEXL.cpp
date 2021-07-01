@@ -128,8 +128,8 @@ TEST_P(TestHEXL_BGV, multiplyTwoCtxts)
   p1.random();
 
   helib::Ctxt c0(publicKey), c1(publicKey);
-  p0.encrypt(c0); 
-  p1.encrypt(c1); 
+  p0.encrypt(c0);
+  p1.encrypt(c1);
 
   p0 *= p1;
   c0 *= c1;
@@ -139,15 +139,15 @@ TEST_P(TestHEXL_BGV, multiplyTwoCtxts)
 
 TEST_P(TestHEXL_BGV, encryptDecrypt)
 {
-    NTL::SetNumThreads(1);
+  NTL::SetNumThreads(1);
   helib::PtxtArray p0(ea);
- 
-  std::vector<long> v0 = {0,5};
+
+  std::vector<long> v0 = {0, 5};
 
   p0.load(v0);
 
   helib::Ctxt c0(publicKey);
-  p0.encrypt(c0); 
+  p0.encrypt(c0);
 
   EXPECT_TRUE(ciphertextMatches(ea, secretKey, p0, c0));
 }
@@ -155,7 +155,7 @@ TEST_P(TestHEXL_BGV, encryptDecrypt)
 TEST(TestHEXL_BGV, CModulusFFT)
 {
   NTL::SetNumThreads(1);
- 
+
   helib::PAlgebra zms(8, 769);
   helib::Cmodulus cmod(zms, 1135873, 0);
 
@@ -176,7 +176,6 @@ TEST(TestHEXL_BGV, CModulusFFT)
   NTL::ZZX inverse_conv = NTL::conv<NTL::ZZX>(inverse);
   EXPECT_EQ(inverse_conv, poly);
 }
-
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(typicalParameters, TestHEXL_BGV, ::testing::Values(
