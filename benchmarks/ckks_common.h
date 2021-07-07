@@ -10,6 +10,9 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+#ifndef HELIB_CKKS_COMMON_H
+#define HELIB_CKKS_COMMON_H
+
 #include <memory>
 
 #include <helib/helib.h>
@@ -64,3 +67,5 @@ struct Meta
     return *this;
   }
 };
+
+#endif // HELIB_CKKS_COMMON_H
