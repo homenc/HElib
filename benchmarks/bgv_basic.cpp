@@ -89,45 +89,21 @@ static void decrypting_ciphertexts(benchmark::State& state, Meta& meta)
 
 Meta fn;
 Params tiny_params(/*m=*/257, /*p=*/2, /*r=*/1, /*L=*/5800);
-BENCHMARK_CAPTURE(adding_two_ciphertexts, tiny_params, fn(tiny_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
-BENCHMARK_CAPTURE(multiplying_two_ciphertexts, tiny_params, fn(tiny_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
-BENCHMARK_CAPTURE(encrypting_ciphertexts, tiny_params, fn(tiny_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
-BENCHMARK_CAPTURE(decrypting_ciphertexts, tiny_params, fn(tiny_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, tiny_params, fn);//->Iterations(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts, tiny_params, fn);//->Iterations(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, tiny_params, fn);//->Iterations(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, tiny_params, fn);//->Iterations(200);
 
 Params small_params(/*m=*/8009, /*p=*/2, /*r=*/1, /*L=*/5800);
-BENCHMARK_CAPTURE(adding_two_ciphertexts, small_params, fn(small_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
-BENCHMARK_CAPTURE(multiplying_two_ciphertexts, small_params, fn(small_params))
-    ->Unit(benchmark::kMillisecond)
-    ->MinTime(200);
-BENCHMARK_CAPTURE(encrypting_ciphertexts, small_params, fn(small_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
-BENCHMARK_CAPTURE(decrypting_ciphertexts, small_params, fn(small_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, small_params, fn);//->Iterations(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts, small_params, fn);//->MinTime(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, small_params, fn);//->Iterations(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, small_params, fn);//->Iterations(200);
 
 Params big_params(/*m=*/32003, /*p=*/2, /*r=*/1, /*L=*/5800);
-BENCHMARK_CAPTURE(adding_two_ciphertexts, big_params, fn(big_params))
-    ->Unit(benchmark::kMillisecond)
-    ->Iterations(200);
-BENCHMARK_CAPTURE(multiplying_two_ciphertexts, big_params, fn(big_params))
-    ->Unit(benchmark::kMillisecond)
-    ->MinTime(200);
-BENCHMARK_CAPTURE(encrypting_ciphertexts, big_params, fn(big_params))
-    ->Unit(benchmark::kMillisecond)
-    ->MinTime(200);
-BENCHMARK_CAPTURE(decrypting_ciphertexts, big_params, fn(big_params))
-    ->Unit(benchmark::kMillisecond)
-    ->MinTime(200);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, big_params, fn);//->Iterations(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts, big_params, fn);//->MinTime(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, big_params, fn);//->MinTime(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, big_params, fn);//->MinTime(200);
 
 } // namespace

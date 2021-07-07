@@ -14,6 +14,10 @@
 
 #include <helib/helib.h>
 
+#define HE_BENCH_CAPTURE(adding_two_ciphertexts, tiny_params, fn)          \
+  BENCHMARK_CAPTURE(adding_two_ciphertexts, tiny_params, fn(tiny_params))  \
+      ->Unit(benchmark::kMillisecond)      
+
 struct Params
 {
   const long m, p, r, L;
