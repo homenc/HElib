@@ -13,13 +13,11 @@
 #ifndef HELIB_BGV_COMMON_H
 #define HELIB_BGV_COMMON_H
 
-#include <memory>
+#include "bench_common.h" // HE_BENCH_CAPTURE
 
 #include <helib/helib.h>
 
-#define HE_BENCH_CAPTURE(adding_two_ciphertexts, tiny_params, fn)          \
-  BENCHMARK_CAPTURE(adding_two_ciphertexts, tiny_params, fn(tiny_params))  \
-      ->Unit(benchmark::kMillisecond)      
+#include <memory>
 
 struct Params
 {
