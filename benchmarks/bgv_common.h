@@ -46,8 +46,9 @@ struct Params
   bool operator!=(Params& other) const { return !(*this == other); }
   bool operator==(Params& other) const
   {
-    return m == other.m && p == other.p && r == other.r && qbits == other.qbits &&
-           gens == other.gens && ords == other.ords && mvec == other.mvec;
+    return m == other.m && p == other.p && r == other.r &&
+           qbits == other.qbits && gens == other.gens && ords == other.ords &&
+           mvec == other.mvec;
   }
 };
 

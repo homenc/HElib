@@ -602,8 +602,8 @@ public:
    * Please use `Ctxt::operator*=(const EncodedPtxt& ptxt)` instead.
    **/
   [[deprecated(
-      "Please use Ctxt::operator*=(const EncodedPtxt& ptxt) instead.")]]
-  Ctxt& operator*=(const NTL::ZZX& poly);
+      "Please use Ctxt::operator*=(const EncodedPtxt& ptxt) instead.")]] Ctxt&
+  operator*=(const NTL::ZZX& poly);
 
   //! Add a constant polynomial.
   //! If provided, size should be a high-probability bound
@@ -646,18 +646,19 @@ public:
    * @deprecated This function is deprecated in favor of a newer API.
    * Please use `Ctxt::operator+=(double ptxt)` instead.
    **/
-  [[deprecated("Please use Ctxt::operator+=(double ptxt) instead.")]]
-  void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
+  [[deprecated("Please use Ctxt::operator+=(double ptxt) instead.")]] void
+      addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
   /**
    * @deprecated This function is deprecated in favor of a newer API.
    * Please use `Ctxt::operator+=(double ptxt)` instead.
    **/
-  [[deprecated("Please use Ctxt::operator+=(double ptxt) instead.")]]
-  void addConstantCKKS(double x)
+  [[deprecated("Please use Ctxt::operator+=(double ptxt) instead.")]] void
+  addConstantCKKS(double x)
   { // FIXME: not enough precision when x is large
     // This function is deprecated.
-//    addConstantCKKS(
-//        rationalApprox(x, /*denomBound=*/1L << getContext().getAlMod().getR()));
+    //    addConstantCKKS(
+    //        rationalApprox(x, /*denomBound=*/1L <<
+    //        getContext().getAlMod().getR()));
     auto p =
         rationalApprox(x, /*denomBound=*/1L << getContext().getAlMod().getR());
     *this += double(p.first) / p.second;
@@ -677,17 +678,18 @@ public:
    * Please use `Ctxt::operator+=(const EncodedPtxt& ptxt)` instead.
    **/
   [[deprecated(
-      "Please use Ctxt::operator+=(const EncodedPtxt& ptxt) instead.")]]
-  void addConstantCKKS(const NTL::ZZX& poly,
-                       NTL::xdouble size = NTL::xdouble(-1.0),
-                       NTL::xdouble factor = NTL::xdouble(-1.0));
+      "Please use Ctxt::operator+=(const EncodedPtxt& ptxt) instead.")]] void
+  addConstantCKKS(const NTL::ZZX& poly,
+                  NTL::xdouble size = NTL::xdouble(-1.0),
+                  NTL::xdouble factor = NTL::xdouble(-1.0));
 
   /**
    * @deprecated This function is deprecated in favor of a newer API.
    * Please use `Ctxt::operator+=(const PtxtArray& ptxt)` instead.
    **/
-  [[deprecated("Please use Ctxt::operator+=(const PtxtArray& ptxt) instead.")]]
-  void addConstantCKKS(const std::vector<std::complex<double>>& ptxt);
+  [[deprecated(
+      "Please use Ctxt::operator+=(const PtxtArray& ptxt) instead.")]] void
+  addConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   /**
    * @brief Add a `CKKS` plaintext to this `Ctxt`.
@@ -696,14 +698,15 @@ public:
    * Please use `Ctxt::operator+=(const PtxtArray& ptxt)` instead.
    **/
   [[deprecated(
-      "Please use Ctxt::operator+=(const Ptxt<Scheme>& ptxt) instead.")]]
-  void addConstantCKKS(const Ptxt<CKKS>& ptxt);
+      "Please use Ctxt::operator+=(const Ptxt<Scheme>& ptxt) instead.")]] void
+  addConstantCKKS(const Ptxt<CKKS>& ptxt);
   /**
    * @deprecated This function is deprecated in favor of a newer API.
    * Please use `Ctxt::operator+=(const NTL::ZZ& ptxt)` instead.
    **/
-  [[deprecated("Please use Ctxt::operator+=(const NTL::ZZ& ptxt) instead.")]]
-  void addConstantCKKS(const NTL::ZZ& c);
+  [[deprecated(
+      "Please use Ctxt::operator+=(const NTL::ZZ& ptxt) instead.")]] void
+  addConstantCKKS(const NTL::ZZ& c);
 
   //! Multiply-by-constant.
   //! If the size is not given, for the DCRT variant, we use
@@ -1091,8 +1094,8 @@ public:
    * @deprecated This function is deprecated in favor of a newer API.
    * Please use `Ctxt::operator*=(double ptxt)` instead.
    **/
-  [[deprecated("Please use Ctxt::operator*=(double ptxt) instead.")]]
-  void multByConstantCKKS(double x)
+  [[deprecated("Please use Ctxt::operator*=(double ptxt) instead.")]] void
+  multByConstantCKKS(double x)
   {
     if (this->isEmpty())
       return;
@@ -1116,8 +1119,8 @@ public:
    * @deprecated This function is deprecated in favor of a newer API.
    * Please use `Ctxt::operator*=(double ptxt)` instead.
    **/
-  [[deprecated("Please use Ctxt::operator*=(double ptxt) instead.")]]
-  void multByConstantCKKS(std::pair<long, long> num) // rational number
+  [[deprecated("Please use Ctxt::operator*=(double ptxt) instead.")]] void
+  multByConstantCKKS(std::pair<long, long> num) // rational number
   {
     // This function is deprecated.
     // multByConstantCKKS(double(num.first) / num.second);
@@ -1139,11 +1142,11 @@ public:
    * Please use `Ctxt::operator*=(const EncodedPtxt& ptxt)` instead.
    **/
   [[deprecated(
-      "Please use Ctxt::operator*=(const EncodedPtxt& ptxt) instead.")]]
-  void multByConstantCKKS(const NTL::ZZX& poly,
-                          NTL::xdouble size = NTL::xdouble(-1.0),
-                          NTL::xdouble factor = NTL::xdouble(-1.0),
-                          double roundingErr = -1.0)
+      "Please use Ctxt::operator*=(const EncodedPtxt& ptxt) instead.")]] void
+  multByConstantCKKS(const NTL::ZZX& poly,
+                     NTL::xdouble size = NTL::xdouble(-1.0),
+                     NTL::xdouble factor = NTL::xdouble(-1.0),
+                     double roundingErr = -1.0)
   {
     DoubleCRT dcrt(poly, context, primeSet);
     multByConstantCKKS(dcrt, size, factor, roundingErr);
@@ -1158,15 +1161,15 @@ public:
    * Please use `Ctxt::operator*=(const PtxtArray& ptxt)` instead.
    **/
   [[deprecated(
-      "Please use Ctxt::operator*=(const Ptxt<Scheme>& ptxt) instead.")]]
-  void multByConstantCKKS(const Ptxt<CKKS>& ptxt);
+      "Please use Ctxt::operator*=(const Ptxt<Scheme>& ptxt) instead.")]] void
+  multByConstantCKKS(const Ptxt<CKKS>& ptxt);
   /**
    * @deprecated This function is deprecated in favor of a newer API.
    * Please use `Ctxt::operator*=(const PtxtArray& ptxt)` instead.
    **/
   [[deprecated(
-      "Please use Ctxt::operator*=(const PtxtArray& ptxt) instead.")]]
-  void multByConstantCKKS(const std::vector<std::complex<double>>& ptxt);
+      "Please use Ctxt::operator*=(const PtxtArray& ptxt) instead.")]] void
+  multByConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:
   //! a xor b = a+b-2ab = a + (1-2a)*b,
@@ -1396,8 +1399,8 @@ public:
    * @brief Returns log(noiseBound) - log(q)
    * @deprecated This is deprecated. Please use `Ctxt::capacity()` instead.
    **/
-  [[deprecated("Please use Ctxt::capacity() instead.")]]
-  double log_of_ratio() const
+  [[deprecated("Please use Ctxt::capacity() instead.")]] double log_of_ratio()
+      const
   {
     double logNoise =
         (getNoiseBound() <= 0.0) ? -DBL_MAX : log(getNoiseBound());

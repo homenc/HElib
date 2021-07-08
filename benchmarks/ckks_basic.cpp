@@ -36,7 +36,6 @@ static void adding_two_ciphertexts(benchmark::State& state, Meta& meta)
   // Benchmark adding ciphertexts
   for (auto _ : state)
     ctxt1 += ctxt2;
-
 }
 
 static void subtracting_two_ciphertexts(benchmark::State& state, Meta& meta)
@@ -53,7 +52,6 @@ static void subtracting_two_ciphertexts(benchmark::State& state, Meta& meta)
   // Benchmark adding ciphertexts
   for (auto _ : state)
     ctxt1 -= ctxt2;
-
 }
 
 static void negating_a_ciphertext(benchmark::State& state, Meta& meta)
@@ -68,7 +66,6 @@ static void negating_a_ciphertext(benchmark::State& state, Meta& meta)
   // Benchmark adding ciphertexts
   for (auto _ : state)
     ctxt.negate();
-
 }
 
 static void square_a_ciphertext(benchmark::State& state, Meta& meta)
@@ -83,7 +80,6 @@ static void square_a_ciphertext(benchmark::State& state, Meta& meta)
   // Benchmark adding ciphertexts
   for (auto _ : state)
     ctxt.square();
-
 }
 
 static void rotate_a_ciphertext_by1(benchmark::State& state, Meta& meta)
@@ -98,7 +94,6 @@ static void rotate_a_ciphertext_by1(benchmark::State& state, Meta& meta)
   // Benchmark adding ciphertexts
   for (auto _ : state)
     meta.data->ea.rotate(ctxt, 1);
-
 }
 
 static void multiplying_two_ciphertexts(benchmark::State& state, Meta& meta)
@@ -117,8 +112,6 @@ static void multiplying_two_ciphertexts(benchmark::State& state, Meta& meta)
     ctxt1.multiplyBy(ctxt2);
     benchmark::DoNotOptimize(ctxt1);
   }
-
-
 }
 
 static void encrypting_ciphertexts(benchmark::State& state, Meta& meta)
@@ -133,7 +126,6 @@ static void encrypting_ciphertexts(benchmark::State& state, Meta& meta)
     meta.data->publicKey.Encrypt(ctxt, ptxt);
     benchmark::DoNotOptimize(ctxt);
   }
-
 }
 
 static void decrypting_ciphertexts(benchmark::State& state, Meta& meta)
@@ -150,7 +142,6 @@ static void decrypting_ciphertexts(benchmark::State& state, Meta& meta)
     meta.data->secretKey.Decrypt(decrypted_result, ctxt);
     benchmark::DoNotOptimize(decrypted_result);
   }
-
 }
 
 static void multiply_and_add_two_ciphertexts(benchmark::State& state,
@@ -171,41 +162,64 @@ static void multiply_and_add_two_ciphertexts(benchmark::State& state,
     ctxt1.multiplyBy(ctxt2);
     benchmark::DoNotOptimize(ctxt1 += ctxt2);
   }
-
 }
 
 Meta fn;
 Params tiny_params(1024, 1, 5800);
-HE_BENCH_CAPTURE(adding_two_ciphertexts, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(subtracting_two_ciphertexts, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(negating_a_ciphertext, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(square_a_ciphertext, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(multiplying_two_ciphertexts, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(encrypting_ciphertexts, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(decrypting_ciphertexts, tiny_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(multiply_and_add_two_ciphertexts, tiny_params, fn);// ->Iterations(200);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, tiny_params, fn); // ->Iterations(200);
+HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
+                 tiny_params,
+                 fn);                                     // ->Iterations(200);
+HE_BENCH_CAPTURE(negating_a_ciphertext, tiny_params, fn); // ->Iterations(200);
+HE_BENCH_CAPTURE(square_a_ciphertext, tiny_params, fn);   // ->Iterations(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts,
+                 tiny_params,
+                 fn); // ->Iterations(200);
+HE_BENCH_CAPTURE(rotate_a_ciphertext_by1,
+                 tiny_params,
+                 fn);                                      // ->Iterations(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, tiny_params, fn); // ->Iterations(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, tiny_params, fn); // ->Iterations(200);
+HE_BENCH_CAPTURE(multiply_and_add_two_ciphertexts,
+                 tiny_params,
+                 fn); // ->Iterations(200);
 
 Params small_params(16384, 1, 5800);
-HE_BENCH_CAPTURE(adding_two_ciphertexts, small_params, fn);// ->MinTime(200);
-HE_BENCH_CAPTURE(subtracting_two_ciphertexts, small_params, fn);// ->MinTime(200);
-HE_BENCH_CAPTURE(negating_a_ciphertext, small_params, fn);// ->MinTime(200);
-HE_BENCH_CAPTURE(square_a_ciphertext, small_params, fn);// ->MinTime(200);
-HE_BENCH_CAPTURE(multiplying_two_ciphertexts, small_params, fn);// ->MinTime(200);
-HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, small_params, fn);// ->MinTime(200);
-HE_BENCH_CAPTURE(encrypting_ciphertexts, small_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(decrypting_ciphertexts, small_params, fn);// ->Iterations(200);
-HE_BENCH_CAPTURE(multiply_and_add_two_ciphertexts, small_params, fn);// ->Iterations(200);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, small_params, fn); // ->MinTime(200);
+HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
+                 small_params,
+                 fn);                                      // ->MinTime(200);
+HE_BENCH_CAPTURE(negating_a_ciphertext, small_params, fn); // ->MinTime(200);
+HE_BENCH_CAPTURE(square_a_ciphertext, small_params, fn);   // ->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts,
+                 small_params,
+                 fn);                                        // ->MinTime(200);
+HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, small_params, fn); // ->MinTime(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts,
+                 small_params,
+                 fn); // ->Iterations(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts,
+                 small_params,
+                 fn); // ->Iterations(200);
+HE_BENCH_CAPTURE(multiply_and_add_two_ciphertexts,
+                 small_params,
+                 fn); // ->Iterations(200);
 
 Params big_params(65536, 1, 5800);
 HE_BENCH_CAPTURE(adding_two_ciphertexts, big_params, fn); // ->MinTime(200);
-HE_BENCH_CAPTURE(subtracting_two_ciphertexts, big_params, fn); // ->MinTime(200);
+HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
+                 big_params,
+                 fn);                                    // ->MinTime(200);
 HE_BENCH_CAPTURE(negating_a_ciphertext, big_params, fn); // ->MinTime(200);
-HE_BENCH_CAPTURE(square_a_ciphertext, big_params, fn); // ->MinTime(200);
-HE_BENCH_CAPTURE(multiplying_two_ciphertexts, big_params, fn); // ->MinTime(200);
+HE_BENCH_CAPTURE(square_a_ciphertext, big_params, fn);   // ->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts,
+                 big_params,
+                 fn);                                      // ->MinTime(200);
 HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, big_params, fn); // ->MinTime(200);
-HE_BENCH_CAPTURE(encrypting_ciphertexts, big_params, fn); //->Iterations(200);
-HE_BENCH_CAPTURE(decrypting_ciphertexts, big_params, fn); //->Iterations(200);
-HE_BENCH_CAPTURE(multiply_and_add_two_ciphertexts, big_params, fn); //->Iterations(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, big_params, fn);  //->Iterations(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, big_params, fn);  //->Iterations(200);
+HE_BENCH_CAPTURE(multiply_and_add_two_ciphertexts,
+                 big_params,
+                 fn); //->Iterations(200);
 
 } // namespace

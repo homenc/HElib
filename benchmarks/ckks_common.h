@@ -19,7 +19,6 @@
 
 #include <memory>
 
-
 struct Params
 {
   const long m, r, L;
