@@ -83,6 +83,24 @@ static void square_a_ciphertext(benchmark::State& state, Meta& meta)
     ctxt.square();
 }
 
+static void multiplying_two_ciphertexts_no_relin(benchmark::State& state, Meta& meta)
+{
+  helib::Ptxt<helib::BGV> ptxt1(meta.data->context);
+  helib::Ptxt<helib::BGV> ptxt2(meta.data->context);
+
+  ptxt1.random();
+  ptxt2.random();
+
+  helib::Ctxt ctxt1(meta.data->publicKey);
+  helib::Ctxt ctxt2(meta.data->publicKey);
+
+  meta.data->publicKey.Encrypt(ctxt1, ptxt1);
+  meta.data->publicKey.Encrypt(ctxt2, ptxt2);
+  // Benchmark adding ciphertexts
+  for (auto _ : state)
+    ctxt1.multLowLvl(ctxt2);
+}
+
 static void multiplying_two_ciphertexts(benchmark::State& state, Meta& meta)
 {
   helib::Ptxt<helib::BGV> ptxt1(meta.data->context);
@@ -153,6 +171,9 @@ HE_BENCH_CAPTURE(square_a_ciphertext, tiny_params, fn);   //->Iterations(200);
 HE_BENCH_CAPTURE(multiplying_two_ciphertexts,
                  tiny_params,
                  fn);                                       //->Iterations(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin,
+                 tiny_params,
+                 fn);                                       //->Iterations(200);
 HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, tiny_params, fn); //->Iterations(200);
 HE_BENCH_CAPTURE(encrypting_ciphertexts, tiny_params, fn);  //->Iterations(200);
 HE_BENCH_CAPTURE(decrypting_ciphertexts, tiny_params, fn);  //->Iterations(200);
@@ -167,6 +188,9 @@ HE_BENCH_CAPTURE(square_a_ciphertext, small_params, fn);   //->MinTime(200);
 HE_BENCH_CAPTURE(multiplying_two_ciphertexts,
                  small_params,
                  fn);                                        //->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin,
+                 small_params,
+                 fn);                                        //->MinTime(200);
 HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, small_params, fn); //->MinTime(200);
 HE_BENCH_CAPTURE(encrypting_ciphertexts, small_params, fn); //->Iterations(200);
 HE_BENCH_CAPTURE(decrypting_ciphertexts, small_params, fn); //->Iterations(200);
@@ -179,6 +203,7 @@ HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
 HE_BENCH_CAPTURE(negating_a_ciphertext, big_params, fn); //->MinTime(200);
 HE_BENCH_CAPTURE(square_a_ciphertext, big_params, fn);   //->MinTime(200);
 HE_BENCH_CAPTURE(multiplying_two_ciphertexts, big_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin, big_params, fn); //->MinTime(200);
 HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, big_params, fn);     //->MinTime(200);
 HE_BENCH_CAPTURE(encrypting_ciphertexts, big_params, fn);      //->MinTime(200);
 HE_BENCH_CAPTURE(decrypting_ciphertexts, big_params, fn);      //->MinTime(200);
