@@ -49,7 +49,7 @@ def parseRange(rangeStr):
     matchRange, startRange, endRange, matchSingle, endSingle = match
 
     if matchRange != None:
-      if endRange < startRange:
+      if int(endRange) < int(startRange):
         raise argparse.ArgumentTypeError(\
           "Range going from high to low '%s'" % matchRange)
       else:
