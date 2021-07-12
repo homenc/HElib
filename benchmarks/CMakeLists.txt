@@ -54,7 +54,7 @@ file(STRINGS "../VERSION" HELIB_VERSION)
 
 find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
-find_package(HEXL REQUIRED)
+find_package(HEXL REQUIRED HINTS ${HEXL_DIR})
 
 find_package(benchmark REQUIRED)
 

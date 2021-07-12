@@ -10,12 +10,13 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include <benchmark/benchmark.h>
-#include <iostream>
+#include "bgv_common.h"
 
+#include <NTL/BasicThreadPool.h>
 #include <helib/helib.h>
 
-#include "bgv_common.h"
+#include <benchmark/benchmark.h>
+#include <iostream>
 
 namespace {
 
@@ -85,21 +86,14 @@ static void square_a_ciphertext(benchmark::State& state, Meta& meta)
 
 static void multiplying_two_ciphertexts_no_relin(benchmark::State& state, Meta& meta)
 {
-  
-  std::cout << "Abotu to mult 2 ctxts\n";
-
   helib::Ptxt<helib::BGV> ptxt1(meta.data->context);
   helib::Ptxt<helib::BGV> ptxt2(meta.data->context);
 
   ptxt1.random();
   ptxt2.random();
   
-  std::cout << "First\n";
-
   helib::Ctxt ctxt1(meta.data->publicKey);
   helib::Ctxt ctxt2(meta.data->publicKey);
-
-  std::cout << "Yep\n";
 
   meta.data->publicKey.Encrypt(ctxt1, ptxt1);
   meta.data->publicKey.Encrypt(ctxt2, ptxt2);
@@ -217,8 +211,9 @@ HE_BENCH_CAPTURE(decrypting_ciphertexts, big_params, fn);      //->MinTime(200);
 
 Params hexl_F4_params(/*m=*/32768, /*p=*/65537, /*r=*/1, /*qbits=*/5800);
 HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin, hexl_F4_params, fn); //->MinTime(200);
-Params hexl_F0_params(/*m=*/4, /*p=*/5, /*r=*/1, /*qbits=*/500);
-//Params hexl_F0_params(/*m=*/16, /*p=*/257, /*r=*/1, /*qbits=*/5800);
+
+Params hexl_F0_params(/*m=*/16, /*p=*/257, /*r=*/1, /*qbits=*/5800);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, hexl_F0_params, fn); //->MinTime(200);
 HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin, hexl_F0_params, fn); //->MinTime(200);
 
 } // namespace
