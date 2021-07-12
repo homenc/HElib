@@ -11,6 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+// TODO update
 /*
   Some simple wrappers to enable HElib to use HEXL.
   For HEXL's NTTs we make use of roots that HElib have already computated for
@@ -32,18 +33,20 @@ namespace intel {
 
 using intel::hexl::NTT;
 
-std::mutex table_mutex;
+static std::mutex table_mutex;
 
 struct Key
 {
   uint64_t degree;
   uint64_t q;
-  uint64_t root;
+//  uint64_t root;
 
   bool operator==(const Key& other) const
   {
-    return this->degree == other.degree && this->q == other.q &&
-           this->root == other.root;
+    return this->degree == other.degree && this->q == other.q;
+     
+    //return this->degree == other.degree && this->q == other.q &&
+    //       this->root == other.root;
   }
 };
 
@@ -52,8 +55,10 @@ struct Hash
   size_t operator()(const Key& key) const
   {
     return std::hash<uint64_t>{}(key.degree) ^
-           (std::hash<uint64_t>{}(key.q) ^
-            (std::hash<uint64_t>{}(key.root) << 1) << 1);
+           (std::hash<uint64_t>{}(key.q) << 1);
+    //return std::hash<uint64_t>{}(key.degree) ^
+    //       (std::hash<uint64_t>{}(key.q) ^
+    //        (std::hash<uint64_t>{}(key.root) << 1) << 1);
   }
 };
 
@@ -61,16 +66,16 @@ struct Hash
 // For life of program.
 static std::unordered_map<Key, NTT, Hash> table;
 
-static NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
+static NTT& initNTT(uint64_t degree, uint64_t q)
 {
-  Key key = {degree, q, root};
+  Key key = {degree, q};
   auto it = table.find(key);
-  if (it != table.end()) {
+  if (it != table.end()) { // Found
     return it->second;
   } else {
     // Lock the table for writing
     std::scoped_lock table_lock(table_mutex);
-    auto ret = table.emplace(key, NTT(degree, q, root));
+    auto ret = table.emplace(key, NTT(degree, q));
     return (ret.first)->second; // The NTT object just created.
   }
 }
@@ -78,10 +83,9 @@ static NTT& initNTT(uint64_t degree, uint64_t q, uint64_t root)
 void FFTFwd(long* output,
             const long* input,
             long n,
-            long q,
-            long root) //, const helib::FFTPrimeInfo& info)
+            long q) 
 {
-  initNTT(/*degree=*/n, /*modulus=*/q, root)
+  initNTT(/*degree=*/n, /*modulus=*/q)
       .ComputeForward(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),
                       /*input_mod_factor=*/4,
@@ -92,10 +96,9 @@ void FFTFwd(long* output,
 void FFTRev1(long* output,
              const long* input,
              long n,
-             long q,
-             long root) //, const helib::FFTPrimeInfo& info)
+             long q) 
 {
-  initNTT(/*degree=*/n, /*modulus=*/q, root)
+  initNTT(/*degree=*/n, /*modulus=*/q)
       .ComputeInverse(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),
                       /*input_mod_factor=*/2,

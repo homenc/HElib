@@ -9,6 +9,7 @@
 // only run if HEXL has been linked.
 #ifdef USE_INTEL_HEXL
 #include "../src/intelExt.h" // Private header
+#include "../src/PrimeGenerator.h" // Private header
 
 namespace {
 
@@ -106,17 +107,37 @@ protected:
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
+struct HEXL_params {
+  const long N; // phim
+  const long modulus;
+  HEXL_params(long _N, long _modulus) : N(_N), modulus(_modulus) {} 
+};
+
+class TestHEXL : public ::testing::TestWithParam<HEXL_params>
+{
+protected:
+  const long N; // phim
+  const long modulus;
+  
+  TestHEXL() : N(GetParam().N), modulus(GetParam().modulus) {}
+ 
+};
+
 TEST(TestHEXL, hexlInUse)
 {
-  long N = 8; // This is phi_m
-  long modulus = 769;
-  long root = 2;
+  // This test does not use HEXL_params because algebra must be d == 1
 
-  std::vector<long> args = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  long N = 64;
+  long modulus = 769;
+
+  std::vector<long> args(N);
+  for(size_t i = 0; i < args.size(); ++i){
+    args[i] = i + 1;
+  }
   auto expected_outputs = args;
 
-  intel::FFTFwd(args.data(), args.data(), N, modulus, root);
-  intel::FFTRev1(args.data(), args.data(), N, modulus, root);
+  intel::FFTFwd(args.data(), args.data(), N, modulus);
+  intel::FFTRev1(args.data(), args.data(), N, modulus);
 
   EXPECT_TRUE(std::equal(args.begin(), args.end(), expected_outputs.begin()));
 }
@@ -152,26 +173,30 @@ TEST_P(TestHEXL_BGV, encryptDecrypt)
   EXPECT_TRUE(ciphertextMatches(ea, secretKey, p0, c0));
 }
 
-TEST(TestHEXL_BGV, CModulusFFT)
+TEST_P(TestHEXL, CModulusFFT)
 {
   NTL::SetNumThreads(1);
 
-  helib::PAlgebra zms(8, 769);
-  helib::Cmodulus cmod(zms, 1135873, 0);
+  long m = 2 * N;
+  helib::PAlgebra zms(m, modulus);
+
+  helib::PrimeGenerator prime_generator(60, m);
+  long q = prime_generator.next();
+  helib::Cmodulus cmod(zms, q, 0);
 
   NTL::ZZX poly;
   poly.SetLength(2);
   poly[0] = 0;
   poly[1] = 5;
-  std::cout << "TEST: input " << poly << std::endl;
+//  std::cout << "TEST: input " << poly << std::endl;
 
   NTL::vec_long transformed;
   cmod.FFT(transformed, poly);
-  std::cout << "TEST: transformed " << transformed << std::endl;
+//  std::cout << "TEST: transformed " << transformed << std::endl;
 
   NTL::zz_pX inverse;
   cmod.iFFT(inverse, transformed);
-  std::cout << "TEST: inverse " << inverse << std::endl;
+//  std::cout << "TEST: inverse " << inverse << std::endl;
 
   NTL::ZZX inverse_conv = NTL::conv<NTL::ZZX>(inverse);
   EXPECT_EQ(inverse_conv, poly);
@@ -181,6 +206,13 @@ TEST(TestHEXL_BGV, CModulusFFT)
 INSTANTIATE_TEST_SUITE_P(typicalParameters, TestHEXL_BGV, ::testing::Values(
     //Parameters(16, 3, 1, 300) // m power of 2.
     Parameters(8, 769, 1, 50) // m power of 2.
+    ));
+
+INSTANTIATE_TEST_SUITE_P(typicalParameters, TestHEXL, ::testing::Values(
+    //Parameters(16, 3, 1, 300) // m power of 2.
+    HEXL_params(/*phim=*/8, /*p=*/769), // m power of 2, d == 1.
+    HEXL_params(/*phim=*/64, /*p=*/769), // m power of 2, d == 1.
+    HEXL_params(/*m=512, phim=*/256, /*p=*/769) // m power of 2, d == 2. 
     ));
 // clang-format on
 

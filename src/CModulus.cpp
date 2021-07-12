@@ -370,8 +370,10 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     }
 
     // Should be k-1 index, but HEXL expects k index
-    long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
-    intel::FFTFwd(yp, yp, phim, p, local_root);
+    // TODO tidy
+    //long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
+    //intel::FFTFwd(yp, yp, phim, p, local_root);
+    intel::FFTFwd(yp, yp, phim, p);
 
 #else
 
@@ -492,8 +494,9 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
 #ifdef USE_INTEL_HEXL
     // Should be k-1 index, but HEXL expects k index
-    long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
-    intel::FFTRev1(tmp_p, tmp_p, phim, p, local_root);
+    //long local_root = NTL::zz_pInfo->p_info->RootTable[0][k];
+    //intel::FFTRev1(tmp_p, tmp_p, phim, p, local_root);
+    intel::FFTRev1(tmp_p, tmp_p, phim, p);
 
     x.rep.SetLength(phim);
     NTL::zz_p* xp = x.rep.elts();

@@ -19,8 +19,10 @@
 namespace intel {
 
 // Simple wrappers around HEXL
-void FFTFwd(long* output, const long* input, long n, long q, long root);
-void FFTRev1(long* output, const long* input, long n, long q, long root);
+//void FFTFwd(long* output, const long* input, long n, long q, long root);
+//void FFTRev1(long* output, const long* input, long n, long q, long root);
+void FFTFwd(long* output, const long* input, long n, long q);
+void FFTRev1(long* output, const long* input, long n, long q);
 
 void EltwiseAddMod(long* result,
                    const long* operand1,
