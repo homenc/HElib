@@ -68,13 +68,14 @@ static std::unordered_map<Key, NTT, Hash> table;
 
 static NTT& initNTT(uint64_t degree, uint64_t q)
 {
+  // Lock the table for writing
+  std::scoped_lock table_lock(table_mutex);
+
   Key key = {degree, q};
   auto it = table.find(key);
   if (it != table.end()) { // Found
     return it->second;
   } else {
-    // Lock the table for writing
-    std::scoped_lock table_lock(table_mutex);
     auto ret = table.emplace(key, NTT(degree, q));
     return (ret.first)->second; // The NTT object just created.
   }

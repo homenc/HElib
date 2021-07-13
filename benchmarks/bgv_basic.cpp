@@ -209,11 +209,44 @@ HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, big_params, fn);     //->MinTime(200);
 HE_BENCH_CAPTURE(encrypting_ciphertexts, big_params, fn);      //->MinTime(200);
 HE_BENCH_CAPTURE(decrypting_ciphertexts, big_params, fn);      //->MinTime(200);
 
-Params hexl_F4_params(/*m=*/32768, /*p=*/65537, /*r=*/1, /*qbits=*/5800);
+Params hexl_F4_params(/*m=*/16384, /*p=*/65537, /*r=*/1, /*qbits=*/5800);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, hexl_F4_params, fn); //->Iterations(200);
+HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
+                 hexl_F4_params,
+                 fn);                                    //->Iterations(200);
+HE_BENCH_CAPTURE(negating_a_ciphertext, hexl_F4_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(square_a_ciphertext, hexl_F4_params, fn);   //->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts, hexl_F4_params, fn); //->MinTime(200);
 HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin, hexl_F4_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, hexl_F4_params, fn);     //->MinTime(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, hexl_F4_params, fn);      //->MinTime(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, hexl_F4_params, fn);      //->MinTime(200);
 
-Params hexl_F0_params(/*m=*/16, /*p=*/257, /*r=*/1, /*qbits=*/5800);
-HE_BENCH_CAPTURE(adding_two_ciphertexts, hexl_F0_params, fn); //->MinTime(200);
-HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin, hexl_F0_params, fn); //->MinTime(200);
+
+Params hexl_F3_params(/*m=*/16, /*p=*/257, /*r=*/1, /*qbits=*/5800);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, hexl_F3_params, fn); //->Iterations(200);
+HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
+                 hexl_F3_params,
+                 fn);                                    //->Iterations(200);
+HE_BENCH_CAPTURE(negating_a_ciphertext, hexl_F3_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(square_a_ciphertext, hexl_F3_params, fn);   //->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts, hexl_F3_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin, hexl_F3_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, hexl_F3_params, fn);     //->MinTime(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, hexl_F3_params, fn);      //->MinTime(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, hexl_F3_params, fn);      //->MinTime(200);
+
+Params hexl_F3d2_params(/*m=*/512, /*p=*/257, /*r=*/1, /*qbits=*/5800);
+HE_BENCH_CAPTURE(adding_two_ciphertexts, hexl_F3d2_params, fn); //->Iterations(200);
+HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
+                 hexl_F3d2_params,
+                 fn);                                    //->Iterations(200);
+HE_BENCH_CAPTURE(negating_a_ciphertext, hexl_F3d2_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(square_a_ciphertext, hexl_F3d2_params, fn);   //->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts, hexl_F3d2_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(multiplying_two_ciphertexts_no_relin, hexl_F3d2_params, fn); //->MinTime(200);
+HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, hexl_F3d2_params, fn);     //->MinTime(200);
+HE_BENCH_CAPTURE(encrypting_ciphertexts, hexl_F3d2_params, fn);      //->MinTime(200);
+HE_BENCH_CAPTURE(decrypting_ciphertexts, hexl_F3d2_params, fn);      //->MinTime(200);
 
 } // namespace

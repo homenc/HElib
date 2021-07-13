@@ -63,7 +63,8 @@ set(TRGTS bgv_basic
           bgv_thinboot
           bgv_fatboot
           ckks_basic
-          IO)
+          IO
+          fft_bench)
 
 # Sources derived from their targets.
 set(SRCS "")
