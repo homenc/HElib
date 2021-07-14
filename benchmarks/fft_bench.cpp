@@ -29,7 +29,7 @@ static void helib_fft_forward(benchmark::State& state, Meta& meta)
   long m = meta.data->context.getM();
   auto zms = meta.data->context.getZMStar();
 
-  helib::PrimeGenerator prime_generator(60, m);
+  helib::PrimeGenerator prime_generator(49, m);
 
   long q = prime_generator.next();
   helib::Cmodulus cmod(zms, q, 0);
@@ -53,7 +53,7 @@ static void helib_fft_inverse(benchmark::State& state, Meta& meta)
   long m = meta.data->context.getM();
   auto zms = meta.data->context.getZMStar();
 
-  helib::PrimeGenerator prime_generator(60, m);
+  helib::PrimeGenerator prime_generator(49, m);
 
   long q = prime_generator.next();
   helib::Cmodulus cmod(zms, q, 0);

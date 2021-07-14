@@ -9,6 +9,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+#include "macro.h" // Private Header
+
 #include <helib/NumbTh.h>
 #include <helib/timing.h>
 #include <helib/range.h>
@@ -1603,7 +1606,7 @@ std::pair<long, long> rationalApprox(double x, long denomBound)
     x = -x;
   }
   if (denomBound <= 0)
-    denomBound = 1L << (NTL_SP_NBITS / 2);
+    denomBound = 1L << (HELIB_SP_NBITS / 2);
   double epsilon = 1.0 / (denomBound * 8.0); // "smudge factor"
   double a = floor(x + epsilon);
   double xi = x - a;
@@ -1642,7 +1645,7 @@ std::pair<NTL::ZZ, NTL::ZZ> rationalApprox(NTL::xdouble x,
     x = -x;
   }
   if (denomBound <= 0)
-    denomBound = NTL::conv<NTL::xdouble>(1L << (NTL_SP_NBITS / 2));
+    denomBound = NTL::conv<NTL::xdouble>(1L << (HELIB_SP_NBITS / 2));
 
   NTL::xdouble epsilon = 0.125 / denomBound; // "smudge factor"
   NTL::xdouble a = floor(x + epsilon);

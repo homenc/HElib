@@ -209,7 +209,7 @@ HE_BENCH_CAPTURE(rotate_a_ciphertext_by1, big_params, fn);     //->MinTime(200);
 HE_BENCH_CAPTURE(encrypting_ciphertexts, big_params, fn);      //->MinTime(200);
 HE_BENCH_CAPTURE(decrypting_ciphertexts, big_params, fn);      //->MinTime(200);
 
-Params hexl_F4_params(/*m=*/16384, /*p=*/65537, /*r=*/1, /*qbits=*/5800);
+Params hexl_F4_params(/*m=*/32768, /*p=*/65537, /*r=*/1, /*qbits=*/5800);
 HE_BENCH_CAPTURE(adding_two_ciphertexts, hexl_F4_params, fn); //->Iterations(200);
 HE_BENCH_CAPTURE(subtracting_two_ciphertexts,
                  hexl_F4_params,

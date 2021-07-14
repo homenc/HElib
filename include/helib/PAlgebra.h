@@ -772,18 +772,13 @@ class PAlgebraModDerived<PA_cx> : public PAlgebraModBase
   long r; // counts bits of precision
 
 public:
-  PAlgebraModDerived(const PAlgebra& palg, long _r) : zMStar(palg), r(_r)
-  {
-    assertInRange<InvalidArgument>(r,
-                                   1l,
-                                   (long)NTL_SP_NBITS,
-                                   "Invalid bit precision r");
-  }
+  PAlgebraModDerived(const PAlgebra& palg, long _r);
 
   PAlgebraModBase* clone() const override
   {
     return new PAlgebraModDerived(*this);
   }
+
   PA_tag getTag() const override { return PA_cx_tag; }
 
   const PAlgebra& getZMStar() const override { return zMStar; }
@@ -796,6 +791,7 @@ public:
   {
     throw LogicError("PAlgebraModCx::getFactorsOverZZ undefined");
   }
+
   zzX getMask_zzX(UNUSED long i, UNUSED long j) const override
   {
     throw LogicError("PAlgebraModCx::getMask_zzX undefined");

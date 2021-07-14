@@ -11,6 +11,8 @@
 #ifndef HELIB_PRIME_GENERATOR_H
 #define HELIB_PRIME_GENERATOR_H
 
+#include "macro.h" // Private Header
+
 namespace helib {
 
 class PrimeGenerator
@@ -28,9 +30,9 @@ public:
   {
     assertInRange<InvalidArgument>(len,
                                    long(B),
-                                   static_cast<long>(NTL_SP_NBITS),
+                                   static_cast<long>(HELIB_SP_NBITS),
                                    "PrimeGenerator: len is not "
-                                   "in [B, NTL_SP_NBITS]",
+                                   "in [B, HELIB_SP_NBITS]",
                                    true);
     assertInRange<InvalidArgument>(m,
                                    1l,

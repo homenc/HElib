@@ -54,10 +54,12 @@
  * ciphertext wrt (1,s(X^2)) to another wrt (1,s(X^2),s^2(X^2)), but not
  * to another ciphertext wrt (1,s).
  **/
-#include <cfloat> // DBL_MAX
+
 #include <helib/DoubleCRT.h>
 #include <helib/EncodedPtxt.h>
 #include <helib/apiAttributes.h>
+
+#include <cfloat> // DBL_MAX
 
 namespace helib {
 struct CKKS;
@@ -1382,18 +1384,7 @@ public:
   bool isCKKS() const { return getContext().isCKKS(); }
 
   // Return r such that p^r = ptxtSpace
-  long effectiveR() const
-  {
-    long p = context.getP();
-    for (long r = 1, p2r = p; r < NTL_SP_NBITS; r++, p2r *= p) {
-      if (p2r == ptxtSpace)
-        return r;
-      if (p2r > ptxtSpace)
-        throw RuntimeError("ctxt.ptxtSpace is not of the form p^r");
-    }
-    throw RuntimeError("ctxt.ptxtSpace is not of the form p^r");
-    return 0; // just to keep the compiler happy
-  }
+  long effectiveR() const;
 
   /**
    * @brief Returns log(noiseBound) - log(q)

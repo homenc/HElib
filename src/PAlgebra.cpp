@@ -10,6 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+#include "macro.h"
+
 #include <helib/PAlgebra.h>
 #include <helib/hypercube.h>
 #include <helib/timing.h>
@@ -427,6 +429,17 @@ double calcPolyNormBnd(long m)
 
   return max_norm;
 }
+
+PAlgebraModDerived<PA_cx>::PAlgebraModDerived(
+  const PAlgebra& palg, long _r) : 
+  zMStar(palg), r(_r)
+{
+    assertInRange<InvalidArgument>(r,
+                                   1l,
+                                   (long)HELIB_SP_NBITS,
+                                   "Invalid bit precision r");
+}
+
 
 PAlgebra::PAlgebra(long mm,
                    long pp,
