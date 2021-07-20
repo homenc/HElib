@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "test_common.h"
 
+#include "../src/macro.h" // Private header
 // only run if HEXL has been linked.
 #ifdef USE_INTEL_HEXL
 #include "../src/intelExt.h" // Private header
@@ -180,7 +181,9 @@ TEST_P(TestHEXL, CModulusFFT)
   long m = 2 * N;
   helib::PAlgebra zms(m, modulus);
 
-  helib::PrimeGenerator prime_generator(60, m);
+  std::cout << "***SP bits: " << HELIB_SP_NBITS << '\n';
+
+  helib::PrimeGenerator prime_generator(HELIB_SP_NBITS, m);
   long q = prime_generator.next();
   helib::Cmodulus cmod(zms, q, 0);
 
@@ -222,7 +225,9 @@ INSTANTIATE_TEST_SUITE_P(typicalParameters, TestHEXL, ::testing::Values(
 
 namespace {
 
-TEST(TestHEXL, noTestRequired) {}
+TEST(TestHEXL, noTestRequired) {
+  std::cout << "***SP bits: " << HELIB_SP_NBITS << '\n';
+}
 
 } // namespace
 

@@ -109,6 +109,17 @@ if (NOT TARGET_ARCHITECTURE)
       FORCE)
 endif (NOT TARGET_ARCHITECTURE)
 
+set(HELIB_SP_NBITS "0" 
+    CACHE 
+    STRING "Override the bitsize for the ciphertext primes used")
+if (NOT HELIB_SP_NBITS EQUAL 0)
+  # Now check within bounds. NB. zero is special value to not override
+  if (HELIB_SP_NBITS LESS 1 OR HELIB_SP_NBITS GREATER 64)
+    message(FATAL_ERROR "HELIB_SP_NBITS must be in range [1, 64].")
+  endif()
+  add_compile_definitions(HELIB_SP_NBITS=${HELIB_SP_NBITS})
+endif()
+
 # Path containing FindGMP.cmake and FindNTL.cmake
 list(APPEND CMAKE_MODULE_PATH "${HELIB_CMAKE_EXTRA_DIR}")
 
