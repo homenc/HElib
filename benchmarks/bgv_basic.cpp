@@ -34,8 +34,13 @@ static void adding_two_ciphertexts(benchmark::State& state, Meta& meta)
   meta.data->publicKey.Encrypt(ctxt1, ptxt1);
   meta.data->publicKey.Encrypt(ctxt2, ptxt2);
   // Benchmark adding ciphertexts
-  for (auto _ : state)
-    ctxt1 += ctxt2;
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto copy(ctxt1);
+
+    state.ResumeTiming();
+    copy += ctxt2;
+  }
 }
 
 static void subtracting_two_ciphertexts(benchmark::State& state, Meta& meta)
@@ -52,8 +57,13 @@ static void subtracting_two_ciphertexts(benchmark::State& state, Meta& meta)
   meta.data->publicKey.Encrypt(ctxt1, ptxt1);
   meta.data->publicKey.Encrypt(ctxt2, ptxt2);
   // Benchmark adding ciphertexts
-  for (auto _ : state)
-    ctxt1 -= ctxt2;
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto copy(ctxt1);
+
+    state.ResumeTiming();
+    copy -= ctxt2;
+  }
 }
 
 static void negating_a_ciphertext(benchmark::State& state, Meta& meta)
@@ -66,8 +76,13 @@ static void negating_a_ciphertext(benchmark::State& state, Meta& meta)
 
   meta.data->publicKey.Encrypt(ctxt, ptxt);
   // Benchmark adding ciphertexts
-  for (auto _ : state)
-    ctxt.negate();
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto copy(ctxt);
+
+    state.ResumeTiming();
+    copy.negate();
+  }
 }
 
 static void square_a_ciphertext(benchmark::State& state, Meta& meta)
@@ -80,8 +95,13 @@ static void square_a_ciphertext(benchmark::State& state, Meta& meta)
 
   meta.data->publicKey.Encrypt(ctxt, ptxt);
   // Benchmark adding ciphertexts
-  for (auto _ : state)
-    ctxt.square();
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto copy(ctxt);
+
+    state.ResumeTiming();
+    copy.square();
+  }
 }
 
 static void multiplying_two_ciphertexts_no_relin(benchmark::State& state, Meta& meta)
@@ -98,8 +118,13 @@ static void multiplying_two_ciphertexts_no_relin(benchmark::State& state, Meta& 
   meta.data->publicKey.Encrypt(ctxt1, ptxt1);
   meta.data->publicKey.Encrypt(ctxt2, ptxt2);
   // Benchmark adding ciphertexts
-  for (auto _ : state)
-    ctxt1.multLowLvl(ctxt2);
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto copy(ctxt1);
+
+    state.ResumeTiming();
+    copy.multLowLvl(ctxt2);
+  }
 }
 
 static void multiplying_two_ciphertexts(benchmark::State& state, Meta& meta)
@@ -116,8 +141,13 @@ static void multiplying_two_ciphertexts(benchmark::State& state, Meta& meta)
   meta.data->publicKey.Encrypt(ctxt1, ptxt1);
   meta.data->publicKey.Encrypt(ctxt2, ptxt2);
   // Benchmark adding ciphertexts
-  for (auto _ : state)
-    ctxt1.multiplyBy(ctxt2);
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto copy(ctxt1);
+
+    state.ResumeTiming();
+    copy.multiplyBy(ctxt2);
+  }
 }
 
 static void rotate_a_ciphertext_by1(benchmark::State& state, Meta& meta)
@@ -130,8 +160,13 @@ static void rotate_a_ciphertext_by1(benchmark::State& state, Meta& meta)
 
   meta.data->publicKey.Encrypt(ctxt, ptxt);
   // Benchmark adding ciphertexts
-  for (auto _ : state)
-    meta.data->ea.rotate(ctxt, 1);
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto copy(ctxt);
+
+    state.ResumeTiming();
+    meta.data->ea.rotate(copy, 1);
+  }
 }
 
 static void encrypting_ciphertexts(benchmark::State& state, Meta& meta)
