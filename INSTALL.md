@@ -1,16 +1,21 @@
 # Building and installing HElib
 
-The HElib build, install, and regression tests suite have been built and tested
-on Ubuntu 18.04, Ubuntu 20.04, Fedora 32, Fedora 33, CentOS 7.8, CentOS 8.2,
-macOS Mojave >=10.14.6, and macOS Catalina >=10.15.7.
+The current HElib build, install, and regression tests suite have been built 
+and tested on Ubuntu 20.04 and macOS Catalina >=10.15.7. Previous versions
+have also included Ubuntu 18.04, Fedora 32, Fedora 33, CentOS 7.8, CentOS 8.2,
+macOS Mojave >=10.14.6. 
 
 There are two different ways to build and install HElib. The first one will
 automatically download and build the GMP and NTL dependencies and pack the
 libraries in a relocatable folder. The second way, instead, requires the
 dependencies to be installed by you and available in the system.
 
+Intel [HEXL](https://github.com/intel/hexl) acceleration library for
+homomorphic encryption support has been added. This should be treated as
+experimental. Instructions to enable HEXL and link to it are given below.
+
 **Please read these instructions in full to better choose the type of build that
- is better for you.**
+ is best for you.**
 
 ## General prerequisites
 
@@ -208,6 +213,34 @@ step 3.
 
 **NOTE**: if linking against a non-system GMP, pass `GMP_PREFIX=<path/to/gmp>`
 to the `./configure` step.
+
+## Enabling and linking to Intel HEXL
+
+First you must download and build HEXL from source. We recommend using at least 
+version 1.2. Using git this would be
+
+```bash
+git clone https://github.com/intel/hexl --branch 1.2.0
+```
+Follow the instructions for HEXL installation in the README.md for all
+available options.  Note previous versions on HEXL required the deprecated
+`-DENABLE_EXPORT=ON` otherwise the cmake metadata for linking a cmake project
+is not created. Modern versions do not have this flag and the metadata is
+created by default.  For a quick start most people will want,
+
+```bash
+cd hexl
+cmake -S . -B build/ [-DCMAKE_INSTALL_PREFIX=<install-location-for-HEXL>] 
+cmake --build build -j [<parrallel-jobs>]
+cmake --install build
+```
+If you do not provide an optional install location for HEXL the default is
+`/usr/local`.
+
+To enable and link HEXL in HElib, you must configure cmake for HElib with the
+`-DUSE_INTEL_HEXL=ON`. If HEXL is not in the default system location or you
+wish to use another installation tell HElib where to find it using the
+`-DHEXL_DIR=<install-location-for-hexl>`.
 
 ## HElib build options
 

@@ -1,6 +1,17 @@
 Release Changes
 ===============
 
+HElib 2.2.0, August 2021
+=========================
+(tagged as v2.2.0)
+
+* Intel HEXL integration (experimental)
+  * HEXL NTT acceleration for m as a power of 2 
+  * HEXL acceleration to fundamental ciphertexts operations 
+  * Documentation update
+* Update to benchmarks
+* Bug fixes
+
 HElib 2.1.0, March 2021
 =========================
 (tagged as v2.1.0)
