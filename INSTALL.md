@@ -237,9 +237,9 @@ cmake --install build
 If you do not provide an optional install location for HEXL the default is
 `/usr/local`.
 
-To enable and link HEXL in HElib, you must configure cmake for HElib with the
+To enable and link HEXL in HElib, you must configure cmake for HElib with
 `-DUSE_INTEL_HEXL=ON`. If HEXL is not in the default system location or you
-wish to use another installation tell HElib where to find it using the
+wish to use another installation tell HElib where to find it using
 `-DHEXL_DIR=<install-location-for-hexl>`.
 
 ## HElib build options
