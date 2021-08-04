@@ -1,22 +1,10 @@
 /* Copyright (C) 2021 Intel Corporation
  * SPDX-License-Identifier: Apache-2.0
- * This program is Licensed under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
- *   http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License. See accompanying LICENSE file.
  */
 
-// TODO update
 /*
-  Some simple wrappers to enable HElib to use HEXL.
-  For HEXL's NTTs we make use of roots that HElib have already computated for
-  the qs.
-*/
+ * Some simple wrappers to enable HElib to use HEXL.
+ */
 
 #ifdef USE_INTEL_HEXL
 
@@ -27,26 +15,23 @@
 #include <iostream>
 #include <unordered_map>
 #include <functional>
+#include <shared_mutex>
 #include <mutex>
 
 namespace intel {
 
 using intel::hexl::NTT;
 
-static std::mutex table_mutex;
+static std::shared_mutex table_mutex;
 
 struct Key
 {
   uint64_t degree;
   uint64_t q;
-//  uint64_t root;
 
   bool operator==(const Key& other) const
   {
     return this->degree == other.degree && this->q == other.q;
-     
-    //return this->degree == other.degree && this->q == other.q &&
-    //       this->root == other.root;
   }
 };
 
@@ -56,9 +41,6 @@ struct Hash
   {
     return std::hash<uint64_t>{}(key.degree) ^
            (std::hash<uint64_t>{}(key.q) << 1);
-    //return std::hash<uint64_t>{}(key.degree) ^
-    //       (std::hash<uint64_t>{}(key.q) ^
-    //        (std::hash<uint64_t>{}(key.root) << 1) << 1);
   }
 };
 
@@ -68,16 +50,26 @@ static std::unordered_map<Key, NTT, Hash> table;
 
 static NTT& initNTT(uint64_t degree, uint64_t q)
 {
-  // Lock the table for writing
-  std::scoped_lock table_lock(table_mutex);
-
   Key key = {degree, q};
-  auto it = table.find(key);
-  if (it != table.end()) { // Found
-    return it->second;
-  } else {
-    auto ret = table.emplace(key, NTT(degree, q));
-    return (ret.first)->second; // The NTT object just created.
+    
+  { // First Read to see if there is an NTT
+    std::shared_lock read_lock(table_mutex);
+    auto it = table.find(key);
+    if (it != table.end()) { // Found
+      return it->second;
+    } 
+  }
+
+  { // Didn't find an NTT, lock the table for writing
+    std::scoped_lock write_lock(table_mutex);
+    // Check again to see another thread snuck it in.
+    auto it = table.find(key);
+    if (it != table.end()) { // Found
+      return it->second;
+    } else { 
+      auto ret = table.emplace(key, NTT(degree, q));
+      return (ret.first)->second; // The NTT object just created.
+    }
   }
 }
 
