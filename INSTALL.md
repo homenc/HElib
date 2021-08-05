@@ -1,7 +1,7 @@
 # Building and installing HElib
 
 The current HElib build, install, and regression tests suite have been built 
-and tested on Ubuntu 20.04 and macOS Catalina >=10.15.7. Previous versions
+and tested on Ubuntu 20.04, and macOS Catalina >=10.15.7. Previous versions
 have also included Ubuntu 18.04, Fedora 32, Fedora 33, CentOS 7.8, CentOS 8.2,
 macOS Mojave >=10.14.6. 
 
@@ -26,7 +26,7 @@ experimental. Instructions to enable HEXL and link to it are given below.
 **Linux environment:**
 
 - g++ >= 7.3.1
-- cmake >= 3.10.2
+- cmake >= 3.12
 
 **macOS environment:**
 

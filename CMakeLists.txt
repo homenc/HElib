@@ -10,7 +10,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
-# TODO: Change this back to 3.10.2 (Remove add_compile_definitions)
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 project(helib_superbuild LANGUAGES C CXX)
