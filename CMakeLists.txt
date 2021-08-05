@@ -190,7 +190,19 @@ endif ()
 
 # Build optional Intel HEXL library
 if(USE_INTEL_HEXL)
-  find_package(HEXL 1.1.0 HINTS ${HEXL_HINT_DIR} REQUIRED)
+  if(HEXL_DIR)
+    set(HEXL_DIR
+        ""
+        CACHE
+        STRING "Set location of HEXL cmake data for linking."
+        )
+    set(INIT_HEXL_DIR ${HEXL_DIR})
+  endif()
+  find_package(HEXL 1.1.0 HINTS ${HEXL_DIR} REQUIRED)
+  if(INIT_HEXL_DIR AND NOT INIT_HEXL_DIR STREQUAL HEXL_DIR)
+    message(WARNING "HEXL location provided '${INIT_HEXL_DIR}' \
+            does not equal chosen '${HEXL_DIR}'.")
+  endif()
   include_directories(${HEXL_INCLUDE_DIRS})
   add_compile_definitions(USE_INTEL_HEXL)
 endif(USE_INTEL_HEXL)
