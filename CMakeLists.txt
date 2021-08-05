@@ -191,17 +191,8 @@ endif ()
 
 # Build optional Intel HEXL library
 if(USE_INTEL_HEXL)
-  #add_library(hexl STATIC)
-  #set_target_properties(hexl PROPERTIES IMPORTED_LOCATION ${HEXL_HINT_DIR}/libhexl.a)
-  find_package(HEXL 1.1.0 HINTS ${HEXL_HINT_DIR})
+  find_package(HEXL 1.1.0 HINTS ${HEXL_HINT_DIR} REQUIRED)
   include_directories(${HEXL_INCLUDE_DIRS})
-  if (NOT TARGET HEXL::hexl)
-    message("Intel HEXL: not found. Fetching...")
-    #include(cmake/intel-hexl.cmake)
-    #install(
-    #  DIRECTORY ${hexl_SOURCE_DIR}/hexl/include/intel-hexl
-    #  DESTINATION ${SEAL_INCLUDES_INSTALL_DIR})
-  endif()
   add_compile_definitions(USE_INTEL_HEXL)
 endif(USE_INTEL_HEXL)
 
