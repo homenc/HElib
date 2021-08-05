@@ -54,7 +54,7 @@ file(STRINGS "../VERSION" HELIB_VERSION)
 
 find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
-find_package(HEXL REQUIRED HINTS ${HEXL_DIR})
+find_package(HEXL HINTS ${HEXL_DIR})
 
 find_package(benchmark REQUIRED)
 
@@ -76,12 +76,12 @@ if(SINGLE_EXEC)
   # Add each benchmark source file to the executable list
   add_executable(helib_benchmark ${SRCS})
   # Specify the libraries each target is dependent upon
-  target_link_libraries(helib_benchmark benchmark::benchmark_main helib)
+  target_link_libraries(helib_benchmark benchmark::benchmark_main helib HEXL::hexl)
 else(SINGLE_EXEC)
   foreach(TRGT ${TRGTS})
     # Add each benchmark source file to the executable list
     add_executable(${TRGT} ${TRGT}.cpp)
     # Specify the libraries each target is dependent upon
-    target_link_libraries(${TRGT} benchmark::benchmark_main helib)
+    target_link_libraries(${TRGT} benchmark::benchmark_main helib HEXL::hexl)
   endforeach()
 endif(SINGLE_EXEC)
