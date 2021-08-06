@@ -198,7 +198,7 @@ if(USE_INTEL_HEXL)
         )
     set(INIT_HEXL_DIR ${HEXL_DIR})
   endif()
-  find_package(HEXL 1.1.0 HINTS ${HEXL_DIR} REQUIRED)
+  find_package(HEXL 1.2.0 HINTS ${HEXL_DIR} REQUIRED)
   if(INIT_HEXL_DIR AND NOT INIT_HEXL_DIR STREQUAL HEXL_DIR)
     message(WARNING "HEXL location provided '${INIT_HEXL_DIR}' \
             does not equal chosen '${HEXL_DIR}'.")
