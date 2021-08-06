@@ -217,10 +217,8 @@ to the `./configure` step.
 ## Enabling and linking to Intel HEXL
 
 It is currently only possible to use HEXL with HElib when using the library
-build.
-
-First you must download and build HEXL from source. We recommend using at least 
-version 1.2. Using git this would be
+build. First you must download and build HEXL from source. Currently, HElib
+only works with HEXL version 1.2. Using git this would be
 
 ```bash
 git clone https://github.com/intel/hexl --branch 1.2.0
