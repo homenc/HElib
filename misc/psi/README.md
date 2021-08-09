@@ -31,22 +31,22 @@ columns, where the data can be seen in bold
 
 <pre>
 2 4
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[0,1],[2,3],[4,5]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[0],[0],[0]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[6,7],[8,9],[10,11]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[1],[1],[1]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[12,13],[14,15],[16,17]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[2],[2],[2]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[18,19],[0],[0]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[3],[3],[3]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[0,1],[2,3],[4,5]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[0],[0],[0]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[6,7],[8,9],[10,11]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[1],[1],[1]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[12,13],[14,15],[16,17]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[2],[2],[2]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[18,19],[0],[0]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[3],[3],[3]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
 </pre>
 and an example query
 <pre>
 1 4
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[0,1],[2,3],[4,5]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[6,7],[8,9],[10,11]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[12,13],[14,15],[16,17]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
-{"HElibVersion":"2.1.0","content":{"scheme":"BGV","slots":<b>[[18,19],[0],[0]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[0,1],[2,3],[4,5]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[6,7],[8,9],[10,11]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[12,13],[14,15],[16,17]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
+{"HElibVersion":"2.2.0","content":{"scheme":"BGV","slots":<b>[[18,19],[0],[0]]</b>},"serializationVersion":"0.0.1","type":"Ptxt"}
 </pre>
 
 Make sure you are in the directory `<path-to-HElib>/HElib/misc/psi/test`
