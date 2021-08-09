@@ -38,5 +38,11 @@ file(STRINGS "../../VERSION" HELIB_VERSION)
 
 find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
+# Optionally find HEXL, prints warning if not found.
+find_package(HEXL 1.2.0 HINTS ${HEXL_DIR})
+if (HEXL_FOUND)
+  message(STATUS "Intel HEXL location: '${HEXL_DIR}'")
+endif()
+
 add_subdirectory(scoring)
 add_subdirectory(lookup)
