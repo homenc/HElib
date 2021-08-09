@@ -9,6 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+// Copyright (C) 2021 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+
 /* DoubleCRT.cpp - This class holds an integer polynomial in double-CRT form
  *
  * Double-CRT form is a matrix of L rows and phi(m) columns. The i'th row

@@ -1,3 +1,6 @@
+// Copyright (C) 2021 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef HELIB_MACRO_H
 #define HELIB_MACRO_H
 

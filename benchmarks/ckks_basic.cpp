@@ -10,6 +10,9 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+// Copyright (C) 2021 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+
 #include "ckks_common.h"
 
 #include <helib/helib.h>

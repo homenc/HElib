@@ -10,6 +10,9 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+// Copyright (C) 2021 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
+
 #include "bgv_common.h"
 
 #include <NTL/BasicThreadPool.h>
