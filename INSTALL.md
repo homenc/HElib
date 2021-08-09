@@ -19,23 +19,24 @@ experimental. Instructions to enable HEXL and link to it are given below.
 
 ## General prerequisites
 
-- GNU make >= 3.82
 - pthreads
-- git >= 1.8.3 (required to build and run the HElib test suite)
+- git >= 2.27 (required to build and run the HElib test suite)
 
 **Linux environment:**
 
-- g++ >= 7.3.1
-- cmake >= 3.12
+- GNU make >= 4.2
+- g++ >= 9.3.0
+- cmake >= 3.19
 
 **macOS environment:**
 
-- Apple clang >= 11.0.0 (available with the latest Xcode for the tested versions of macOS)
+- Apple clang >= 12.0.0 (available with the latest Xcode for the tested versions of macOS)
 - Xcode Command Line Tools (can be installed with the command `xcode-select
   --install` in a teminal)
-- cmake >= 3.17.3 (available from [CMake](https://cmake.org/) or [MacPorts
+- cmake >= 3.20 (available from [CMake](https://cmake.org/) or [MacPorts
   Project](https://www.macports.org/) and [Homebrew](https://brew.sh/) as
   packages)
+- GNU make >= 3.81
 
 **For development:**
 
