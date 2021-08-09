@@ -54,8 +54,11 @@ file(STRINGS "../VERSION" HELIB_VERSION)
 
 find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
+# Optionally find HEXL, prints warning if not found.
 find_package(HEXL 1.2.0 HINTS ${HEXL_DIR})
-message(STATUS "HEXL_DIR '${HEXL_DIR}'")
+if (HEXL_FOUND)
+  message(STATUS "Intel HEXL location: '${HEXL_DIR}'")
+endif()
 
 find_package(benchmark REQUIRED)
 
