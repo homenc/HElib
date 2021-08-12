@@ -30,7 +30,7 @@ include(GNUInstallDirs)
 file(STRINGS "../../VERSION" HELIB_VERSION)
 
 find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
-find_package(HEXL 1.1.1 EXACT REQUIRED)
+
 add_executable(circuit basic_circuit.cpp)
 
-target_link_libraries(circuit helib HEXL::hexl)
+target_link_libraries(circuit helib)

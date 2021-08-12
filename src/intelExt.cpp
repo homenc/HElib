@@ -11,7 +11,6 @@
 
 #include <hexl/hexl.hpp>
 
-#include <iostream>
 #include <unordered_map>
 #include <functional>
 #include <shared_mutex>
