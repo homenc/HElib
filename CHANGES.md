@@ -6,8 +6,8 @@ HElib 2.2.0, August 2021
 (tagged as v2.2.0)
 
 * Intel HEXL integration (experimental)
-  * HEXL NTT acceleration for m as a power of 2 
-  * HEXL acceleration to fundamental ciphertexts operations 
+  * HEXL NTT acceleration for m as a power of 2
+  * HEXL acceleration to fundamental ciphertext operations
   * Documentation update
 * Update to benchmarks
 * Bug fixes
