@@ -15,6 +15,7 @@
  * @file Context.h
  * @brief Keeps the parameters of an instance of the cryptosystem
  **/
+#include <optional>
 #include <helib/PAlgebra.h>
 #include <helib/CModulus.h>
 #include <helib/IndexSet.h>
