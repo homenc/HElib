@@ -437,7 +437,7 @@ PAlgebraModDerived<PA_cx>::PAlgebraModDerived(
     assertInRange<InvalidArgument>(r,
                                    1l,
                                    (long)HELIB_SP_NBITS,
-                                   "Invalid bit precision r");
+                                   "Invalid bit precision r: '" + std::to_string(r) + "'");
 }
 
 
