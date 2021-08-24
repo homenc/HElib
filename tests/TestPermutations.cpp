@@ -340,7 +340,7 @@ INSTANTIATE_TEST_SUITE_P(variousParameters,
 INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestPermutationsCKKS,
                          ::testing::Values(CKKSParameters(/*m=*/8192,
-                                                          /*precision=*/HELIB_SP_NBITS - 1,
+                                                          /*precision=*/HELIB_SP_NBITS - 8,
                                                           /*bits=*/1000,
                                                           /*depth=*/5)));
 
