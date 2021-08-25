@@ -159,7 +159,6 @@ endif (NOT PACKAGE_BUILD)
 
 # Setting flag lists to avoid polluting CMAKE_CXX_FLAGS.
 # PUBLIC_HELIB_CXX_FLAGS will be exported to the installed target.
-set(PRIVATE_HELIB_CXX_FLAGS "-march=${TARGET_ARCHITECTURE}")
 set(PUBLIC_HELIB_CXX_FLAGS "")
 # Add extra checks during build
 if (PEDANTIC_BUILD)

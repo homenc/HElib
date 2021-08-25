@@ -16,7 +16,7 @@ AR = ar
 ARFLAGS=rv
 GMP=-lgmp
 NTL=-lntl
-COPT=-g -O2 -march=native
+COPT=-g -O2
 INC_HELIB=-I../include/
 LEGACY_TESTS=../misc/legacy_tests/
 

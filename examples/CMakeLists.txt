@@ -23,14 +23,6 @@ project(utils LANGUAGES CXX)
 # Define standard installation directories (GNU)
 include(GNUInstallDirs)
 
-# Set default output folder
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
-
 # STRINGS avoids having the 2 newline characters at the end of the string.
 # Alternatively it's possible to use file(READ ...) and then
 # string(REGEX REPLACE "\n$" "" HELIB_VERSION "${HELIB_VERSION}")

@@ -10,5 +10,9 @@
 # limitations under the License. See accompanying LICENSE file.
 
 add_executable(BGV_country_db_lookup BGV_country_db_lookup.cpp)
-
+configure_file(countries_dataset.csv countries_dataset.csv COPYONLY)
 target_link_libraries(BGV_country_db_lookup helib)
+
+add_executable(BGV_string_int_db_lookup BGV_string_int_db_lookup.cpp)
+configure_file(string_int_dataset.csv string_int_dataset.csv COPYONLY)
+target_link_libraries(BGV_string_int_db_lookup helib)
