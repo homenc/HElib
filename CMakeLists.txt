@@ -209,7 +209,19 @@ if(USE_INTEL_HEXL)
         )
     set(INIT_HEXL_DIR ${HEXL_DIR})
   endif()
-  find_package(HEXL 1.2.1 HINTS ${HEXL_DIR} REQUIRED)
+
+  # Set minimum version of HEXL
+  set(HEXL_MIN_VERSION 1.2.1)
+
+  find_package(HEXL HINTS ${HEXL_DIR} REQUIRED)
+
+  # Check the version found is greater than the minimum
+  if(HEXL_MIN_VERSION GREATER HEXL_VERSION)
+    message(FATAL_ERROR "Minimum Intel HEXL version required is ${HEXL_MIN_VERSION}, found ${HEXL_VERSION}")
+  else()
+    message("-- Intel HEXL Version: ${HEXL_VERSION} found (minimum required is ${HEXL_MIN_VERSION})")
+  endif()
+
   if(INIT_HEXL_DIR AND NOT INIT_HEXL_DIR STREQUAL HEXL_DIR)
     message(WARNING "HEXL location provided '${INIT_HEXL_DIR}' \
             does not equal chosen '${HEXL_DIR}'.")
