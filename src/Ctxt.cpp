@@ -14,6 +14,7 @@
 
 #include "io.h"
 #include "binio.h"
+#include "macro.h"
 
 #include <helib/timing.h>
 #include <helib/Context.h>
@@ -98,6 +99,19 @@ void SKHandle::readJSON(const JsonWrapper& jw)
 // A hack for recording required automorphisms (see NumbTh.h)
 std::set<long>* FHEglobals::automorphVals = nullptr;
 std::set<long>* FHEglobals::automorphVals2 = nullptr;
+
+long Ctxt::effectiveR() const
+{
+  long p = context.getP();
+  for (long r = 1, p2r = p; r < HELIB_SP_NBITS; r++, p2r *= p) {
+    if (p2r == ptxtSpace)
+      return r;
+    if (p2r > ptxtSpace)
+      throw RuntimeError("ctxt.ptxtSpace is not of the form p^r");
+  }
+  throw RuntimeError("ctxt.ptxtSpace is not of the form p^r");
+  return 0; // just to keep the compiler happy
+}
 
 bool Ctxt::isCorrect() const
 {
@@ -821,7 +835,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   HELIB_STATS_UPDATE("KS-noise-ratio", ratio);
 
   if (ratio > 1) {
-    Warning("KS-noise-ratio=" + std::to_string(ratio) + "\n");
+    Warning("KS-noise-ratio=" + std::to_string(ratio));
   }
 
   noiseBound += addedNoise; // update the noise estimate

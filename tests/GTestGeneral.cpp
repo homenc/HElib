@@ -522,6 +522,7 @@ TEST_P(GTestGeneral, rotate1D)
   EXPECT_TRUE(ciphertextMatches(ea, secretKey, p0, c0));
 
   long pos = 5; // Position of element to replicate
+  ASSERT_LE(pos, ea.size());
 
   ea.encrypt(c1, publicKey, p1);
   helib::Ctxt c1r = c1;
@@ -544,6 +545,7 @@ TEST_P(GTestGeneral, rotate1D)
 INSTANTIATE_TEST_SUITE_P(variousParameters, GTestGeneral, ::testing::Values(
     //         R, p, r, d, c,  k,   L, s,  m,        mvec,        gens,     ords, seed, nt
     //DEEP
+    Parameters(1, 127, 1, 2, 2, 10, 500, 0, 64,          {},          {},       {},    0,  1),
     Parameters(1, 2, 2, 1, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
     Parameters(1, 2, 1, 2, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),
     Parameters(2, 7, 2, 1, 2, 10, 500, 0, 91,          {},          {},       {},    0,  1),

@@ -10,6 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+#include "macro.h"
+
 #include <helib/PAlgebra.h>
 #include <helib/hypercube.h>
 #include <helib/timing.h>
@@ -428,6 +430,16 @@ double calcPolyNormBnd(long m)
   return max_norm;
 }
 
+PAlgebraModDerived<PA_cx>::PAlgebraModDerived(const PAlgebra& palg, long _r) :
+    zMStar(palg), r(_r)
+{
+  assertInRange<InvalidArgument>(r,
+                                 1l,
+                                 (long)HELIB_SP_NBITS,
+                                 "Invalid bit precision r: '" +
+                                     std::to_string(r) + "'");
+}
+
 PAlgebra::PAlgebra(long mm,
                    long pp,
                    const std::vector<long>& _gens,
@@ -519,8 +531,8 @@ PAlgebra::PAlgebra(long mm,
   Tidx.assign(mm, -1);   // allocate m slots, initialize them to -1
   zmsIdx.assign(mm, -1); // allocate m slots, initialize them to -1
   resize(zmsRep, phiM);
-  long i, idx;
-  for (i = idx = 0; i < mm; i++) {
+
+  for (long i = 0, idx = 0; i < mm; i++) {
     if (NTL::GCD(i, mm) == 1) {
       zmsIdx[i] = idx++;
       zmsRep[zmsIdx[i]] = i;
@@ -539,8 +551,9 @@ PAlgebra::PAlgebra(long mm,
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
   std::vector<long> buffer(gens.size()); // temporary holds exponents
-  i = idx = 0;
+
   long ctr = 0;
+  long i = 0;
   do {
     ctr++;
     long t = exponentiate(buffer);

@@ -56,7 +56,7 @@ static inline long howManyThreads(long max = 0)
                            ") cannot be less than zero."
                            " Zero means use the maximum available on system.");
 
-  // Get system threads and clip to max
+    // Get system threads and clip to max
 #ifdef HELIB_THREADS
   long threads = std::thread::hardware_concurrency();
 #else

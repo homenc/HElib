@@ -9,6 +9,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+/* Intel HEXL integration.
+ * Copyright (C) 2021 Intel Corporation
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef HELIB_DOUBLECRT_H
 #define HELIB_DOUBLECRT_H
 /**
@@ -32,10 +46,8 @@ class Context;
  */
 class DoubleCRTHelper : public IndexMapInit<NTL::vec_long>
 {
-private:
-  long val;
-
 public:
+  DoubleCRTHelper() = delete;
   DoubleCRTHelper(const Context& context);
 
   /** @brief the init method ensures that all rows have the same size */
@@ -48,7 +60,7 @@ public:
   }
 
 private:
-  DoubleCRTHelper(); // disable default constructor
+  long val;
 };
 
 /**
@@ -74,6 +86,7 @@ private:
  **/
 class DoubleCRT
 {
+private:
   const Context& context; // the context
 
   // the data itself: if the i'th prime is in use then map[i] is the std::vector
@@ -90,23 +103,8 @@ class DoubleCRT
   // determined by the union of the two index sets; otherwise, the index set
   // of *this.
 
-  class AddFun
-  {
-  public:
-    long apply(long a, long b, long n) { return NTL::AddMod(a, b, n); }
-  };
-
-  class SubFun
-  {
-  public:
-    long apply(long a, long b, long n) { return NTL::SubMod(a, b, n); }
-  };
-
-  class MulFun
-  {
-  public:
-    long apply(long a, long b, long n) { return NTL::MulMod(a, b, n); }
-  };
+  // Arithmetic operations. Only the "destructive" versions are used,
+  // i.e., a += b is implemented but not a + b.
 
   template <typename Fun>
   DoubleCRT& Op(const DoubleCRT& other, Fun fun, bool matchIndexSets = true);
@@ -291,21 +289,15 @@ public:
   DoubleCRT& Negate(const DoubleCRT& other);
   DoubleCRT& Negate() { return Negate(*this); }
 
-  DoubleCRT& operator+=(const DoubleCRT& other) { return Op(other, AddFun()); }
+  DoubleCRT& operator+=(const DoubleCRT& other);
+  DoubleCRT& operator+=(const NTL::ZZX& poly);
+  DoubleCRT& operator+=(const NTL::ZZ& num);
+  DoubleCRT& operator+=(long num);
 
-  DoubleCRT& operator+=(const NTL::ZZX& poly) { return Op(poly, AddFun()); }
-
-  DoubleCRT& operator+=(const NTL::ZZ& num) { return Op(num, AddFun()); }
-
-  DoubleCRT& operator+=(long num) { return Op(NTL::to_ZZ(num), AddFun()); }
-
-  DoubleCRT& operator-=(const DoubleCRT& other) { return Op(other, SubFun()); }
-
-  DoubleCRT& operator-=(const NTL::ZZX& poly) { return Op(poly, SubFun()); }
-
-  DoubleCRT& operator-=(const NTL::ZZ& num) { return Op(num, SubFun()); }
-
-  DoubleCRT& operator-=(long num) { return Op(NTL::to_ZZ(num), SubFun()); }
+  DoubleCRT& operator-=(const DoubleCRT& other);
+  DoubleCRT& operator-=(const NTL::ZZX& poly);
+  DoubleCRT& operator-=(const NTL::ZZ& num);
+  DoubleCRT& operator-=(long num);
 
   // These are the prefix versions, ++dcrt and --dcrt.
   DoubleCRT& operator++() { return (*this += 1); };
@@ -317,17 +309,10 @@ public:
   void operator--(int) { *this -= 1; };
 
   // Multiplication
-  DoubleCRT& operator*=(const DoubleCRT& other)
-  {
-    // return Op(other,MulFun());
-    return do_mul(other);
-  }
-
-  DoubleCRT& operator*=(const NTL::ZZX& poly) { return Op(poly, MulFun()); }
-
-  DoubleCRT& operator*=(const NTL::ZZ& num) { return Op(num, MulFun()); }
-
-  DoubleCRT& operator*=(long num) { return Op(NTL::to_ZZ(num), MulFun()); }
+  DoubleCRT& operator*=(const DoubleCRT& other);
+  DoubleCRT& operator*=(const NTL::ZZX& poly);
+  DoubleCRT& operator*=(const NTL::ZZ& num);
+  DoubleCRT& operator*=(long num);
 
   // NOTE: the matchIndexSets business in the following routines
   // is DEPRECATED.  The requirement is that the prime set of other
@@ -336,21 +321,9 @@ public:
   // not contain the prime set of other, an exception is also raised.
 
   // Procedural equivalents, supporting also the matchIndexSets flag
-  void Add(const DoubleCRT& other, bool matchIndexSets = true)
-  {
-    Op(other, AddFun(), matchIndexSets);
-  }
-
-  void Sub(const DoubleCRT& other, bool matchIndexSets = true)
-  {
-    Op(other, SubFun(), matchIndexSets);
-  }
-
-  void Mul(const DoubleCRT& other, bool matchIndexSets = true)
-  {
-    // Op(other, MulFun(), matchIndexSets);
-    do_mul(other, matchIndexSets);
-  }
+  void Add(const DoubleCRT& other, bool matchIndexSets = true);
+  void Sub(const DoubleCRT& other, bool matchIndexSets = true);
+  void Mul(const DoubleCRT& other, bool matchIndexSets = true);
 
   // Division by constant
   DoubleCRT& operator/=(const NTL::ZZ& num);

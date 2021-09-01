@@ -10,7 +10,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
-cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
+# Enforce CMake v3.20 on MacOS else set minimum to v3.16
+if (APPLE)
+  cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+else ()
+  cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+endif ()
 
 project(helib_superbuild LANGUAGES C CXX)
 
@@ -108,6 +113,17 @@ if (NOT TARGET_ARCHITECTURE)
       FORCE)
 endif (NOT TARGET_ARCHITECTURE)
 
+set(HELIB_SP_NBITS "0" 
+    CACHE 
+    STRING "Override the bitsize for the ciphertext primes used")
+if (NOT HELIB_SP_NBITS EQUAL 0)
+  # Now check within bounds. NB. zero is special value to not override
+  if (HELIB_SP_NBITS LESS 1 OR HELIB_SP_NBITS GREATER 64)
+    message(FATAL_ERROR "HELIB_SP_NBITS must be in range [1, 64].")
+  endif()
+  add_compile_definitions(HELIB_SP_NBITS=${HELIB_SP_NBITS})
+endif()
+
 # Path containing FindGMP.cmake and FindNTL.cmake
 list(APPEND CMAKE_MODULE_PATH "${HELIB_CMAKE_EXTRA_DIR}")
 
@@ -125,6 +141,7 @@ option(HELIB_DEBUG
        "Build with HELIB_DEBUG (enables extra debugging info, but needs to be initialized)"
        OFF)
 option(ENABLE_TEST "Enable tests" OFF)
+option(USE_INTEL_HEXL "Use Intel HEXL library" OFF)
 option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" ON)
 
 # Add properties dependent to PACKAGE_BUILD
@@ -175,6 +192,31 @@ find_package(Threads)
 if (ENABLE_THREADS AND Threads_NOTFOUND)
   message(FATAL_ERROR "Cannot find pthreads (ENABLE_THREADS is ON).")
 endif ()
+
+# Build optional Intel HEXL library
+if(USE_INTEL_HEXL)
+  # HEXL currently only supported using Library Build
+  if(PACKAGE_BUILD)
+    message(FATAL_ERROR "Intel HEXL currently not supported with Package "
+      "Build. Please use the Library Build when enabling Intel HEXL.")
+  endif(PACKAGE_BUILD)
+
+  if(HEXL_DIR)
+    set(HEXL_DIR
+        ""
+        CACHE
+        STRING "Set location of HEXL cmake data for linking."
+        )
+    set(INIT_HEXL_DIR ${HEXL_DIR})
+  endif()
+  find_package(HEXL 1.2.1 HINTS ${HEXL_DIR} REQUIRED)
+  if(INIT_HEXL_DIR AND NOT INIT_HEXL_DIR STREQUAL HEXL_DIR)
+    message(WARNING "HEXL location provided '${INIT_HEXL_DIR}' \
+            does not equal chosen '${HEXL_DIR}'.")
+  endif()
+  include_directories(${HEXL_INCLUDE_DIRS})
+  add_compile_definitions(USE_INTEL_HEXL)
+endif(USE_INTEL_HEXL)
 
 # NOTE: Consider reconfiguring everything when PACKAGE_BUILD changes value.
 # Options from the previous value will remain otherwise.
@@ -334,6 +376,7 @@ if (PACKAGE_BUILD)
                -DFETCH_GMP=${FETCH_GMP}
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
+               -DUSE_INTEL_HEXL=${USE_INTEL_HEXL}
                -DHELIB_PROJECT_ROOT_DIR=${HELIB_PROJECT_ROOT_DIR}
                -DHELIB_CMAKE_EXTRA_DIR=${HELIB_CMAKE_EXTRA_DIR}
                -DHELIB_INCLUDE_DIR=${HELIB_INCLUDE_DIR}

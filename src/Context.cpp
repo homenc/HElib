@@ -24,6 +24,8 @@ using json = ::nlohmann::json;
 #include <helib/PolyModRing.h>
 #include <helib/fhe_stats.h>
 
+#include "macro.h"
+#include "PrimeGenerator.h"
 #include "binio.h"
 #include "io.h"
 
@@ -68,99 +70,6 @@ double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
 
   return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
 }
-
-// You initialize a PrimeGenerator as follows:
-//    PrimeGenerator gen(len, m);
-// Each call to gen.next() generates a prime p with
-// (1-1/2^B)*2^len <= p < 2^len and p = 2^k*t*m + 1,
-// where t is odd and k is as large as possible
-// and B is a small constant (typically, B in {2,3,4}).
-// If no such prime is found, then an error is raised.
-
-struct PrimeGenerator
-{
-  const static long B = 3;
-  long len, m;
-  long k, t;
-
-  PrimeGenerator(long _len, long _m) : len(_len), m(_m)
-  {
-    assertInRange<InvalidArgument>(len,
-                                   long(B),
-                                   static_cast<long>(NTL_SP_NBITS),
-                                   "PrimeGenerator: len is not "
-                                   "in [B, NTL_SP_NBITS]",
-                                   true);
-    assertInRange<InvalidArgument>(m,
-                                   1l,
-                                   static_cast<long>(NTL_SP_BOUND),
-                                   "PrimeGenerator: m is "
-                                   "not in [1, NTL_SP_BOUND)");
-
-    // compute k as smallest non-negative integer such that
-    // 2^{len-B} < 2^k*m
-    k = 0;
-    while ((m << k) <= (1L << (len - B)))
-      k++;
-
-    t = divc((1L << len) - 1, m << k);
-    // this ensures the fist call to next will trigger a new k-value
-  }
-
-  long next()
-  {
-    // we consider all odd t in the interval
-    // [ (1-1/2^B)*2^len-1)/(2^k*m), (2^len-1)/(2^k*m) ).
-    // For k satisfying 2^{len-B} >= 2^k*m, this interval is
-    // contains at least one integer.
-    // It is equivalent to consider the interval
-    // of integers [tlb, tub), where tlb = ceil(((1-1/2^B)*2^len-1)/(2^k*m))
-    // and tub = ceil((2^len-1)/(2^k*m)).
-
-    long tub = divc((1L << len) - 1, m << k);
-
-    for (;;) {
-
-      t++;
-
-      if (t >= tub) {
-        // move to smaller value of k, reset t and tub
-
-        k--;
-
-        long klb;
-        if (m % 2 == 0)
-          klb = 0;
-        else
-          klb = 1;
-
-        // we run k down to 0  if m is even, and down to 1
-        // if m is odd.
-
-        if (k < klb)
-          throw RuntimeError("Prime generator ran out of primes");
-
-        t = divc((1L << len) - (1L << (len - B)) - 1, m << k);
-        tub = divc((1L << len) - 1, m << k);
-      }
-
-      if (t % 2 == 0)
-        continue; // we only want to consider odd t
-
-      long cand = ((t * m) << k) + 1; // = 2^k*t*m + 1
-
-      // double check that cand is in the prescribed interval
-      assertInRange(cand,
-                    (1L << len) - (1L << (len - B)),
-                    1L << len,
-                    "Candidate cand is not in the prescribed interval");
-
-      if (NTL::ProbPrime(cand, 60))
-        return cand;
-      // iteration count == 60 implies 2^{-120} error probability
-    }
-  }
-};
 
 // Useful params objects (POD) to simplify calls between ContextBuilder and
 // Context.
@@ -819,12 +728,12 @@ static void CheckPrimes(const Context& context,
 void Context::addSmallPrimes(long resolution, long cpSize)
 {
   // cpSize is the size of the ciphertext primes
-  // Sanity-checks, cpSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
+  // Sanity-checks, cpSize \in [0.9*HELIB_SP_NBITS, HELIB_SP_NBITS]
   assertTrue(cpSize >= 30, "cpSize is too small (minimum is 30)");
   assertInRange(cpSize * 10,
-                9l * NTL_SP_NBITS,
-                10l * NTL_SP_NBITS,
-                "cpSize not in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]",
+                9l * HELIB_SP_NBITS,
+                10l * HELIB_SP_NBITS,
+                "cpSize not in [0.9*HELIB_SP_NBITS, HELIB_SP_NBITS]",
                 true);
 
   long m = getM();
@@ -897,10 +806,10 @@ void Context::addSpecialPrime(long q)
 }
 
 // Determine the target size of the ctxtPrimes. The target size is
-// set at 2^n, where n is at most NTL_SP_NBITS and at least
-// ceil(0.9*NTL_SP_NBITS), so that we don't overshoot nBits by too
+// set at 2^n, where n is at most HELIB_SP_NBITS and at least
+// ceil(0.9*HELIB_SP_NBITS), so that we don't overshoot nBits by too
 // much.
-// The reason that we do not allow to go below 0.9*NTL_SP_NBITS is
+// The reason that we do not allow to go below 0.9*HELIB_SP_NBITS is
 // that we need some of the smallPrimes to be sufficiently smaller
 // than the ctxtPrimes, and still we need these smallPrimes to have
 // m'th roots of unity.
@@ -910,20 +819,21 @@ static long ctxtPrimeSize(long nBits)
       -std::log1p(-1.0 / double(1L << PrimeGenerator::B)) / std::log(2.0);
   // std::cerr << "*** bit_loss=" << bit_loss;
 
-  // How many primes of size NTL_SP_NBITS it takes to get to nBits
-  double maxPsize = NTL_SP_NBITS - bit_loss;
+  // How many primes of size HELIB_SP_NBITS it takes to get to nBits
+  double maxPsize = HELIB_SP_NBITS - bit_loss;
   // primes of length len are guaranteed to be at least (1-1/2^B)*2^len,
 
   long nPrimes = long(ceil(nBits / maxPsize));
   // this is sufficiently many primes
 
-  // now we want to trim the size to avoid unnecssary overshooting
+  // now we want to trim the size to avoid unnecessary overshooting
   // so we decrease targetSize, while guaranteeing that
   // nPrimes primes of length targetSize multiply out to
   // at least nBits bits.
 
-  long targetSize = NTL_SP_NBITS;
-  while (10 * (targetSize - 1) >= 9 * NTL_SP_NBITS && (targetSize - 1) >= 30 &&
+  long targetSize = HELIB_SP_NBITS;
+  while (10 * (targetSize - 1) >= 9 * HELIB_SP_NBITS &&
+         (targetSize - 1) >= 30 &&
          ((targetSize - 1) - bit_loss) * nPrimes >= nBits)
     targetSize--;
 
@@ -938,13 +848,13 @@ void Context::addCtxtPrimes(long nBits, long targetSize)
   // We add enough primes of size targetSize until their product is
   // at least 2^{nBits}
 
-  // Sanity-checks, targetSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
+  // Sanity-checks, targetSize \in [0.9*HELIB_SP_NBITS, HELIB_SP_NBITS]
   assertTrue(targetSize >= 30,
              "Target prime is too small (minimum size is 30)");
   assertInRange(targetSize * 10,
-                9l * NTL_SP_NBITS,
-                10l * NTL_SP_NBITS,
-                "targetSize not in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]",
+                9l * HELIB_SP_NBITS,
+                10l * HELIB_SP_NBITS,
+                "targetSize not in [0.9*HELIB_SP_NBITS, HELIB_SP_NBITS]",
                 true);
   const PAlgebra& palg = getZMStar();
   long m = palg.getM();
@@ -1081,20 +991,20 @@ void Context::addSpecialPrimes(long nDgts,
   double bit_loss =
       -std::log1p(-1.0 / double(1L << PrimeGenerator::B)) / std::log(2.0);
 
-  // How many primes of size NTL_SP_NBITS it takes to get to nBits
-  double maxPsize = NTL_SP_NBITS - bit_loss;
+  // How many primes of size HELIB_SP_NBITS it takes to get to nBits
+  double maxPsize = HELIB_SP_NBITS - bit_loss;
   // primes of length len are guaranteed to be at least (1-1/2^B)*2^len,
 
   long nPrimes = long(ceil(nBits / maxPsize));
   // this is sufficiently many prime
 
-  // now we want to trim the size to avoid unnecssary overshooting
+  // now we want to trim the size to avoid unnecessary overshooting
   // so we decrease targetSize, while guaranteeing that
   // nPrimes primes of length targetSize multiply out to
   // at least nBits bits.
 
-  long targetSize = NTL_SP_NBITS;
-  while ((targetSize - 1) >= 0.55 * NTL_SP_NBITS && (targetSize - 1) >= 30 &&
+  long targetSize = HELIB_SP_NBITS;
+  while ((targetSize - 1) >= 0.55 * HELIB_SP_NBITS && (targetSize - 1) >= 30 &&
          ((targetSize - 1) - bit_loss) * nPrimes >= nBits)
     targetSize--;
 

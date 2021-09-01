@@ -103,7 +103,7 @@ public:
 
     HELIB_STATS_UPDATE("KS-noise-ratio-hoist", ratio);
     if (ratio > 1) {
-      Warning("KS-noise-ratio-hoist=" + std::to_string(ratio) + "\n");
+      Warning("KS-noise-ratio-hoist=" + std::to_string(ratio));
     }
     // std::stderr << "*** HOIST INIT\n";
     // fprintf(stderr, "   KS-log-noise-ratio-hoist: %f\n",
