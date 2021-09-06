@@ -9,6 +9,8 @@ HElib 2.2.0, September 2021
   * HEXL NTT acceleration for m as a power of 2
   * HEXL acceleration to fundamental ciphertext operations
   * Documentation update
+* Update NTL dependency to version 11.5.1
+* Update GMP dependency to version 6.2.1
 * Update to benchmarks
 * Bug fixes
 

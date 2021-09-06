@@ -28,7 +28,7 @@ ExternalProject_Add(
     URL "https://gmplib.org/download/gmp/gmp-${FETCHED_GMP_VERSION}.tar.bz2"
         "https://ftp.gnu.org/gnu/gmp/gmp-${FETCHED_GMP_VERSION}.tar.bz2"
     URL_HASH
-        # NOTE: hash of version 6.2.0
+        # NOTE: hash of version 6.2.x
         SHA256=eae9326beb4158c386e39a356818031bd28f3124cf915f8c5b1dc4c7a36b4d7c
     DOWNLOAD_NO_PROGRESS 1
     UPDATE_COMMAND ""

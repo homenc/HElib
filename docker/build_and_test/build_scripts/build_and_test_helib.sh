@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Script for building and testing HElib in various configurations.
-# Default behaviour is build IBM-HElib/HElib master using the package build
+# Default behaviour is build homenc/HElib master using the package build
 # without running any tests.
 
 # Default arguments
-repo=https://github.com/IBM-HElib/HElib.git
+repo=https://github.com/homenc/HElib.git
 branch=master
 package=true
 tests=false
