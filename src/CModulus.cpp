@@ -9,6 +9,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+/* Intel HEXL integration.
+ * Copyright (C) 2021 Intel Corporation
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /* CModulus.cpp - supports forward and backward length-m FFT transformations
  *
  * This is a wrapper around the bluesteinFFT routines, for one modulus q.
@@ -27,6 +41,10 @@
 #include <helib/CModulus.h>
 #include <helib/timing.h>
 
+#ifdef USE_INTEL_HEXL
+#include "intelExt.h"
+#endif
+
 namespace helib {
 
 // It is assumed that m,q,context, and root are already set. If root is set
@@ -43,25 +61,22 @@ NTL::zz_pContext BuildContext(long p, long maxroot)
 
 // Constructor: it is assumed that zms is already set with m>1
 // If q == 0, then the current context is used
-Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
+Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt) :
+    q(qq), zMStar(&zms), root(rt)
 {
   assertTrue<InvalidArgument>(zms.getM() > 1,
                               "Bad Z_m^* modulus m (must be greater than 1)");
   bool explicitModulus = true;
 
-  if (qq == 0) {
-    q = NTL::zz_p::modulus();
+  // Correction for q == 0
+  if (this->q == 0) {
+    this->q = NTL::zz_p::modulus();
     explicitModulus = false;
-  } else
-    q = qq;
+  }
 
   qinv = NTL::PrepMulMod(q);
 
-  zMStar = &zms;
-  root = rt;
-
-  long mm;
-  mm = zms.getM();
+  long mm = zms.getM();
   m_inv = NTL::InvMod(mm, q);
 
   NTL::zz_pBak bak;
@@ -223,10 +238,8 @@ Cmodulus& Cmodulus::operator=(const Cmodulus& other)
 
 static long RevInc(long a, long k)
 {
-  long j, m;
-
-  j = k;
-  m = 1L << (k - 1);
+  long j = k;
+  long m = 1L << (k - 1);
 
   while (j && (m & a)) {
     a ^= m;
@@ -263,8 +276,7 @@ static long* BRC_init(long k)
   long n = (1L << k);
   brc_mem[k].SetLength(n);
   long* rev = brc_mem[k].elts();
-  long i, j;
-  for (i = 0, j = 0; i < n; i++, j = RevInc(j, k))
+  for (long i = 0, j = 0; i < n; i++, j = RevInc(j, k))
     rev[i] = j;
   return rev;
 }
@@ -295,9 +307,10 @@ static void COBRA(long* NTL_RESTRICT B, const long* NTL_RESTRICT A, long k)
 
   long q = NTL_BRC_Q;
   long k1 = k - 2 * q;
-  long *NTL_RESTRICT rev_k1, *NTL_RESTRICT rev_q;
+  long* NTL_RESTRICT rev_k1;
+  long* NTL_RESTRICT rev_q;
   long* NTL_RESTRICT T;
-  long a, b, c, a1, b1, c1;
+  long a1, b1, c1;
 
   rev_k1 = brc_mem[k1].elts();
   if (!rev_k1)
@@ -313,17 +326,17 @@ static void COBRA(long* NTL_RESTRICT B, const long* NTL_RESTRICT A, long k)
     T = BRC_temp.elts();
   }
 
-  for (b = 0; b < (1L << k1); b++) {
+  for (long b = 0; b < (1L << k1); b++) {
     b1 = rev_k1[b];
-    for (a = 0; a < (1L << q); a++) {
+    for (long a = 0; a < (1L << q); a++) {
       a1 = rev_q[a];
-      for (c = 0; c < (1L << q); c++)
+      for (long c = 0; c < (1L << q); c++)
         T[(a1 << q) + c] = A[(a << (k1 + q)) + (b << q) + c];
     }
 
-    for (c = 0; c < (1L << q); c++) {
+    for (long c = 0; c < (1L << q); c++) {
       c1 = rev_q[c];
-      for (a1 = 0; a1 < (1L << q); a1++)
+      for (long a1 = 0; a1 < (1L << q); a1++)
         B[(c1 << (k1 + q)) + (b1 << q) + a1] = T[(a1 << q) + c];
     }
   }
@@ -347,54 +360,70 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
   HELIB_TIMER_START;
 
   if (zMStar->getPow2()) {
-    // special case when m is a power of 2
+    // Special case: m is a power of 2
 
     long k = zMStar->getPow2();
     long phim = (1L << (k - 1));
     long dx = deg(tmp);
     long p = NTL::zz_p::modulus();
 
-    const NTL::zz_p* powers_p = (*powers).rep.elts();
-    const NTL::mulmod_precon_t* powers_aux_p = powers_aux.elts();
-
     y.SetLength(phim);
     long* yp = y.elts();
 
     NTL::zz_p* tmp_p = tmp.rep.elts();
 
-    for (long i = 0; i <= dx; i++)
+#ifdef USE_INTEL_HEXL
+
+    for (long i = 0; i <= dx; ++i) {
+      yp[i] = rep(tmp_p[i]);
+    }
+
+    for (long i = dx + 1; i < phim; ++i) {
+      yp[i] = 0;
+    }
+
+    intel::FFTFwd(yp, yp, phim, p);
+
+#else
+
+    const NTL::zz_p* powers_p = (*powers).rep.elts();
+    const NTL::mulmod_precon_t* powers_aux_p = powers_aux.elts();
+
+    for (long i = 0; i <= dx; i++) {
       yp[i] = NTL::MulModPrecon(rep(tmp_p[i]),
                                 rep(powers_p[i]),
                                 p,
                                 powers_aux_p[i]);
-    for (long i = dx + 1; i < phim; i++)
+    }
+
+    for (long i = dx + 1; i < phim; i++) {
       yp[i] = 0;
+    }
 
 #ifdef HELIB_OPENCL
     AltFFTFwd(yp, yp, k - 1, *altFFTInfo);
 #else
 
 #ifndef NTL_PROVIDES_TRUNC_FFT
-    FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+    NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
 #else
+    NTL::FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+#endif
 
-    FFTFwd(yp, yp, k - 1, *NTL::zz_pInfo->p_info);
+#endif // HELIB_OPENCL
+
+#endif // USE_INTEL_HEXL
+
     // Now we have to bit reverse the result
     // The BitReverseCopy routine does not allow aliasing, so
     // we have to do an extra copy here.
     // We use the fact tmp1 and y do not alias.
+    NTL::vec_long& bit_reversed = Cmodulus::getScratch_vec_long();
+    bit_reversed.SetLength(phim);
+    long* bit_reversed_p = bit_reversed.elts();
 
-    NTL::vec_long& tmp1 = Cmodulus::getScratch_vec_long();
-    tmp1.SetLength(phim);
-    long* tmp1_p = tmp1.elts();
-
-    BitReverseCopy(tmp1_p, yp, k - 1);
-    for (long i = 0; i < phim; i++)
-      yp[i] = tmp1_p[i];
-
-#endif
-
-#endif
+    BitReverseCopy(bit_reversed_p, yp, k - 1);
+    std::copy_n(bit_reversed_p, phim, yp);
 
     return;
   }
@@ -408,9 +437,8 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
   // copy the result to the output vector y, keeping only the
   // entries corresponding to primitive roots of unity
   y.SetLength(zMStar->getPhiM());
-  long i, j;
-  long m = getM();
-  for (i = j = 0; i < m; i++)
+
+  for (long i = 0, j = 0; i < long(this->getM()); i++)
     if (zMStar->inZmStar(i))
       y[j++] = rep(coeff(tmp, i));
 }
@@ -461,51 +489,67 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     long phim = (1L << (k - 1));
     long p = NTL::zz_p::modulus();
 
-    const NTL::zz_p* ipowers_p = (*ipowers).rep.elts();
-    const NTL::mulmod_precon_t* ipowers_aux_p = ipowers_aux.elts();
-
     const long* yp = y.elts();
 
     NTL::vec_long& tmp = Cmodulus::getScratch_vec_long();
     tmp.SetLength(phim);
     long* tmp_p = tmp.elts();
 
-#ifdef HELIB_OPENCL
-    AltFFTRev1(tmp_p, yp, k - 1, *altFFTInfo);
-#else
-
-#ifndef NTL_PROVIDES_TRUNC_FFT
-    FFTRev1(tmp_p, yp, k - 1, *NTL::zz_pInfo->p_info);
-#else
     // We have to bit reverse the inputs to FFTRev1
     // The BitReverseCopy routine does not allow aliasing.
     // We use the fact that y and tmp do not alias
 
     BitReverseCopy(tmp_p, yp, k - 1);
-    FFTRev1(tmp_p, tmp_p, k - 1, *NTL::zz_pInfo->p_info);
-#endif
 
-#endif
+#ifdef USE_INTEL_HEXL
+
+    intel::FFTRev1(tmp_p, tmp_p, phim, p);
 
     x.rep.SetLength(phim);
     NTL::zz_p* xp = x.rep.elts();
 
-    for (long i = 0; i < phim; i++)
+    for (long i = 0; i < phim; ++i) {
+      xp[i].LoopHole() = tmp_p[i];
+    }
+
+#else
+
+    const NTL::zz_p* ipowers_p = (*ipowers).rep.elts();
+    const NTL::mulmod_precon_t* ipowers_aux_p = ipowers_aux.elts();
+
+#ifdef HELIB_OPENCL
+    AltFFTRev1(tmp_p, yp, k - 1, *altFFTInfo);
+#else
+
+#ifndef NTL_PROVIDES_TRUNC_FFT
+    NTL::FFTRev1(tmp_p, yp, k - 1, *NTL::zz_pInfo->p_info);
+#else
+    NTL::FFTRev1(tmp_p, tmp_p, k - 1, *NTL::zz_pInfo->p_info);
+#endif
+
+#endif // HELIB_OPENCL
+
+    x.rep.SetLength(phim);
+    NTL::zz_p* xp = x.rep.elts();
+
+    for (long i = 0; i < phim; ++i) {
       xp[i].LoopHole() =
           NTL::MulModPrecon(tmp_p[i], rep(ipowers_p[i]), p, ipowers_aux_p[i]);
+    }
+
+#endif // USE_INTEL_HEXL
 
     x.normalize();
 
     return;
-  }
+  } // End of special case if m is power of 2
 
   NTL::zz_p rt;
   long m = getM();
 
   // convert input to zpx format, initializing only the coeffs i s.t. (i,m)=1
   x.rep.SetLength(m);
-  long i, j;
-  for (i = j = 0; i < m; i++)
+  for (long i = 0, j = 0; i < m; i++)
     if (zMStar->inZmStar(i))
       x.rep[i].LoopHole() = y[j++]; // DIRT: y[j] already reduced
   x.normalize();

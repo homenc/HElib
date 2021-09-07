@@ -105,6 +105,7 @@ set(HELIB_SRCS
     "fhe_stats.cpp"
     "hypercube.cpp"
     "IndexSet.cpp"
+    "intelExt.cpp"
     "intraSlot.cpp"
     "JsonWrapper.cpp"
     "keys.cpp"
@@ -296,6 +297,28 @@ target_link_libraries(
          "$<INSTALL_INTERFACE:${GMP_LIBRARIES_EXPORTED_PATH}>"
          # Add pthread if required
          $<$<BOOL:${HELIB_REQUIRES_PTHREADS}>:Threads::Threads>)
+
+# Link HEXL
+if (USE_INTEL_HEXL)
+  add_dependencies(helib HEXL::hexl)
+
+  # Manually add the HEXL include directory
+  get_target_property(
+    HEXL_INCLUDE_DIR
+    HEXL::hexl
+    INTERFACE_INCLUDE_DIRECTORIES)
+  target_include_directories(helib PRIVATE ${HEXL_INCLUDE_DIR})
+
+  # Manually package HEXL with libhelib.a
+  add_custom_command(TARGET helib POST_BUILD
+    COMMAND ar -x $<TARGET_FILE:HEXL::hexl>
+    COMMAND ar -x $<TARGET_FILE:helib>
+    COMMAND ar -qcs $<TARGET_FILE:helib> *.o
+    COMMAND rm -f *.o
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS helib hexl
+    )
+endif()
 
 # FIX RPATH
 if (BUILD_SHARED)

@@ -10,9 +10,14 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include <memory>
+#ifndef HELIB_CKKS_COMMON_H
+#define HELIB_CKKS_COMMON_H
+
+#include "bench_common.h" // HE_BENCH_CAPTURE
 
 #include <helib/helib.h>
+
+#include <memory>
 
 struct Params
 {
@@ -64,3 +69,5 @@ struct Meta
     return *this;
   }
 };
+
+#endif // HELIB_CKKS_COMMON_H

@@ -10,30 +10,35 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include <memory>
+#ifndef HELIB_BGV_COMMON_H
+#define HELIB_BGV_COMMON_H
+
+#include "bench_common.h" // HE_BENCH_CAPTURE
 
 #include <helib/helib.h>
 
+#include <memory>
+
 struct Params
 {
-  const long m, p, r, L;
+  const long m, p, r, qbits;
   const std::vector<long> gens;
   const std::vector<long> ords;
   const std::vector<long> mvec;
   Params(long _m,
          long _p,
          long _r,
-         long _L,
+         long _qbits,
          const std::vector<long>& _gens = {},
          const std::vector<long>& _ords = {},
          const std::vector<long>& _mvec = {}) :
-      m(_m), p(_p), r(_r), L(_L), gens(_gens), ords(_ords), mvec(_mvec)
+      m(_m), p(_p), r(_r), qbits(_qbits), gens(_gens), ords(_ords), mvec(_mvec)
   {}
   Params(const Params& other) :
       Params(other.m,
              other.p,
              other.r,
-             other.L,
+             other.qbits,
              other.gens,
              other.ords,
              other.mvec)
@@ -41,8 +46,9 @@ struct Params
   bool operator!=(Params& other) const { return !(*this == other); }
   bool operator==(Params& other) const
   {
-    return m == other.m && p == other.p && r == other.r && L == other.L &&
-           gens == other.gens && ords == other.ords && mvec == other.mvec;
+    return m == other.m && p == other.p && r == other.r &&
+           qbits == other.qbits && gens == other.gens && ords == other.ords &&
+           mvec == other.mvec;
   }
 };
 
@@ -61,7 +67,7 @@ struct ContextAndKeys
                   .m(params.m)
                   .p(params.p)
                   .r(params.r)
-                  .bits(params.L)
+                  .bits(params.qbits)
                   .gens(params.gens)
                   .ords(params.ords)
                   .bootstrappable(!params.mvec.empty())
@@ -88,3 +94,5 @@ struct Meta
     return *this;
   }
 };
+
+#endif // HELIB_BGV_COMMON_H

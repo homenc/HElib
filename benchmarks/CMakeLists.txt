@@ -48,7 +48,7 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
 # STRINGS avoids having the 2 newline characters at the end of the string.
-# Alternatively it's possible to use file(READ ...) and then
+# Alternatively it is possible to use file(READ ...) and then
 # string(REGEX REPLACE "\n$" "" HELIB_VERSION "${HELIB_VERSION}")
 file(STRINGS "../VERSION" HELIB_VERSION)
 
@@ -61,7 +61,8 @@ set(TRGTS bgv_basic
           bgv_thinboot
           bgv_fatboot
           ckks_basic
-          IO)
+          IO
+          fft_bench)
 
 # Sources derived from their targets.
 set(SRCS "")

@@ -1,5 +1,5 @@
-# Recipe for an HE-ready Fedora 33 docker
-FROM fedora:33
+# Recipe for an HE-ready Fedora 34 docker
+FROM fedora:34
 
 # Install general HElib pre-requisites
 RUN yum -y upgrade && \

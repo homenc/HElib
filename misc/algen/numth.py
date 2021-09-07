@@ -82,7 +82,7 @@ def factorize(n):
 
   # Factor path global - run once
   if factorPath != None:
-    res = subprocess.run(["gfactor", str(n)], stdout=subprocess.PIPE, universal_newlines=True)
+    res = subprocess.run([factorPath, str(n)], stdout=subprocess.PIPE, universal_newlines=True)
     # ignore first numer - the dividend
     factors = map( int, res.stdout.split()[1:] )
     return defaultdict(int, Counter(factors))
