@@ -9,10 +9,10 @@ Build and install HElib as described in [INSTALL.md](../INSTALL.md).
 ### Build and install google benchmark
 
 Download the library https://github.com/google/benchmark from github, build and
-then install it.
+then install it. We tested with Google Benchmark v1.5.6
 
 ```
-git clone https://github.com/google/benchmark
+git clone https://github.com/google/benchmark.git -b v1.5.6
 cd benchmark
 mkdir build
 cd build
