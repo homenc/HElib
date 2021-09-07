@@ -238,7 +238,7 @@ created by default.  For a quick start most people will want,
 
 ```bash
 cd hexl
-cmake -S . -B build/ [-DCMAKE_INSTALL_PREFIX=<install-location-for-HEXL>] 
+cmake -S . -B build/ [-DCMAKE_INSTALL_PREFIX=<install-location-for-HEXL>/lib/cmake/hexl-1.2.1] 
 cmake --build build -j [<parallel-jobs>]
 cmake --install build
 ```
