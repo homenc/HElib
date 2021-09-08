@@ -216,10 +216,10 @@ if(USE_INTEL_HEXL)
   find_package(HEXL HINTS ${HEXL_DIR} REQUIRED)
 
   # Check the version found is greater than the minimum
-  if(HEXL_MIN_VERSION GREATER HEXL_VERSION)
+  if(HEXL_MIN_VERSION VERSION_GREATER HEXL_VERSION)
     message(FATAL_ERROR "Minimum Intel HEXL version required is ${HEXL_MIN_VERSION}, found ${HEXL_VERSION}")
   else()
-    message("-- Intel HEXL Version: ${HEXL_VERSION} found (minimum required is ${HEXL_MIN_VERSION})")
+    message(STATUS "Intel HEXL Version: ${HEXL_VERSION} found (minimum required is ${HEXL_MIN_VERSION})")
   endif()
 
   if(INIT_HEXL_DIR AND NOT INIT_HEXL_DIR STREQUAL HEXL_DIR)
