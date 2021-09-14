@@ -370,7 +370,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     y.SetLength(phim);
     long* yp = y.elts();
 
-    NTL::zz_p* tmp_p = tmp.rep.elts();
+    const NTL::zz_p* tmp_p = tmp.rep.elts();
 
 #ifdef USE_INTEL_HEXL
 
@@ -464,41 +464,30 @@ void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
 
 void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
 {
-  std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
-
-
-  // HELIB_TIMER_START;
-  // NTL::zz_pBak bak;
-  // bak.save();
+  // std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
+  HELIB_TIMER_START;
+  NTL::zz_pBak bak;
+  bak.save();
   context.restore();
 
   NTL::zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   {
-    // HELIB_NTIMER_START(FFT_remainder);
+    HELIB_NTIMER_START(FFT_remainder);
 
     convert(tmp, x); // convert input to zpx format
   }
-
-  FFT_aux(y, tmp);
+  FFT(y, tmp);
 }
 
-void Cmodulus::FFT(NTL::vec_long& y, const NTL::zz_pX& x) const
+void Cmodulus::FFT(NTL::vec_long& y, NTL::zz_pX& x) const
 {
-  std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
+  // std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
 
-  // HELIB_TIMER_START;
-  // NTL::zz_pBak bak;
-  // bak.save();
+  HELIB_TIMER_START;
+  NTL::zz_pBak bak;
+  bak.save();
   context.restore();
-
-  NTL::zz_pX& tmp = Cmodulus::getScratch_zz_pX();
-  {
-    // HELIB_NTIMER_START(FFT_remainder);
-
-    convert(tmp, x); // convert input to zpx format
-  }
-
-  FFT_aux(y, tmp);
+  FFT_aux(y, x);
 }
 
 void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
