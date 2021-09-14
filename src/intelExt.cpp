@@ -12,7 +12,6 @@
 #include <hexl/hexl.hpp>
 
 #include <unordered_map>
-#include <iostream>
 #include <functional>
 #include <shared_mutex>
 #include <mutex>
@@ -75,7 +74,6 @@ static NTT& initNTT(uint64_t degree, uint64_t q)
 
 void FFTFwd(long* output, const long* input, long n, long q)
 {
-  // std::cout << "fwdntt " << n << " mod " << q << "\n";
   initNTT(/*degree=*/n, /*modulus=*/q)
       .ComputeForward(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),
@@ -86,7 +84,6 @@ void FFTFwd(long* output, const long* input, long n, long q)
 
 void FFTRev1(long* output, const long* input, long n, long q)
 {
-  // std::cout << "invntt " << n << " mod " << q << "\n";
   initNTT(/*degree=*/n, /*modulus=*/q)
       .ComputeInverse(reinterpret_cast<uint64_t*>(output),
                       reinterpret_cast<const uint64_t*>(input),

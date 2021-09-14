@@ -457,7 +457,6 @@ void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
   }
 
   FFT(y, tmp);
-  // FFT_aux(y, tmp);
 }
 
 void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
@@ -470,7 +469,6 @@ void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
   NTL::zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   {
     HELIB_NTIMER_START(FFT_remainder);
-
     convert(tmp, x); // convert input to zpx format
   }
   FFT(y, tmp);
