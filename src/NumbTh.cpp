@@ -1133,7 +1133,6 @@ void buildLinPolyMatrix(NTL::mat_GF2E& M, long p)
 
 void convert(NTL::vec_zz_pE& X, const std::vector<NTL::ZZX>& A)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   long n = A.size();
   NTL::zz_pX tmp;
   X.SetLength(n);
@@ -1145,7 +1144,6 @@ void convert(NTL::vec_zz_pE& X, const std::vector<NTL::ZZX>& A)
 
 void convert(NTL::mat_zz_pE& X, const std::vector<std::vector<NTL::ZZX>>& A)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   long n = A.size();
 
   if (n == 0) {
@@ -1163,7 +1161,6 @@ void convert(NTL::mat_zz_pE& X, const std::vector<std::vector<NTL::ZZX>>& A)
 
 void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   long n = A.length();
   X.resize(n);
   for (long i = 0; i < n; i++)
@@ -1172,7 +1169,6 @@ void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A)
 
 void convert(std::vector<std::vector<NTL::ZZX>>& X, const NTL::mat_zz_pE& A)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   long n = A.NumRows();
   X.resize(n);
   for (long i = 0; i < n; i++)
@@ -1181,7 +1177,6 @@ void convert(std::vector<std::vector<NTL::ZZX>>& X, const NTL::mat_zz_pE& A)
 
 void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
 {
-    std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   out.SetLength(in.rep.length());
   for (long i = 0; i < out.length(); i++)
     out[i] = NTL::conv<long>(in[i]);
@@ -1189,7 +1184,6 @@ void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
 
 void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   out.SetLength(in.rep.length());
   for (long i = 0; i < out.length(); i++)
     out[i] = NTL::conv<long>(in[i]);
@@ -1204,7 +1198,6 @@ void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric)
 
 void convert(NTL::Vec<long>& out, const NTL::GF2X& in)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   out.SetLength(1 + deg(in));
   for (long i = 0; i < out.length(); i++)
     out[i] = NTL::conv<long>(in[i]);
@@ -1212,7 +1205,6 @@ void convert(NTL::Vec<long>& out, const NTL::GF2X& in)
 
 void convert(NTL::ZZX& out, const NTL::Vec<long>& in)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   out.SetLength(in.length());
   for (long i = 0; i < in.length(); i++)
     out[i] = NTL::conv<NTL::ZZ>(in[i]);
@@ -1221,7 +1213,6 @@ void convert(NTL::ZZX& out, const NTL::Vec<long>& in)
 
 void convert(NTL::GF2X& out, const NTL::Vec<long>& in)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   out.SetLength(in.length());
   for (long i = 0; i < in.length(); i++)
     out[i] = NTL::conv<NTL::GF2>(in[i]);

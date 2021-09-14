@@ -428,8 +428,6 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     return;
   }
 
-  // std::cout << "not power of 2\n";
-
   NTL::zz_p rt;
   conv(rt, root); // convert root to zp format
 
@@ -447,7 +445,6 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 
 void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
 {
-  std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
   HELIB_TIMER_START;
   NTL::zz_pBak bak;
   bak.save();
@@ -459,12 +456,12 @@ void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
     convert(tmp, x); // convert input to zpx format
   }
 
-  FFT_aux(y, tmp);
+  FFT(y, tmp);
+  // FFT_aux(y, tmp);
 }
 
 void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
 {
-  // std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
   HELIB_TIMER_START;
   NTL::zz_pBak bak;
   bak.save();
@@ -481,8 +478,6 @@ void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
 
 void Cmodulus::FFT(NTL::vec_long& y, NTL::zz_pX& x) const
 {
-  // std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
-
   HELIB_TIMER_START;
   NTL::zz_pBak bak;
   bak.save();

@@ -365,11 +365,8 @@ void balanced_MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q);
 
 ///@{
 //! @name Some enhanced conversion routines
-inline void convert(long& x1, const NTL::GF2X& x2) {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
-  x1 = rep(ConstTerm(x2)); }
-inline void convert(long& x1, const NTL::zz_pX& x2) {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n"; x1 = rep(ConstTerm(x2)); }
+inline void convert(long& x1, const NTL::GF2X& x2) { x1 = rep(ConstTerm(x2)); }
+inline void convert(long& x1, const NTL::zz_pX& x2) { x1 = rep(ConstTerm(x2)); }
 void convert(NTL::vec_zz_pE& X, const std::vector<NTL::ZZX>& A);
 void convert(NTL::mat_zz_pE& X, const std::vector<std::vector<NTL::ZZX>>& A);
 void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A);
