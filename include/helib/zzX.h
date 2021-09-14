@@ -29,9 +29,8 @@ inline void clear(zzX& a) { a.SetLength(0); }
 
 inline void convert(NTL::zz_pX& x, const zzX& a)
 {
-  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << "\n";
   NTL::conv(x.rep, a);
-  // x.normalize();
+  x.normalize();
 }
 
 void add(zzX& res, const zzX& a, const zzX& b);

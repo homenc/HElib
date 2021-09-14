@@ -357,7 +357,7 @@ static void BitReverseCopy(long* NTL_RESTRICT B,
 
 void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 {
-  // HELIB_TIMER_START;
+  HELIB_TIMER_START;
 
   if (zMStar->getPow2()) {
     // Special case: m is a power of 2
@@ -418,12 +418,12 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     // The BitReverseCopy routine does not allow aliasing, so
     // we have to do an extra copy here.
     // We use the fact tmp1 and y do not alias.
-    // NTL::vec_long& bit_reversed = Cmodulus::getScratch_vec_long();
-    // bit_reversed.SetLength(phim);
-    // long* bit_reversed_p = bit_reversed.elts();
+    NTL::vec_long& bit_reversed = Cmodulus::getScratch_vec_long();
+    bit_reversed.SetLength(phim);
+    long* bit_reversed_p = bit_reversed.elts();
 
-    // BitReverseCopy(bit_reversed_p, yp, k - 1);
-    // std::copy_n(bit_reversed_p, phim, yp);
+    BitReverseCopy(bit_reversed_p, yp, k - 1);
+    std::copy_n(bit_reversed_p, phim, yp);
 
     return;
   }
@@ -448,14 +448,14 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
 {
   std::cout << __FUNCTION__ << " " << __FILE__ << ":" << __LINE__ << "\n";
-  // HELIB_TIMER_START;
-  // NTL::zz_pBak bak;
-  // bak.save();
+  HELIB_TIMER_START;
+  NTL::zz_pBak bak;
+  bak.save();
   context.restore();
 
   NTL::zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   {
-    // HELIB_NTIMER_START(FFT_remainder);
+    HELIB_NTIMER_START(FFT_remainder);
     convert(tmp, x); // convert input to zpx format
   }
 
