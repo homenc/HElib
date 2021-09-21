@@ -1,0 +1,64 @@
+# Copyright (C) 2021 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#  http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: helib
+on:
+  # By default this will run when the activity type is "opened", "synchronize",
+  # or "reopened".
+  pull_request:
+    branches:
+      - master
+  # Manually run this workflow on any specified branch.
+  workflow_dispatch:
+
+
+###################
+# Define env vars #
+###################
+env:
+  INSTALL_PREFIX: $GITHUB_WORKSPACE
+
+jobs:
+  library_build:
+    runs-on: '${{ matrix.os }}'
+    name: 'os=${{ matrix.os }} package_build=${{ matrix.package_build }} hexl=${{ matrix.hexl }} compiler=${{ matrix.cxx_compiler}}'
+    environment: intel_workflow
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      matrix:
+        # TODO: shared builds
+        package_build: [ON, OFF]
+        hexl: [ON, OFF]
+        c_compiler: [gcc, clang]
+        os: [macos-latest, ubuntu-20.04]
+        include: # Use g++ with gcc only and clang++ with clang only
+          - c_compiler: gcc
+            cxx_compiler: g++
+          - c_compiler: clang
+            cxx_compiler: clang++
+        exclude: # Skip HEXL package build
+          - package_build: ON
+            hexl: ON
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          set -x
+          env
+          ./ci/install_deps.sh "${{ matrix.package_build }}" "${{ matrix.os }}" \
+            "${{ matrix.c_compiler }}" "${{ matrix.cxx_compiler }}" "${{ matrix.hexl }}"
+          ./ci/build_install_lib.sh "${{ matrix.package_build }}" ${{ env.INSTALL_PREFIX }} \
+            ${{ matrix.c_compiler }} ${{ matrix.cxx_compiler }} \
+             ${{ matrix.hexl }} "./hexl/lib/cmake/hexl-1.2.1"
+          ./ci/test_lib.sh
+          ./ci/build_test_consumer.sh "examples" "${{ matrix.package_build }}" ${{ env.INSTALL_PREFIX }}
+          ./ci/build_test_consumer.sh "utils" "${{ matrix.package_build }}" ${{ env.INSTALL_PREFIX }}
