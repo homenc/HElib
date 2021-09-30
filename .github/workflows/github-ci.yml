@@ -30,7 +30,6 @@ jobs:
   library_build:
     runs-on: '${{ matrix.os }}'
     name: 'os=${{ matrix.os }} package_build=${{ matrix.package_build }} hexl=${{ matrix.hexl }} compiler=${{ matrix.cxx_compiler}}'
-    environment: intel_workflow
     defaults:
       run:
         shell: bash
