@@ -94,12 +94,24 @@ Matrix<Ctxt> calculateMasks(const EncryptedArray& ea,
   mask = mask.columns(columns);
   mask.inPlaceTranspose();
 
-  (mask -= database)
+  // FIXME: Avoid deep copy
+  // Ptxt Query
+  if constexpr (std::is_same_v<TXT, Ptxt<BGV>>) {
+    auto tmp = database.deepCopy();
+    (tmp -= mask)
       .apply([&](auto& entry) { mapTo01(ea, entry); })
       .apply([](auto& entry) { entry.negate(); })
       .apply([](auto& entry) { entry.addConstant(NTL::ZZX(1l)); });
 
-  return mask;
+    return tmp;
+  } else { // Ctxt Query
+    (mask -= database)
+      .apply([&](auto& entry) { mapTo01(ea, entry); })
+      .apply([](auto& entry) { entry.negate(); })
+      .apply([](auto& entry) { entry.addConstant(NTL::ZZX(1l)); });
+
+    return mask;
+  }
 }
 
 /**
@@ -569,8 +581,8 @@ public:
    * match or no match respectively.
    **/
   template <typename TXT2>
-  Matrix<TXT2> contains(const Query_t& lookup_query,
-                        const Matrix<TXT2>& query_data) const;
+  auto contains(const Query_t& lookup_query,
+                const Matrix<TXT2>& query_data) const;
 
   // FIXME: Combination of TXT = ctxt and TXT2 = ptxt does not work
   /**
@@ -583,8 +595,8 @@ public:
    * @return A `Matrix<TXT2>` containing a score on weighted matches.
    **/
   template <typename TXT2>
-  Matrix<TXT2> getScore(const Query_t& weighted_query,
-                        const Matrix<TXT2>& query_data) const;
+  auto getScore(const Query_t& weighted_query,
+                const Matrix<TXT2>& query_data) const;
 
   // TODO - correct name?
   /**
@@ -593,6 +605,8 @@ public:
    **/
   long columns() { return data.dims(1); }
 
+  Matrix<TXT>& getData();
+
 private:
   Matrix<TXT> data;
   std::shared_ptr<const Context> context;
@@ -600,7 +614,7 @@ private:
 
 template <typename TXT>
 template <typename TXT2>
-inline Matrix<TXT2> Database<TXT>::contains(
+inline auto Database<TXT>::contains(
     const Query_t& lookup_query,
     const Matrix<TXT2>& query_data) const
 {
@@ -619,7 +633,7 @@ inline Matrix<TXT2> Database<TXT>::contains(
 
 template <typename TXT>
 template <typename TXT2>
-inline Matrix<TXT2> Database<TXT>::getScore(
+inline auto Database<TXT>::getScore(
     const Query_t& weighted_query,
     const Matrix<TXT2>& query_data) const
 {
@@ -631,6 +645,12 @@ inline Matrix<TXT2> Database<TXT>::getScore(
                                 mask);
 
   return result;
+}
+
+template <typename TXT>
+inline Matrix<TXT>& Database<TXT>::getData()
+{
+  return data;
 }
 
 } // namespace helib

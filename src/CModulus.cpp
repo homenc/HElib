@@ -370,7 +370,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     y.SetLength(phim);
     long* yp = y.elts();
 
-    NTL::zz_p* tmp_p = tmp.rep.elts();
+    const NTL::zz_p* tmp_p = tmp.rep.elts();
 
 #ifdef USE_INTEL_HEXL
 
@@ -456,7 +456,7 @@ void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
     convert(tmp, x); // convert input to zpx format
   }
 
-  FFT_aux(y, tmp);
+  FFT(y, tmp);
 }
 
 void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
@@ -471,8 +471,16 @@ void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
     HELIB_NTIMER_START(FFT_remainder);
     convert(tmp, x); // convert input to zpx format
   }
+  FFT(y, tmp);
+}
 
-  FFT_aux(y, tmp);
+void Cmodulus::FFT(NTL::vec_long& y, NTL::zz_pX& x) const
+{
+  HELIB_TIMER_START;
+  NTL::zz_pBak bak;
+  bak.save();
+  context.restore();
+  FFT_aux(y, x);
 }
 
 void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const

@@ -1,6 +1,15 @@
 Release Changes
 ===============
 
+HElib 2.2.1, October 2021
+=========================
+(tagged as v2.2.1)
+
+* Improved NTT bechmark code
+* CI update
+* Improvements to partial match logic
+* Bug fixes
+
 HElib 2.2.0, September 2021
 =========================
 (tagged as v2.2.0)

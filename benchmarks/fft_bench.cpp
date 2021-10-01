@@ -34,14 +34,13 @@ static void helib_fft_forward(benchmark::State& state, Meta& meta)
   long q = prime_generator.next();
   helib::Cmodulus cmod(zms, q, 0);
 
-  NTL::ZZX poly;
-  poly.SetLength(N);
-  for (long i = 0; i < N; ++i)
-    poly[i] = i;
+  NTL::zz_pX poly(N, 1);
 
-  NTL::vec_long transformed;
-  for (auto _ : state)
+  NTL::vec_long transformed(NTL::INIT_SIZE, N);
+
+  for (auto _ : state) {
     cmod.FFT(transformed, poly);
+  }
 }
 
 static void helib_fft_inverse(benchmark::State& state, Meta& meta)

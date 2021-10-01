@@ -9,6 +9,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+/* Intel HEXL integration.
+ * Copyright (C) 2021 Intel Corporation
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef HELIB_CMODULUS_H
 #define HELIB_CMODULUS_H
 /**
@@ -123,6 +137,9 @@ public:
   void FFT(NTL::vec_long& y, const NTL::ZZX& x) const;
   // y = FFT(x)
   void FFT(NTL::vec_long& y, const zzX& x) const;
+  // y = FFT(x)
+  void FFT(NTL::vec_long& y, NTL::zz_pX& x) const;
+
 
   // expects zp context to be set externally
   // x = FFT^{-1}(y)
