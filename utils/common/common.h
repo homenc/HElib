@@ -18,13 +18,13 @@
 
 #include <helib/helib.h>
 
-std::string stripExtension(const std::string& s)
+inline std::string stripExtension(const std::string& s)
 {
   std::size_t dotPos = s.find_last_of(".");
   return (dotPos == std::string::npos) ? s : s.substr(0, dotPos);
 }
 
-std::string readline(std::istream& is)
+inline std::string readline(std::istream& is)
 {
   std::string s;
   getline(is, s);
