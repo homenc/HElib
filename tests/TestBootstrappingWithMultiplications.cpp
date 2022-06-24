@@ -203,7 +203,7 @@ long multiplyWithRecryption(helib::Ctxt& ctxt,
   return count;
 }
 
-void multiplyPtxt(std::vector<long> ptxt, long count, long nslots, long p2r)
+void multiplyPtxt(std::vector<long>& ptxt, long count, long nslots, long p2r)
 {
   std::vector<long> tmp_ptxt(ptxt);
   for (int j = 0; j < count; j++) {
