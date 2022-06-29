@@ -36,7 +36,7 @@ CXX_COMPILER="${4}"
 USE_INTEL_HEXL="${5}"
 
 if [ "${USE_INTEL_HEXL}" == "ON" ]; then
-  git clone https://github.com/intel/hexl.git -b v1.2.1
+  git clone https://github.com/intel/hexl.git -b v1.2.4
   cd hexl
   cmake -B build \
     -DCMAKE_INSTALL_PREFIX=./ \
@@ -54,7 +54,7 @@ if [ "${RUNNER_OS}" == "ubuntu-20.04" ]; then
 fi
 
 if [ "${RUNNER_OS}" == "macos-latest" ]; then
-  brew install ntl
+  brew install ntl bats-core
 fi
 
 cd "$HOME"

@@ -57,7 +57,7 @@ jobs:
             "${{ matrix.c_compiler }}" "${{ matrix.cxx_compiler }}" "${{ matrix.hexl }}"
           ./ci/build_install_lib.sh "${{ matrix.package_build }}" ${{ env.INSTALL_PREFIX }} \
             ${{ matrix.c_compiler }} ${{ matrix.cxx_compiler }} \
-             ${{ matrix.hexl }} "./hexl/lib/cmake/hexl-1.2.1"
+             ${{ matrix.hexl }} "./hexl/lib/cmake/hexl-1.2.4"
           ./ci/test_lib.sh
           ./ci/build_test_consumer.sh "examples" "${{ matrix.package_build }}" ${{ env.INSTALL_PREFIX }}
           ./ci/build_test_consumer.sh "utils" "${{ matrix.package_build }}" ${{ env.INSTALL_PREFIX }}
