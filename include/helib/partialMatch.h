@@ -444,7 +444,7 @@ public:
     for (long i = 0; i < long(expr.size()); ++i) { // Each tau
       mus[i] = 0;                                  // Set mu to zero.
       Matrix<long> M(columns, 1);                  // Create temp tau matrix
-      containsOR = (expr[i].size() > 1) ? true : false;
+      containsOR = (expr[i].size() > 1) ? true : containsOR;
       for (long j = 0; j < long(expr[i].size()); ++j) // Each column index
         M(expr[i][j], 0) = 1;                         // Mark those columns as 1
       taus.push_back(std::move(M));
