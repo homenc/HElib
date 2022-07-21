@@ -196,20 +196,18 @@ struct Expr;
 class ColNumber;
 
 /**
- * @brief An alias for a shared pointer to an `Expr` object.
+ * @brief A class wrapping a shared pointer to an `Expr` object.
  **/
-using QueryExpr = std::shared_ptr<Expr>;
-
-/**
- * @brief Utility function for creating a shared pointer to a specified column
- * in a query.
- * @param cl The index of the column to be used in the query.
- * @return Shared pointer to the class `ColNumber`.
- **/
-inline std::shared_ptr<ColNumber> makeQueryExpr(int cl)
+class QueryExpr
 {
-  return std::make_shared<ColNumber>(cl);
-}
+  public:
+  std::shared_ptr<Expr> exp;
+  /**
+   * @brief Constructor.
+   * @param p The `std::shared_ptr` to wrap into a `QueryExpr`.
+   **/
+  QueryExpr(std::shared_ptr<Expr> p) : exp(p) {} 
+};
 
 /**
  * @struct Expr
@@ -240,30 +238,43 @@ public:
    * @brief Constructor.
    * @param c The column number.
    **/
-  ColNumber(int c) : column(c) {}
+  ColNumber(long c) : column(c) {}
 
 private:
-  int column;
+  long column;
 };
 
 /**
+ * @brief Utility function for creating a `QueryExpr` for a specified column
+ * in a query.
+ * @param cl The index of the column to be used in the query.
+ * @return `QueryExpr` with the specified `ColNumber` as the `Expr`.
+ **/
+inline QueryExpr makeQueryExpr(long cl)
+{
+  ColNumber col(cl);
+  return QueryExpr(std::make_shared<ColNumber>(col));
+}
+
+
+/**
  * @class And
- * @brief An object representing the logical AND expression which inherits from
+ * @brief An object representing the logical `AND` expression which inherits from
  * `Expr`.
  **/
 class And : public Expr
 {
 public:
   /**
-   * @brief Function for returning the logical AND expression in reverse polish
-   * notation where the AND operation is represented by `&&` and each operand
+   * @brief Function for returning the logical `AND` expression in reverse polish
+   * notation where the `AND` operation is represented by `&&` and each operand
    * is a column number.
-   * @return A string representing the AND expression in reverse polish
+   * @return A string representing the `AND` expression in reverse polish
    * notation.
    **/
   std::string eval() const override
   {
-    return lhs->eval() + " " + rhs->eval() + " &&";
+    return lhs.exp->eval() + " " + rhs.exp->eval() + " &&";
   }
 
   /**
@@ -295,7 +306,7 @@ public:
    **/
   std::string eval() const override
   {
-    return lhs->eval() + " " + rhs->eval() + " ||";
+    return lhs.exp->eval() + " " + rhs.exp->eval() + " ||";
   }
 
   /**
@@ -311,29 +322,29 @@ private:
 };
 
 /**
- * @brief Overloaded operator for creating a shared pointer to an AND
+ * @brief Overloaded operator for creating a `QueryExpr` to an `AND`
  * expression.
- * @param lhs Left operand of the AND expression.
- * @param rhs Right operand of the AND expression.
- * @return Shared pointer to the class `And`.
+ * @param lhs Left operand of the `AND` expression.
+ * @param rhs Right operand of the `AND` expression.
+ * @return `QueryExpr` with the `AND` as the `Expr`.
  **/
-inline std::shared_ptr<And> operator&&(const QueryExpr& lhs,
+inline QueryExpr operator&&(const QueryExpr& lhs,
                                        const QueryExpr& rhs)
 {
-  return std::make_shared<And>(lhs, rhs);
+  return QueryExpr(std::make_shared<And>(lhs.exp, rhs.exp));
 }
 
 /**
- * @brief Overloaded operator for creating a shared pointer to an OR
+ * @brief Overloaded operator for creating a `QueryExpr` of an `OR`
  * expression.
- * @param lhs Left operand of the OR expression.
- * @param rhs Right operand of the OR expression.
- * @return Shared pointer to the class `Or`.
+ * @param lhs Left operand of the `OR` expression.
+ * @param rhs Right operand of the `OR` expression.
+ * @return `QueryExpr` with the OR as the `Expr`.
  **/
-inline std::shared_ptr<Or> operator||(const QueryExpr& lhs,
+inline QueryExpr operator||(const QueryExpr& lhs,
                                       const QueryExpr& rhs)
 {
-  return std::make_shared<Or>(lhs, rhs);
+  return QueryExpr(std::make_shared<Or>(lhs.exp, rhs.exp));
 }
 
 /**
@@ -415,7 +426,7 @@ public:
    * @param expr The logical expression to build.
    * @note The expression is evaluated to reverse polish notation.
    **/
-  QueryBuilder(const QueryExpr& expr) : query_str(expr->eval()) {}
+  QueryBuilder(const QueryExpr& expr) : query_str(expr.exp->eval()) {}
 
   /**
    * @brief Function for building the `Query_t` object from the expression.

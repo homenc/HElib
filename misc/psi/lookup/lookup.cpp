@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
   helib::QueryBuilder qbAnd(a && b);
   helib::QueryBuilder qbOr(a || b);
   helib::QueryBuilder qbExpand(a || (b && c));
-
+  
   helib::Query_t query = qb.build(database.columns());
   helib::Query_t queryAnd = qbAnd.build(database.columns());
   helib::Query_t queryOr = qbOr.build(database.columns());
