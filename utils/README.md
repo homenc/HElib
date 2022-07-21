@@ -82,6 +82,8 @@ specified then the script will generate a prefix using the name of the
 parameter file by default concatenated with a generated number. This file
 prefix will be printed to the command line.
 
+The flag `--scheme <default=BGV|CKKS>` will generate the context for BGV or CKKS scheme. 
+
 The script will always generate two files (`example.pk` and `example.sk`. They
 both hold the serialization of the context and the public key and secret key
 respectively.
@@ -90,6 +92,9 @@ The flag `--info-file` will redirect the information describing the algebra to
 the file `example.info`. By default this information is sent to the standard
 output however generating the info file is useful for passing to the example
 encode decode utilities.
+
+The flag `--bootstrap <default=NONE|THIN|THICK>` can be used enable the bootstrapping with THIN or THICK bootstrapping options, this will generate the required bootstrappable context with key-switching matrices, frobenius matrices and bootstrapping keys, which are added to the `*.pk` and `*.sk` files respectivey. If this flag is enabled while using the BGV scheme, it needs three additional parameters (mvec, gens, ords) which are formatted as space-separated list added to the parameter file.
+
 
 3. Encode some data
 ```
