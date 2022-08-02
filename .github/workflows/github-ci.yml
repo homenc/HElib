@@ -47,9 +47,13 @@ jobs:
             cxx_compiler: clang++
           - c_compiler: gcc-10
             cxx_compiler: g++-10
-        exclude: # Skip HEXL package build
+        exclude: 
+          # Skip HEXL package build
           - package_build: ON
             hexl: ON
+          # Skip gcc-10 on macos-latest
+          - c_compiler: gcc-10
+            os: macos-latest
     steps:
       - uses: actions/checkout@v2
       - run: |
