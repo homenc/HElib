@@ -700,9 +700,41 @@ TEST(TestPartialMatch, databaseLookupQueryAPIGeneratesPostFix)
   const helib::QueryExpr& height = helib::makeQueryExpr(2);
   const helib::QueryExpr& weight = helib::makeQueryExpr(3);
 
-  helib::QueryExpr res = name && (age || (height && weight));
+  helib::QueryExpr res = ((name && age) || height); 
 
-  EXPECT_EQ("0 1 2 3 && || &&", res->eval());
+  res = name || age || height;
+  EXPECT_EQ("0 1 || 2 ||", res.exp->eval());
+
+  res = (name || age) && height;
+  EXPECT_EQ("0 1 || 2 &&", res.exp->eval());
+
+  res = (name || age) && (name || height);
+  EXPECT_EQ("0 1 || 0 2 || &&", res.exp->eval());
+
+  res = (name && age) || (age && height);
+  EXPECT_EQ("0 1 && 1 2 && ||", res.exp->eval());
+
+  res = name && (age || (height && weight));
+  EXPECT_EQ("0 1 2 3 && || &&", res.exp->eval());
+}
+
+TEST(TestPartialMatch, containsOrFlagInBuild)
+{
+  const helib::QueryExpr& name = helib::makeQueryExpr(0);
+  const helib::QueryExpr& age = helib::makeQueryExpr(1);
+  const helib::QueryExpr& height = helib::makeQueryExpr(2);
+  long columns = 4;
+  helib::QueryBuilder res1((name || age) && height);
+  helib::Query_t query = res1.build(columns);
+  EXPECT_EQ(query.containsOR, true);
+
+  helib::QueryBuilder res2(height && (name || age));
+  query = res2.build(columns);
+  EXPECT_EQ(query.containsOR, true);
+
+  helib::QueryBuilder res3(height && name && age);
+  query = res3.build(columns);
+  EXPECT_EQ(query.containsOR, false);
 }
 
 TEST(TestPartialMatch, databaseLookupQueryAPIGeneratesMusAndTaus)
@@ -712,34 +744,90 @@ TEST(TestPartialMatch, databaseLookupQueryAPIGeneratesMusAndTaus)
   const helib::QueryExpr& height = helib::makeQueryExpr(2);
   const helib::QueryExpr& weight = helib::makeQueryExpr(3);
 
-  helib::QueryBuilder qb(name && (age || (height && weight)));
+  // ((0 && 1) || 2) = (0 || 2) && (1 || 2)
+  helib::QueryBuilder qbExpand0((name && age) || height);
+  // (0 || 1 || 2)
+  helib::QueryBuilder qbExpand1(name || age || height);
+  // (0 || 1) && (2)
+  helib::QueryBuilder qbExpand2((name || age) && height);
+  //((0 || 1) && (0 || 2))
+  helib::QueryBuilder qbExpand3((name || age) && (name || height));
+  // ((0 && 1) || (1 && 2)) = (0 || 1) && 1 && (2 || 0) && (2 || 1)
+  helib::QueryBuilder qbExpand4((name && age) || (age && height));
   // 0 && (1 || (2 && 3)) = 0 && (1 || 2) && (1 && 3)
-
+  helib::QueryBuilder qbExpand5(name && (age || (height && weight)));
+  std::vector<helib::QueryBuilder> qbs =
+      {qbExpand0, qbExpand1, qbExpand2, qbExpand3, qbExpand4, qbExpand5};
   long columns = 5;
+  long cases = 6;
+  std::vector<std::vector<std::vector<long>>> expected_Fs_vector(cases);
+  std::vector<long> F(columns);
+  std::iota(F.begin(), F.end(), 0);
+  std::vector<std::vector<long>> Fs(4);
+  std::fill(Fs.begin(), Fs.end(), F);
+  std::fill(expected_Fs_vector.begin(), expected_Fs_vector.end(), Fs);
+  expected_Fs_vector[0].resize(2); // query 0 has 2 conjunctions
+  expected_Fs_vector[1].resize(1); // query 1 has 1 conjunction
+  expected_Fs_vector[2].resize(2); // query 2 has 2 conjunctions
+  expected_Fs_vector[3].resize(2); // query 3 has 2 conjunctions
+  expected_Fs_vector[4].resize(4); // query 4 has 4 conjunctions
+  expected_Fs_vector[5].resize(3); // query 5 has 3 conjunctions
 
-  helib::Query_t query = qb.build(columns);
-
-  std::vector<std::vector<long>> expected_Fs = {{0, 1, 2, 3, 4},
-                                                {0, 1, 2, 3, 4},
-                                                {0, 1, 2, 3, 4}};
-
+  std::vector<std::vector<helib::Matrix<long>>> expected_taus_vector;
   std::vector<helib::Matrix<long>> expected_taus = {
-      {{1}, {0}, {0}, {0}, {0}},  // Only 0-th column
-      {{0}, {1}, {1}, {0}, {0}},  // Either 1st or 2nd column
-      {{0}, {1}, {0}, {1}, {0}}}; // Either 1st or 3rd column
+      {{1}, {0}, {1}, {0}, {0}},  // Either 0-th or 2nd column
+      {{0}, {1}, {1}, {0}, {0}}}; // Either 1st or 2nd column
 
-  std::vector<long> expected_mus = {0, 0, 0};
+  expected_taus_vector.push_back(expected_taus);
 
-  EXPECT_EQ(expected_Fs.size(), query.Fs.size());
-  EXPECT_EQ(expected_mus.size(), query.mus.size());
-  EXPECT_EQ(expected_taus.size(), query.taus.size());
-  EXPECT_EQ(columns, query.taus[0].size());
-  for (size_t i = 0; i < expected_Fs.size(); ++i)
-    EXPECT_EQ(expected_Fs[i], query.Fs[i]);
-  for (size_t i = 0; i < expected_mus.size(); ++i)
-    EXPECT_EQ(expected_mus[i], query.mus[i]) << "*** i= " << i;
-  for (size_t i = 0; i < expected_taus.size(); ++i)
-    EXPECT_TRUE(expected_taus[i] == query.taus[i]) << "*** i= " << i;
+  expected_taus = {
+      {{1}, {1}, {1}, {0}, {0}}}; // Either 0-th or 1st or 2nd column
+  expected_taus_vector.push_back(expected_taus);
+
+  expected_taus = {{{1}, {1}, {0}, {0}, {0}},  // Either 0-th or 1st column
+                   {{0}, {0}, {1}, {0}, {0}}}; // Only 2nd column
+
+  expected_taus_vector.push_back(expected_taus);
+
+  expected_taus = {{{1}, {1}, {0}, {0}, {0}},  // Either 0-th or 1st column
+                   {{1}, {0}, {1}, {0}, {0}}}; // Either 0-th or 2nd column
+
+  expected_taus_vector.push_back(expected_taus);
+
+  expected_taus = {{{1}, {1}, {0}, {0}, {0}},  // Either 0-th or 1st column
+                   {{0}, {1}, {0}, {0}, {0}},  // Only 1st column
+                   {{1}, {0}, {1}, {0}, {0}},  // Either 2nd or 0-th column
+                   {{0}, {1}, {1}, {0}, {0}}}; // Either 2nd or 1st column
+  expected_taus_vector.push_back(expected_taus);
+
+  expected_taus = {{{1}, {0}, {0}, {0}, {0}},  // Only 0-th column
+                   {{0}, {1}, {1}, {0}, {0}},  // Either 1st or 2nd column
+                   {{0}, {1}, {0}, {1}, {0}}}; // Either 1st or 3rd column
+  expected_taus_vector.push_back(expected_taus);
+  std::vector<std::vector<long>> expected_mus_vector =
+      {{0, 0}, {0}, {0, 0}, {0, 0}, {0, 0, 0, 0}, {0, 0, 0}};
+  EXPECT_EQ(expected_Fs_vector.size(),cases);
+  EXPECT_EQ(expected_taus_vector.size(),cases);
+  EXPECT_EQ(expected_mus_vector.size(),cases);
+
+  for (int j = 0; j < cases; j++) {
+    helib::Query_t query = qbs[j].build(columns);
+    EXPECT_EQ(expected_Fs_vector[j].size(), query.Fs.size()) << "*** j = " << j;
+    EXPECT_EQ(expected_mus_vector[j].size(), query.mus.size())
+        << "*** j = " << j;
+    EXPECT_EQ(expected_taus_vector[j].size(), query.taus.size())
+        << "*** j = " << j;
+    EXPECT_EQ(columns, query.taus[0].size()) << "*** j = " << j;
+    for (size_t i = 0; i < expected_Fs_vector[j].size(); ++i)
+      EXPECT_EQ(expected_Fs_vector[j][i], query.Fs[i])
+          << "*** j = " << j << ", i = " << i;
+    for (size_t i = 0; i < expected_mus_vector[j].size(); ++i)
+      EXPECT_EQ(expected_mus_vector[j][i], query.mus[i])
+          << "*** j = " << j << ", i= " << i;
+    for (size_t i = 0; i < expected_taus_vector[j].size(); ++i)
+      EXPECT_TRUE(expected_taus_vector[j][i] == query.taus[i])
+          << "*** j = " << j << ", i= " << i;
+  }
 }
 
 TEST_P(TestPartialMatch, databaseLookupWorksWithQueryAPI)
