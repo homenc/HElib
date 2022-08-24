@@ -140,7 +140,6 @@ public:
   // y = FFT(x)
   void FFT(NTL::vec_long& y, NTL::zz_pX& x) const;
 
-
   // expects zp context to be set externally
   // x = FFT^{-1}(y)
   void iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const;

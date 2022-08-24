@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
                                             {{1}} };
 
   // Build the actual query
-  helib::Query_t weighted_query(Fs, mus, taus, false);
+  helib::QueryType weighted_query(Fs, mus, taus, false);
   HELIB_NTIMER_STOP(buildQuery);
 
   HELIB_NTIMER_START(scoring);

@@ -178,6 +178,7 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/PtrMatrix.h"
     "${HELIB_HEADER_DIR}/PtrVector.h"
     "${HELIB_HEADER_DIR}/Ptxt.h"
+    "${HELIB_HEADER_DIR}/query.h"
     "${HELIB_HEADER_DIR}/randomMatrices.h"
     "${HELIB_HEADER_DIR}/range.h"
     "${HELIB_HEADER_DIR}/recryption.h"
