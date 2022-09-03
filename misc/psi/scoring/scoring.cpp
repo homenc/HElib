@@ -17,7 +17,7 @@
 #include <helib/partialMatch.h>
 #include <helib/timing.h>
 
-#include <psiio.h>
+#include <io.h>
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
   #include <sys/time.h>
@@ -84,12 +84,12 @@ int main(int argc, char *argv[])
 
   HELIB_NTIMER_START(readDatabase);
   // Read in database
-  helib::Database<helib::Ctxt> database = readDbFromFile(cmdLineOpts.databaseFilePath, contextp, *pkp);
+  helib::Database<helib::Ctxt> database = readDbFromFile<helib::Ctxt>(cmdLineOpts.databaseFilePath, contextp, *pkp);
   HELIB_NTIMER_STOP(readDatabase);
 
   HELIB_NTIMER_START(readQuery);
   // Read in the query data
-  helib::Matrix<helib::Ctxt> query = readQueryFromFile(cmdLineOpts.queryFilePath, *pkp);
+  helib::Matrix<helib::Ctxt> query = readQueryFromFile<helib::Ctxt>(cmdLineOpts.queryFilePath, *pkp);
   HELIB_NTIMER_STOP(readQuery);
 
   HELIB_NTIMER_START(buildQuery);

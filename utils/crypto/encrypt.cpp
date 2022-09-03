@@ -33,26 +33,6 @@ struct CmdLineOpts
   long offset = 0;
 };
 
-std::pair<long, long> parseDimsHeader(const std::string& s)
-{
-  std::stringstream iss(s);
-  std::istream_iterator<long> issit(iss);
-  std::vector<long> vl(issit, {});
-
-  switch (vl.size()) {
-  case 1:
-    return {vl[0], 1};
-  case 2:
-    return {vl[0], vl[1]};
-  default:
-    std::ostringstream oss;
-    oss << "Dimensions in header is wrong.\n";
-    for (const auto& l : vl)
-      oss << l << " ";
-    throw std::runtime_error(oss.str());
-  }
-}
-
 template <typename SCHEME>
 void encryptFromTo(const CmdLineOpts& cmdLineOpts,
                    const helib::Context& context,
