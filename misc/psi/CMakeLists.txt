@@ -40,3 +40,8 @@ find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
 add_subdirectory(scoring)
 add_subdirectory(lookup)
+
+option(ENABLE_TEST "Enable Gtests" ON)
+if (ENABLE_TEST)
+  add_subdirectory(tests)
+endif()

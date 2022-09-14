@@ -17,11 +17,11 @@
 #include <helib/partialMatch.h>
 #include <helib/timing.h>
 
-#include <psiio.h>
+#include <io.h>
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
-  #include <sys/time.h>
-  #include <sys/resource.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #endif
 
 // Struct to hold command line arguments
@@ -36,12 +36,13 @@ struct CmdLineOpts
   long offset = 0;
 };
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   // PSI STUFF
   // 1. Read in context and pk file
   // 2. Python scripts to gen data (might use utils)
-  // 3. Read in numbers (all numbers in a single row) and (all numbers in a single column)
+  // 3. Read in numbers (all numbers in a single row) and (all numbers in a
+  // single column)
   // 4. Create the query etc. Similar to TestPartial
 
   CmdLineOpts cmdLineOpts;
@@ -67,7 +68,8 @@ int main(int argc, char *argv[])
   // clang-format on
 
   if (cmdLineOpts.nthreads < 1) {
-    std::cerr << "Number of threads must be a postive integer. Setting n = 1." << std::endl;
+    std::cerr << "Number of threads must be a postive integer. Setting n = 1."
+              << std::endl;
     cmdLineOpts.nthreads = 1;
   }
 
@@ -78,38 +80,39 @@ int main(int argc, char *argv[])
   std::shared_ptr<helib::Context> contextp;
   std::unique_ptr<helib::PubKey> pkp;
   std::tie(contextp, pkp) =
-    loadContextAndKey<helib::PubKey>(cmdLineOpts.pkFilePath);
+      loadContextAndKey<helib::PubKey>(cmdLineOpts.pkFilePath);
   HELIB_NTIMER_STOP(readKey);
 
   HELIB_NTIMER_START(readDatabase);
   // Read in database
   helib::Database<helib::Ctxt> database =
-    readDbFromFile(cmdLineOpts.databaseFilePath, contextp, *pkp);
+      readDbFromFile<helib::Ctxt>(cmdLineOpts.databaseFilePath, contextp, *pkp);
   HELIB_NTIMER_STOP(readDatabase);
 
   HELIB_NTIMER_START(readQuery);
   // Read in the query data
-  helib::Matrix<helib::Ctxt> queryData = readQueryFromFile(cmdLineOpts.queryFilePath, *pkp);
+  helib::Matrix<helib::Ctxt> queryData =
+      readQueryFromFile<helib::Ctxt>(cmdLineOpts.queryFilePath, *pkp);
   HELIB_NTIMER_STOP(readQuery);
 
   HELIB_NTIMER_START(buildQuery);
   const helib::QueryExpr& a = helib::makeQueryExpr(0);
   const helib::QueryExpr& b = helib::makeQueryExpr(1);
   const helib::QueryExpr& c = helib::makeQueryExpr(2);
-
+  
   helib::QueryBuilder qb(a);
   helib::QueryBuilder qbAnd(a && b);
   helib::QueryBuilder qbOr(a || b);
   helib::QueryBuilder qbExpand(a || (b && c));
   
-  helib::Query_t query = qb.build(database.columns());
-  helib::Query_t queryAnd = qbAnd.build(database.columns());
-  helib::Query_t queryOr = qbOr.build(database.columns());
-  helib::Query_t queryExpand = qbExpand.build(database.columns());
+  helib::QueryType query = qb.build(database.columns());
+  helib::QueryType queryAnd = qbAnd.build(database.columns());
+  helib::QueryType queryOr = qbOr.build(database.columns());
+  helib::QueryType queryExpand = qbExpand.build(database.columns());
   HELIB_NTIMER_STOP(buildQuery);
 
   HELIB_NTIMER_START(lookupSame);
-  auto clean = [](auto& x){x.cleanUp();};
+  auto clean = [](auto& x) { x.cleanUp(); };
   auto match = database.contains(query, queryData).apply(clean);
   HELIB_NTIMER_STOP(lookupSame);
   HELIB_NTIMER_START(lookupAnd);
@@ -125,9 +128,15 @@ int main(int argc, char *argv[])
   HELIB_NTIMER_START(writeResults);
   // Write results to file
   writeResultsToFile(cmdLineOpts.outFilePath, match, cmdLineOpts.offset);
-  writeResultsToFile(cmdLineOpts.outFilePath+"_and", matchAnd, cmdLineOpts.offset);
-  writeResultsToFile(cmdLineOpts.outFilePath+"_or", matchOr, cmdLineOpts.offset);
-  writeResultsToFile(cmdLineOpts.outFilePath+"_expand", matchExpand, cmdLineOpts.offset);
+  writeResultsToFile(cmdLineOpts.outFilePath + "_and",
+                     matchAnd,
+                     cmdLineOpts.offset);
+  writeResultsToFile(cmdLineOpts.outFilePath + "_or",
+                     matchOr,
+                     cmdLineOpts.offset);
+  writeResultsToFile(cmdLineOpts.outFilePath + "_expand",
+                     matchExpand,
+                     cmdLineOpts.offset);
   HELIB_NTIMER_STOP(writeResults);
 
   std::ofstream timers("times.log");
@@ -139,16 +148,16 @@ int main(int argc, char *argv[])
   std::ofstream usage("usage.log");
   if (usage.is_open()) {
     struct rusage rusage;
-    getrusage( RUSAGE_SELF, &rusage );
-    usage << "\n  rusage.ru_utime="<<rusage.ru_utime.tv_sec << '\n';
-    usage << "  rusage.ru_stime="<<rusage.ru_utime.tv_sec << '\n';
-    usage << "  rusage.ru_maxrss="<<rusage.ru_maxrss << '\n';
-    usage << "  rusage.ru_minflt="<<rusage.ru_minflt << '\n';
-    usage << "  rusage.ru_majflt="<<rusage.ru_majflt << '\n';
-    usage << "  rusage.ru_inblock="<<rusage.ru_inblock << '\n';
-    usage << "  rusage.ru_oublock="<<rusage.ru_majflt << '\n';
-    usage << "  rusage.ru_nvcsw="<<rusage.ru_nvcsw << '\n';
-    usage << "  rusage.ru_nivcsw="<<rusage.ru_minflt << std::endl;
+    getrusage(RUSAGE_SELF, &rusage);
+    usage << "\n  rusage.ru_utime=" << rusage.ru_utime.tv_sec << '\n';
+    usage << "  rusage.ru_stime=" << rusage.ru_utime.tv_sec << '\n';
+    usage << "  rusage.ru_maxrss=" << rusage.ru_maxrss << '\n';
+    usage << "  rusage.ru_minflt=" << rusage.ru_minflt << '\n';
+    usage << "  rusage.ru_majflt=" << rusage.ru_majflt << '\n';
+    usage << "  rusage.ru_inblock=" << rusage.ru_inblock << '\n';
+    usage << "  rusage.ru_oublock=" << rusage.ru_majflt << '\n';
+    usage << "  rusage.ru_nvcsw=" << rusage.ru_nvcsw << '\n';
+    usage << "  rusage.ru_nivcsw=" << rusage.ru_minflt << std::endl;
   }
 #endif
 

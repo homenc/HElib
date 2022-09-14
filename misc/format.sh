@@ -51,7 +51,7 @@ if [ "$(uname)" == "Darwin" ]; then
 fi
 
 previous_dir=""
-for file in $(find . $arg -type f -regex '.*\.(c|h|cpp|hpp)' \
+for file in $(find $arg . -type f -regex '.*\.(c|h|cpp|hpp)' \
               ! -path '*/misc/*' \
               ! -path '*/build/*' \
               ! -path '*/dependencies/*' \

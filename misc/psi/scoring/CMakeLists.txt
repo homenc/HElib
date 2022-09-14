@@ -29,7 +29,6 @@ find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
 add_executable(scoring scoring.cpp)
 
-target_include_directories(scoring PRIVATE "../../../utils/common"
-    "../psiio")
+target_include_directories(scoring PRIVATE "../../../utils/common" "../io")
 
 target_link_libraries(scoring helib)

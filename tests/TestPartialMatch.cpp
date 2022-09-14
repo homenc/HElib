@@ -700,7 +700,7 @@ TEST(TestPartialMatch, databaseLookupQueryAPIGeneratesPostFix)
   const helib::QueryExpr& height = helib::makeQueryExpr(2);
   const helib::QueryExpr& weight = helib::makeQueryExpr(3);
 
-  helib::QueryExpr res = ((name && age) || height); 
+  helib::QueryExpr res = ((name && age) || height);
 
   res = name || age || height;
   EXPECT_EQ("0 1 || 2 ||", res.exp->eval());
@@ -725,7 +725,7 @@ TEST(TestPartialMatch, containsOrFlagInBuild)
   const helib::QueryExpr& height = helib::makeQueryExpr(2);
   long columns = 4;
   helib::QueryBuilder res1((name || age) && height);
-  helib::Query_t query = res1.build(columns);
+  helib::QueryType query = res1.build(columns);
   EXPECT_EQ(query.containsOR, true);
 
   helib::QueryBuilder res2(height && (name || age));
@@ -806,12 +806,12 @@ TEST(TestPartialMatch, databaseLookupQueryAPIGeneratesMusAndTaus)
   expected_taus_vector.push_back(expected_taus);
   std::vector<std::vector<long>> expected_mus_vector =
       {{0, 0}, {0}, {0, 0}, {0, 0}, {0, 0, 0, 0}, {0, 0, 0}};
-  EXPECT_EQ(expected_Fs_vector.size(),cases);
-  EXPECT_EQ(expected_taus_vector.size(),cases);
-  EXPECT_EQ(expected_mus_vector.size(),cases);
+  EXPECT_EQ(expected_Fs_vector.size(), cases);
+  EXPECT_EQ(expected_taus_vector.size(), cases);
+  EXPECT_EQ(expected_mus_vector.size(), cases);
 
   for (int j = 0; j < cases; j++) {
-    helib::Query_t query = qbs[j].build(columns);
+    helib::QueryType query = qbs[j].build(columns);
     EXPECT_EQ(expected_Fs_vector[j].size(), query.Fs.size()) << "*** j = " << j;
     EXPECT_EQ(expected_mus_vector[j].size(), query.mus.size())
         << "*** j = " << j;
@@ -883,7 +883,7 @@ TEST_P(TestPartialMatch, databaseLookupWorksWithQueryAPI)
 
   long columns = plaintext_database.dims(1);
 
-  helib::Query_t lookup_query(qb.build(columns));
+  helib::QueryType lookup_query(qb.build(columns));
 
   auto plaintext_result = database.contains(lookup_query, plaintext_query_data);
   auto encrypted_result = database.contains(lookup_query, encrypted_query_data);
@@ -951,7 +951,7 @@ TEST_P(TestPartialMatch, scoringWorksWithDatabaseAndQueryAPIs)
                                            {{2}, {1}}};
 
   // Build the query
-  helib::Query_t weighted_query(Fs, mus, taus, false);
+  helib::QueryType weighted_query(Fs, mus, taus, false);
 
   auto plaintext_scores = database.getScore(weighted_query, plaintext_query);
   auto encrypted_scores = database.getScore(weighted_query, encrypted_query);
@@ -1038,7 +1038,7 @@ TEST_P(TestPartialMatch, scoringWorksWithEncryptedDatabaseAndQueryAPIs)
                                            {{2}, {1}}};
 
   // Build the query
-  helib::Query_t weighted_query(Fs, mus, taus, false);
+  helib::QueryType weighted_query(Fs, mus, taus, false);
 
   auto plaintext_scores =
       plaintext_database.getScore(weighted_query, plaintext_query);
