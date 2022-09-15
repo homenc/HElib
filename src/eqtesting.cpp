@@ -29,11 +29,10 @@ namespace helib {
 // and then outputting y * y^p * ... * y^{p^{d-1}}, with exponentiation to
 // powers of p done via Frobenius.
 
-// FIXME: the computation of the "norm" y * y^p * ... * y^{p^{d-1}}
-// can be done using O(log d) automorphisms, rather than O(d).
-
 void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 {
+// Compute of the "norm" y * y^p * ... * y^{p^{d-1}}
+//  using O(log d) automorphisms, rather than O(d).
   long p = ctxt.getPtxtSpace();
   if (p != ea.getPAlgebra().getP()) // ptxt space is p^r for r>1
     throw LogicError("mapTo01 not implemented for r>1");
