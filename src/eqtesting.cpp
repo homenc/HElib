@@ -40,13 +40,20 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 
   if (p > 2)
     ctxt.power(p - 1); // set y = x^{p-1}
-
+  long e = 1;
   long d = ea.getDegree();
-  if (d > 1) { // compute the product of the d automorphisms
-    std::vector<Ctxt> v(d, ctxt);
-    for (long i = 1; i < d; i++)
-      v[i].frobeniusAutomorph(i);
-    totalProduct(ctxt, v);
+  long b = NTL::NumBits(d);
+  Ctxt orig = ctxt;
+  for(long i = b - 2; i >= 0; i--){
+    Ctxt tmp = ctxt;
+    tmp.frobeniusAutomorph(e);
+    ctxt *= tmp;
+    e *= 2;
+    if(NTL::bit(d,i)){
+      ctxt.frobeniusAutomorph(1);
+      ctxt *= orig;
+       e+= 1;
+    }
   }
 }
 
