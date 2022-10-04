@@ -9,6 +9,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+/* Copyright (C) 2022 Intel Corporation
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Modifying HElib to optimize the 01 map.
+ * Contributions include
+ * Modified:
+ *   mapTo01
+ *     added parallelism to existing logic for norm calculation
+ *     added alternative logic for norm calculation which uses log(d) 
+ *     automorphisms on a single core
+ *     added an additional optional argument `multithread` which determines 
+ *     which version to run
+ *      
+ */
 /**
  * @file eqtesting.cpp
  * @brief Useful functions for equality testing...
@@ -17,6 +32,7 @@
 #include <helib/timing.h>
 #include <helib/EncryptedArray.h>
 #include <helib/Ptxt.h>
+#include <NTL/BasicThreadPool.h>
 
 #include <cstdio>
 
@@ -29,10 +45,7 @@ namespace helib {
 // and then outputting y * y^p * ... * y^{p^{d-1}}, with exponentiation to
 // powers of p done via Frobenius.
 
-// FIXME: the computation of the "norm" y * y^p * ... * y^{p^{d-1}}
-// can be done using O(log d) automorphisms, rather than O(d).
-
-void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
+void mapTo01(const EncryptedArray& ea, Ctxt& ctxt, bool multithread)
 {
   long p = ctxt.getPtxtSpace();
   if (p != ea.getPAlgebra().getP()) // ptxt space is p^r for r>1
@@ -40,13 +53,39 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 
   if (p > 2)
     ctxt.power(p - 1); // set y = x^{p-1}
-
   long d = ea.getDegree();
-  if (d > 1) { // compute the product of the d automorphisms
-    std::vector<Ctxt> v(d, ctxt);
-    for (long i = 1; i < d; i++)
-      v[i].frobeniusAutomorph(i);
-    totalProduct(ctxt, v);
+  // TODO: investigate this trade off more thoroughly
+  // Computing in parallel over t threads has runtime approximately
+  // (d - 1)/t, whereas single thread has runtime approx log(d)
+  if ((NTL::AvailableThreads() > 1) && multithread) {
+    // Compute O(d) Frobenius automorphisms in parallel    
+    if (d > 1) {
+      // compute the d - 1 automorphisms in parallel
+      std::vector<Ctxt> v(d, ctxt);
+      NTL_EXEC_RANGE(d - 1, first, last)
+      for (long i = first; i < last; i++)
+        v[i + 1].frobeniusAutomorph(i + 1);
+      NTL_EXEC_RANGE_END
+      // and compute the product of the d automorphisms
+      totalProduct(ctxt, v);
+    }
+  } else {
+    // Compute of the "norm" y * y^p * ... * y^{p^{d-1}}
+    //  using O(log d) automorphisms, rather than O(d).
+    long e = 1;
+    long b = NTL::NumBits(d);
+    Ctxt orig = ctxt;
+    for (long i = b - 2; i >= 0; i--) {
+      Ctxt tmp = ctxt;
+      tmp.frobeniusAutomorph(e);
+      ctxt *= tmp;
+      e *= 2;
+      if (NTL::bit(d, i)) {
+        ctxt.frobeniusAutomorph(1);
+        ctxt *= orig;
+        e++;
+      }
+    }
   }
 }
 
