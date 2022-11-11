@@ -76,11 +76,14 @@ helib::Database<TXT> readDbFromFile(const std::string& databaseFilePath,
       }
     }
   } else { // Ctxt query
-    for (long i = 0; i < nrow; ++i) {
-      for (long j = 0; j < ncol; ++j) {
-        reader.value().readDatum(data(i, j), i, j);
-      }
+    NTL_EXEC_RANGE(nrow * ncol, first, last)
+    Reader<TXT> threadReader(reader.value());
+    for (long i = first; i < last; ++i) {
+      long row = i / ncol;
+      long col = i % ncol;
+      threadReader.readDatum(data(row, col), row, col);
     }
+    NTL_EXEC_RANGE_END
   }
 
   return helib::Database<TXT>(data, contextp);
@@ -128,11 +131,14 @@ helib::Matrix<TXT> readQueryFromFile(const std::string& queryFilePath,
     }
   } else { // Ctxt query
     // Read in ctxts
-    for (long i = 0; i < nrow; ++i) {
-      for (long j = 0; j < ncol; ++j) {
-        reader.value().readDatum(query(i, j), i, j);
-      }
+    NTL_EXEC_RANGE(nrow * ncol, first, last)
+    Reader<TXT> threadReader(reader.value());
+    for (long i = first; i < last; ++i) {
+      long row = i / ncol;
+      long col = i % ncol;
+      threadReader.readDatum(query(row, col), row, col);
     }
+    NTL_EXEC_RANGE_END
     if (ncol == 1) { // Transpose to make row vector
       query.transpose();
     }
