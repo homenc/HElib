@@ -39,7 +39,7 @@ jobs:
         package_build: [ON, OFF]
         hexl: [ON, OFF]
         c_compiler: [gcc, gcc-10, clang]
-        os: [macos-latest, ubuntu-20.04]
+        os: [macos-latest, ubuntu-20.04, ubuntu-22.04]
         include: # Use g++ with gcc only and clang++ with clang only
           - c_compiler: gcc
             cxx_compiler: g++
@@ -54,6 +54,9 @@ jobs:
           # Skip gcc-10 on macos-latest
           - c_compiler: gcc-10
             os: macos-latest
+          # Skip gcc-10 on ubuntu-22.04
+          - c_compiler: gcc-10
+            os: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - run: |
