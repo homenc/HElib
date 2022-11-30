@@ -44,6 +44,8 @@ jobs:
           - c_compiler: gcc
             cxx_compiler: g++
           - c_compiler: clang
+            cxx_compiler: clang++-14
+          - c_compiler: clang-14
             cxx_compiler: clang++
           - c_compiler: gcc-10
             cxx_compiler: g++-10
