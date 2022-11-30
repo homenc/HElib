@@ -56,6 +56,9 @@ jobs:
           # Skip gcc-10 on macos-latest
           - c_compiler: gcc-10
             os: macos-latest
+          # Skip clang-14 on macos-latest
+          - c_compiler: clang-14
+            os: macos-latest
           # Skip gcc-10 on ubuntu-22.04
           - c_compiler: gcc-10
             os: ubuntu-22.04
