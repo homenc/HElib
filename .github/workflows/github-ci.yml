@@ -38,30 +38,27 @@ jobs:
         # TODO: shared builds
         package_build: [ON, OFF]
         hexl: [ON, OFF]
-        c_compiler: [gcc, gcc-10, clang, clang-14]
-        os: [macos-latest, ubuntu-20.04, ubuntu-22.04]
+        c_compiler: [gcc-9, gcc-11, clang-10, clang-14]
+        os: [ubuntu-20.04, ubuntu-22.04]
         include: # Use g++ with gcc only and clang++ with clang only
-          - c_compiler: gcc
+          - os: macos-latest
+            c_compiler: clang
+            cxx_compiler: clang++
+          - os: macos-latest
+            c_compiler: gcc
             cxx_compiler: g++
+          - c_compiler: gcc-9
+            cxx_compiler: g++-9
+          - c_compiler: gcc-11
+            cxx_compiler: g++-11
+          - c_compiler: clang-10
+            cxx_compiler: clang++-10
           - c_compiler: clang-14
             cxx_compiler: clang++-14
-          - c_compiler: clang
-            cxx_compiler: clang++
-          - c_compiler: gcc-10
-            cxx_compiler: g++-10
         exclude: 
           # Skip HEXL package build
           - package_build: ON
             hexl: ON
-          # Skip gcc-10 on macos-latest
-          - c_compiler: gcc-10
-            os: macos-latest
-          # Skip clang-14 on macos-latest
-          - c_compiler: clang-14
-            os: macos-latest
-          # Skip gcc-10 on ubuntu-22.04
-          - c_compiler: gcc-10
-            os: ubuntu-22.04
           # Skip clang-14 on ubuntu-20.04
           - c_compiler: clang-14
             os: ubuntu-20.04
