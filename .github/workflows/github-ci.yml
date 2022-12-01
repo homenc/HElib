@@ -59,6 +59,12 @@ jobs:
           # Skip HEXL package build
           - package_build: ON
             hexl: ON
+          # Skip clang-10 on ubuntu-22.04
+          - c_compiler: clang-10
+            os: ubuntu-22.04
+          # Skip gcc-11 on ubuntu-20.04
+          - c_compiler: gcc-11
+            os: ubuntu-20.04
           # Skip clang-14 on ubuntu-20.04
           - c_compiler: clang-14
             os: ubuntu-20.04
