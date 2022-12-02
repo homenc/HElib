@@ -14,6 +14,7 @@
 #define COMMON_H
 
 #include <iostream>
+#include <iterator>
 #include <fstream>
 
 #include <helib/helib.h>

@@ -49,7 +49,8 @@ fi
 
 cd $HOME
 
-if [ "${RUNNER_OS}" == "ubuntu-20.04" ]; then
+# Remove substr after dash char e.g. ubuntu20.04 -> ubuntu
+if [ "${RUNNER_OS%-*}" == "ubuntu" ]; then
     sudo apt-get -yq --no-install-suggests --no-install-recommends install libgmp-dev libntl-dev bats
 fi
 
