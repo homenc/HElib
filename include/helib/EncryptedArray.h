@@ -2651,7 +2651,7 @@ inline void totalSums(Ctxt& ctxt)
 
 //! @brief Map all non-zero slots to 1, leaving zero slots as zero.
 //! Assumes that r=1, and that all the slots contain elements from GF(p^d).
-void mapTo01(const EncryptedArray& ea, Ctxt& ctxt);
+void mapTo01(const EncryptedArray& ea, Ctxt& ctxt, bool multithread = true);
 // Implemented in eqtesting.cpp. We compute
 //             x^{p^d-1} = x^{(1+p+...+p^{d-1})*(p-1)}
 // by setting y=x^{p-1} and then outputting y * y^p * ... * y^{p^{d-1}},
