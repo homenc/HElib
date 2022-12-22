@@ -9,6 +9,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+ 
+ /* Copyright (C) 2022 Intel Corporation
+* SPDX-License-Identifier: Apache-2.0
+*
+* Added option to load SK only
+*/
 
 #include <iostream>
 #include <fstream>
@@ -26,6 +32,7 @@ struct CmdLineOpts
   std::string skFilePath;
   std::string ctxtFilePath;
   std::string outFilePath;
+  bool read_only_sk = false; // Default to false for backward compatibility.
   long batchSize = 0;
   long nthreads = 0; // Default is 0 for number of cpus.
 };
@@ -134,6 +141,7 @@ int main(int argc, char* argv[])
            "batch size, how many ctxts in memory. If not set or 0 defaults to the number of threads used.")
       .arg("-n", cmdLineOpts.nthreads,
            "number of threads to use. If not set or 0 defaults to the number of concurrent threads supported.", "num. of cores")
+      .toggle(true).arg("-s", cmdLineOpts.read_only_sk, "whether only the secret key is written.")
     .parse(argc, argv);
   // clang-format on
 
@@ -180,11 +188,10 @@ int main(int argc, char* argv[])
   }
 
   // Load Context and SecKey
-  std::unique_ptr<helib::Context> contextp;
-  std::unique_ptr<helib::SecKey> skp;
 
-  std::tie(contextp, skp) =
-      loadContextAndKey<helib::SecKey>(cmdLineOpts.skFilePath);
+  auto [contextp, skp] =
+      loadContextAndKey<helib::SecKey>(cmdLineOpts.skFilePath,
+                                       cmdLineOpts.read_only_sk);
 
   // Read in, decrypt, output.
   try {

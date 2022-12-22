@@ -9,6 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
+# Copyright (C) 2022 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Added Key-gen tests
+
 function random-char-string {
   local N=${1:-8}
   echo $(head /dev/urandom | LC_ALL=C tr -dc A-Za-z0-9 | head -c $N)
@@ -22,9 +27,11 @@ generate_data="$utils_dir/tests/gen-data.py"
 encode="$utils_dir/coders/encode.py"
 decode="$utils_dir/coders/decode.py"
 create_context="$utils_dir/build/bin/create-context"
+key_gen="$utils_dir/build/bin/key-gen"
 encrypt="$utils_dir/build/bin/encrypt"
 decrypt="$utils_dir/build/bin/decrypt"
 test_bootstrap="$utils_dir/build/test/bin/test_bootstrap"
+test_bootstrap_keygen="$utils_dir/build/test/bin/test_bootstrap_keygen"
 tmp_folder="tmp_$(random-char-string)"
 prefix="test"
 prefix_bgv="test_bgv"
@@ -37,6 +44,11 @@ sk_file_ckks="${prefix_ckks}.sk"
 pk_file_ckks="${prefix_ckks}.pk"
 sk_file_bootstrap="${prefix_bootstrap}.sk"
 pk_file_bootstrap="${prefix_bootstrap}.pk"
+enc_pk_file_bgv="${prefix_bgv}Enc.pk"
+enc_pk_file_ckks="${prefix_ckks}Enc.pk"
+eval_pk_file_bgv="${prefix_bgv}Eval.pk"
+eval_pk_file_ckks="${prefix_ckks}Eval.pk"
+eval_pk_file_bootstrap="${prefix_bootstrap}Eval.pk"
 
 function assert {
   if "$@"; then
@@ -152,6 +164,15 @@ function createContext {
   local boot="$4"
   local other_args="$5"
   "$create_context" "$src" -o "$dest" --info-file $boot --scheme "$scheme" $other_args
+}
+
+function keyGeneration {
+  local scheme="$1"
+  local src=$2
+  local dest=$3
+  local boot="$4"
+  local other_args="$5"
+  "$key_gen" "$src" -o "$dest" --info-file $boot --scheme "$scheme" $other_args
 }
 
 function genData {

@@ -10,6 +10,12 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+/* Copyright (C) 2022 Intel Corporation
+* SPDX-License-Identifier: Apache-2.0
+*
+* Added tests for separated SK, PK and Key switching matrices
+*/
+
 /* Note this file only tests JSON (de)serialization.*/
 /* If you are searching for binary (de)serialization go to TestBinIO.cpp*/
 
@@ -701,6 +707,24 @@ TEST_P(TestIO_BGV, readKeysFromDeserializeCorrectly)
   EXPECT_EQ(secretKey, deserialized_sk);
 }
 
+TEST_P(TestIO_BGV, secretKeyOnlyThrowsOnMismatchContext)
+{
+  std::stringstream str;
+  secretKey.writeToJSON(str, /*sk_only=*/true);
+  helib::Context new_context(helib::ContextBuilder<helib::BGV>()
+                                 .m(41)
+                                 .p(p)
+                                 .r(r)
+                                 .bits(bits)
+                                 .gens(gens)
+                                 .ords(ords)
+                                 .mvec(mvec)
+                                 .build());
+  helib::SecKey deserialized_sk(new_context);
+  EXPECT_THROW(deserialized_sk.readFromJSON(str, new_context, /*sk_only=*/true),
+               helib::LogicError);
+}
+
 TEST_P(TestIO_BGV, handlingPublicKeyDeserializationWithMissingField)
 {
   std::stringstream ss;
@@ -756,6 +780,24 @@ TEST_P(TestIO_BGV, canEncryptWithDeserializedPublicKey)
   EXPECT_EQ(ptxt, decrypted_result);
 }
 
+TEST_P(TestIO_BGV, canEncryptWithDeserializedSecretKeyOnly)
+{
+  std::stringstream ss;
+
+  secretKey.writeToJSON(ss, /*sk_only=*/true);
+  helib::SecKey deserialized_sk =
+      helib::SecKey::readFromJSON(ss, context, /*sk_only=*/true);
+  helib::PtxtArray ptxt(ea), decrypted_result(ea);
+  ptxt.random();
+  helib::Ctxt ctxt(deserialized_sk);
+
+  EXPECT_NO_THROW(ptxt.encrypt(ctxt));
+
+  decrypted_result.decrypt(ctxt, secretKey);
+
+  EXPECT_EQ(ptxt, decrypted_result);
+}
+
 TEST_P(TestIO_BGV, canDecryptWithDeserializedSecretKey)
 {
   std::stringstream ss;
@@ -763,6 +805,24 @@ TEST_P(TestIO_BGV, canDecryptWithDeserializedSecretKey)
   ss << secretKey;
 
   helib::SecKey deserialized_sk = helib::SecKey::readFromJSON(ss, context);
+
+  helib::PtxtArray ptxt(ea), decrypted_result(ea);
+  ptxt.random();
+
+  helib::Ctxt ctxt(publicKey);
+  ptxt.encrypt(ctxt);
+
+  EXPECT_NO_THROW(decrypted_result.decrypt(ctxt, deserialized_sk));
+  EXPECT_EQ(ptxt, decrypted_result);
+}
+
+TEST_P(TestIO_BGV, canDecryptWithDeserializedSecretKeyOnly)
+{
+  std::stringstream ss;
+
+  secretKey.writeToJSON(ss, /*sk_only=*/true);
+  helib::SecKey deserialized_sk =
+      helib::SecKey::readFromJSON(ss, context, /*sk_only=*/true);
 
   helib::PtxtArray ptxt(ea), decrypted_result(ea);
   ptxt.random();
@@ -1478,6 +1538,20 @@ TEST_P(TestIO_CKKS, readKeysFromDeserializeCorrectly)
   EXPECT_EQ(secretKey, deserialized_sk);
 }
 
+TEST_P(TestIO_CKKS, secretKeyOnlyThrowsOnMismatchContext)
+{
+  std::stringstream str;
+  secretKey.writeToJSON(str, /*sk_only=*/true);
+  helib::Context new_context(helib::ContextBuilder<helib::CKKS>()
+                                 .m(32)
+                                 .precision(precision)
+                                 .bits(bits)
+                                 .build());
+  helib::SecKey deserialized_sk(new_context);
+  EXPECT_THROW(deserialized_sk.readFromJSON(str, new_context, /*sk_only=*/true),
+               helib::LogicError);
+}
+
 TEST_P(TestIO_CKKS, handlingPublicKeyDeserializationWithMissingField)
 {
   std::stringstream ss;
@@ -1534,6 +1608,24 @@ TEST_P(TestIO_CKKS, canEncryptWithDeserializedPublicKey)
   EXPECT_EQ(ptxt, helib::Approx(decrypted_result));
 }
 
+TEST_P(TestIO_CKKS, canEncryptWithDeserializedSecretKeyOnly)
+{
+  std::stringstream ss;
+
+  secretKey.writeToJSON(ss, /*sk_only=*/true);
+  helib::SecKey deserialized_sk =
+      helib::SecKey::readFromJSON(ss, context, /*sk_only=*/true);
+
+  helib::PtxtArray ptxt(ea), decrypted_result(ea);
+  ptxt.random();
+
+  helib::Ctxt ctxt(deserialized_sk);
+  EXPECT_NO_THROW(ptxt.encrypt(ctxt));
+
+  decrypted_result.decrypt(ctxt, secretKey);
+  EXPECT_EQ(ptxt, helib::Approx(decrypted_result));
+}
+
 TEST_P(TestIO_CKKS, canDecryptWithDeserializedSecretKey)
 {
   std::stringstream ss;
@@ -1542,6 +1634,23 @@ TEST_P(TestIO_CKKS, canDecryptWithDeserializedSecretKey)
 
   helib::SecKey deserialized_sk = helib::SecKey::readFromJSON(ss, context);
 
+  helib::PtxtArray ptxt(ea), decrypted_result(ea);
+  ptxt.random();
+
+  helib::Ctxt ctxt(publicKey);
+  ptxt.encrypt(ctxt);
+
+  EXPECT_NO_THROW(decrypted_result.decrypt(ctxt, deserialized_sk));
+  EXPECT_EQ(ptxt, helib::Approx(decrypted_result));
+}
+
+TEST_P(TestIO_CKKS, canDecryptWithDeserializedSecretKeyOnly)
+{
+  std::stringstream ss;
+
+  secretKey.writeToJSON(ss, /*sk_only=*/true);
+  helib::SecKey deserialized_sk =
+      helib::SecKey::readFromJSON(ss, context, /*sk_only=*/true);
   helib::PtxtArray ptxt(ea), decrypted_result(ea);
   ptxt.random();
 

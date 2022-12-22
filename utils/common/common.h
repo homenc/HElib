@@ -10,6 +10,12 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+/* Copyright (C) 2022 Intel Corporation
+* SPDX-License-Identifier: Apache-2.0
+*
+* Stream serialization for context and key
+*/
+
 #ifndef COMMON_H
 #define COMMON_H
 
@@ -35,24 +41,32 @@ inline std::string readline(std::istream& is)
 template <typename T1, typename T2>
 using uniq_pair = std::pair<std::unique_ptr<T1>, std::unique_ptr<T2>>;
 
+/**
+ * @brief Read from the stream a serialized context and key.
+ *
+ * @tparam KEY The key type
+ * @param keyFilePath Location of context and key
+ * @param read_only_sk Whether the secret key was serialized using
+ * by writing only the secret key polynomial, defaulted to false.
+ * @return uniq_pair<helib::Context, KEY>
+ */
 template <typename KEY>
-uniq_pair<helib::Context, KEY> loadContextAndKey(const std::string& keyFilePath)
+uniq_pair<helib::Context, KEY> loadContextAndKey(const std::string& keyFilePath,
+                                                 bool read_only_sk = false)
 {
   std::ifstream keyFile(keyFilePath, std::ios::binary);
   if (!keyFile.is_open())
     throw std::runtime_error("Cannot open Public Key file '" + keyFilePath +
                              "'.");
-
   unsigned long m, p, r;
   std::vector<long> gens, ords;
 
   std::unique_ptr<helib::Context> contextp(
       helib::Context::readPtrFrom(keyFile));
-
   std::unique_ptr<KEY> keyp = std::make_unique<KEY>(*contextp);
   if constexpr (std::is_same_v<KEY, helib::SecKey>) {
     keyp = std::make_unique<helib::SecKey>(
-        helib::SecKey::readFrom(keyFile, *contextp));
+        helib::SecKey::readFrom(keyFile, *contextp, read_only_sk));
   } else {
     keyp = std::make_unique<helib::PubKey>(
         helib::PubKey::readFrom(keyFile, *contextp));
