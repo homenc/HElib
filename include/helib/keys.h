@@ -10,6 +10,10 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+/* Copyright (C) 2022 Intel Corporation
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef HELIB_KEYS_H
 #define HELIB_KEYS_H
 /**
@@ -423,61 +427,83 @@ public:
   /**
    * @brief Write out the `SecKey` object in binary format.
    * @param str Output `std::ostream`.
+   * @param sk_only Whether to write only the secret key polynomial and context,
+   *and not the public key.
    **/
-  void writeTo(std::ostream& str) const;
+  void writeTo(std::ostream& str, bool sk_only = false) const;
 
   /**
    * @brief Read from the stream the serialized `SecKey` object in binary
    * format.
    * @param str Input `std::istream`.
+   * @param sk_only Whether the stream contains only the secret key polynomial
+   *and context, and not the public key.
    * @return The deserialized `SecKey` object.
    **/
-  static SecKey readFrom(std::istream& str, const Context& context);
+  static SecKey readFrom(std::istream& str,
+                         const Context& context,
+                         bool sk_only = false);
 
   /**
    * @brief Write out the secret key (`SecKey`) object to the output
    * stream using JSON format.
    * @param str Output `std::ostream`.
+   * @param sk_only whether to write only secret key polynomial and context, and
+   *not the public key.
    **/
-  void writeToJSON(std::ostream& str) const;
+  void writeToJSON(std::ostream& str, bool sk_only = false) const;
 
   /**
    * @brief Write out the secret key (`SecKey`) object to a `JsonWrapper`.
    * @return The `JsonWrapper`.
+   * @param sk_only whether to write only secret key polynomial and context, and
+   *not the public key.
    **/
-  JsonWrapper writeToJSON() const;
+  JsonWrapper writeToJSON(bool sk_only = false) const;
 
   /**
    * @brief Read from the stream the serialized secret key (`SecKey`) object
    * using JSON format.
    * @param str Input `std::istream`.
    * @param context The `Context` to be used.
+   * @param sk_only whether the stream contains only the secret key polynomial
+   *and context, and not the public key.
    * @return The deserialized `SecKey` object.
    **/
-  static SecKey readFromJSON(std::istream& str, const Context& context);
+  static SecKey readFromJSON(std::istream& str,
+                             const Context& context,
+                             bool sk_only = false);
 
   /**
    * @brief Read from the `JsonWrapper` the serialized secret key (`SecKey`)
    * object.
    * @param j The `JsonWrapper` containing the serialized `SecKey` object.
    * @param context The `Context` to be used.
+   * @param sk_only whether the stream contains only the secret key polynomial
+   *and context, and not the public key.
    * @return The deserialized `SecKey` object.
    **/
-  static SecKey readFromJSON(const JsonWrapper& j, const Context& context);
+  static SecKey readFromJSON(const JsonWrapper& j,
+                             const Context& context,
+                             bool sk_only = false);
 
   /**
    * @brief Read from the stream the serialized secret key (`SecKey`) object
    * using JSON format.
    * @param str Input `std::istream`.
+   * @param sk_only whether the stream contains only the secret key polynomial
+   *and context, and not the public key.
    **/
-  void readJSON(std::istream& str);
+  void readJSON(std::istream& str, bool sk_only = false);
 
   /**
    * @brief Read from the `JsonWrapper` the serialized secret key (`SecKey`)
    * object.
    * @param j The `JsonWrapper` containing the serialized `SecKey` object.
+   * @param sk_only whether the stream contains only the secret key polynomial
+   *and context, and not the public key.
    **/
-  void readJSON(const JsonWrapper& j);
+  void readJSON(const JsonWrapper& j, bool sk_only = false);
 
   // TODO: Add a similar method for binary serialization
   // This just writes the derived part, not including the public key

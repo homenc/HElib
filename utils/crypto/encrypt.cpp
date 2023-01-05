@@ -178,10 +178,7 @@ int main(int argc, char* argv[])
   }
 
   // Load Context and PubKey
-  std::unique_ptr<helib::Context> contextp;
-  std::unique_ptr<helib::PubKey> pkp;
-
-  std::tie(contextp, pkp) =
+  auto [contextp, pkp] =
       loadContextAndKey<helib::PubKey>(cmdLineOpts.pkFilePath);
 
   try {

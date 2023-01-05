@@ -18,11 +18,11 @@
  * Modified:
  *   mapTo01
  *     added parallelism to existing logic for norm calculation
- *     added alternative logic for norm calculation which uses log(d) 
+ *     added alternative logic for norm calculation which uses log(d)
  *     automorphisms on a single core
- *     added an additional optional argument `multithread` which determines 
+ *     added an additional optional argument `multithread` which determines
  *     which version to run
- *      
+ *
  */
 /**
  * @file eqtesting.cpp
@@ -58,7 +58,7 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt, bool multithread)
   // Computing in parallel over t threads has runtime approximately
   // (d - 1)/t, whereas single thread has runtime approx log(d)
   if ((NTL::AvailableThreads() > 1) && multithread) {
-    // Compute O(d) Frobenius automorphisms in parallel    
+    // Compute O(d) Frobenius automorphisms in parallel
     if (d > 1) {
       // compute the d - 1 automorphisms in parallel
       std::vector<Ctxt> v(d, ctxt);

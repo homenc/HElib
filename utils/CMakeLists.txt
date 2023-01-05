@@ -9,6 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
+# Copyright (C) 2022 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
 cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 
 ## Use -std=c++17 as default.
@@ -39,6 +42,6 @@ file(STRINGS "../VERSION" HELIB_VERSION)
 find_package(helib "${HELIB_VERSION}" EXACT REQUIRED)
 
 add_subdirectory(create-context)
+add_subdirectory(key-gen)
 add_subdirectory(crypto)
-
 add_subdirectory(test_bootstrapping)
