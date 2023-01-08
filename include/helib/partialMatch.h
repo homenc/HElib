@@ -9,7 +9,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
+/* Copyright (C) 2022 Intel Corporation
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Extended HElib to support the Not operator in queries.
+ * Contributions include
+ *
+ * Added:
+ *   Database:
+ *                 template <typename TXT2>
+              auto contains(const std::string& query_string, const Matrix<TXT2>&
+ query_data) const
+ */
 #ifndef HELIB_PARTIALMATCH_H
 #define HELIB_PARTIALMATCH_H
 
@@ -230,17 +241,34 @@ public:
   {}
 
   /**
-   * @brief Function for performing a database lookup given a query expression
-   * and query data.
+   * @brief Overloaded function for performing a database lookup given a query
+   *  expression and query data.
    * @tparam TXT2 The type of the query data, can be either a `Ctxt` or
    * `Ptxt<BGV>`.
    * @param lookup_query The lookup query expression to perform.
    * @param query_data The lookup query data to compare with the database.
-   * @return A `Matrix<TXT2>` containing 1s and 0s in slots where there was a
-   * match or no match respectively.
+   * @return A `Matrix<TXT>` containing 1s and 0s in slots where there was a
+   * match or no match respectively. The return type `TXT` is `Ctxt` if either
+   * query of database is encrypted, and `Ptxt<BGV>` otherwise.
    **/
   template <typename TXT2>
   auto contains(const QueryType& lookup_query,
+                const Matrix<TXT2>& query_data) const;
+
+  /**
+   * @brief Overloaded function for performing a database lookup given a query
+   *  string and query data.
+   * @tparam TXT2 The type of the query data, can be either a `Ctxt` or
+   * `Ptxt<BGV>`.
+   * @param lookup_query A query string in Reverse Polish Notation with only
+   *`ANDs` and `NOTs`.
+   * @param query_data The lookup query data to compare with the database.
+   * @return A `Matrix<TXT>` containing 1s and 0s in slots where there was a
+   * match or no match respectively. The return type `TXT` is `Ctxt` if either
+   * query of database is encrypted, and `Ptxt<BGV>` otherwise.
+   **/
+  template <typename TXT2>
+  auto contains(const std::string& query_string,
                 const Matrix<TXT2>& query_data) const;
 
   /**
@@ -250,7 +278,9 @@ public:
    * `Ptxt<BGV>`.
    * @param weighted_query The weighted lookup query expression to perform.
    * @param query_data The query data to compare with the database.
-   * @return A `Matrix<TXT2>` containing a score on weighted matches.
+   * @return A `Matrix<TXT>` containing a score on weighted matches. The return
+   * type `TXT` is `Ctxt` if either query of database is encrypted, and
+   * `Ptxt<BGV>` otherwise.
    **/
   template <typename TXT2>
   auto getScore(const QueryType& weighted_query,
@@ -261,7 +291,7 @@ public:
    * @brief Returns number of columns in the database.
    * @return The number of columns in the database.
    **/
-  long columns() { return data.dims(1); }
+  long columns() const { return data.dims(1); }
 
   Matrix<TXT>& getData();
 
@@ -269,6 +299,68 @@ private:
   Matrix<TXT> data;
   std::shared_ptr<const Context> context;
 };
+
+template <typename TXT>
+template <typename TXT2>
+inline auto Database<TXT>::contains(const std::string& query_string,
+                                    const Matrix<TXT2>& query_data) const
+{
+  // resolve type names: if both are ptxt, return ptxt, otherwise return ctxt
+  using RTXT = typename std::conditional<(std::is_same_v<TXT, Ptxt<BGV>>)&&(
+                                             std::is_same_v<TXT2, Ptxt<BGV>>),
+                                         Ptxt<BGV>,
+                                         Ctxt>::type;
+
+  auto mask = calculateMasks(context->getEA(), query_data, this->data);
+
+  std::istringstream input(query_string);
+
+  std::stack<Matrix<RTXT>> txtStack;
+  std::string symbol;
+
+  while (input >> symbol) {
+    if (symbol == "!") {
+      auto& top = txtStack.top();
+      top.apply([](auto& entry) { entry.negate(); });
+      top.apply([](auto& entry) { entry.addConstant(NTL::ZZX(1L)); });
+    } else if (symbol == "&&") {
+      auto rhs = txtStack.top();
+      txtStack.pop();
+
+      auto& lhs = txtStack.top();
+      lhs.template entrywiseOperation<RTXT>(
+          rhs,
+          [](auto& l, const auto& r) -> decltype(auto) {
+            l.multiplyBy(r);
+            return l;
+          });
+    } else {
+      // If symbol is ||, throw a specific error
+      assertFalse(symbol == "||",
+                  "Cannot evaluate contains() on a string which contains Or "
+                  "operator: first call removeOr()");
+      // Otherwise, verify symbol is a number
+      assertTrue(isNumber(symbol), "String is not a number: '" + symbol + "'");
+      // And verify the number is in [0,...,columns - 1]
+      assertTrue((std::stol(symbol) >= 0) &&
+                     ((std::stol(symbol) < this->columns())),
+                 "column is out of range");
+      // push a copy of mask[symbol]. To take a deep copy, first make a matrix
+      // of the right type and dimension with zeroes in every entry.
+      auto ones(mask(0, 0));
+      ones.clear();
+      ones.addConstant(NTL::ZZX(0L));
+      Matrix<RTXT> col(ones, mask.dims(0), 1l);
+      // now add the entries we want to the RHS
+      col += mask.getColumn(std::stol(symbol));
+      txtStack.push(col);
+    }
+  }
+  assertEq<LogicError>(1UL,
+                       txtStack.size(),
+                       "Size of stack after evaluation should be 1");
+  return std::move(txtStack.top());
+}
 
 template <typename TXT>
 template <typename TXT2>

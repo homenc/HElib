@@ -99,12 +99,12 @@ int main(int argc, char* argv[])
   const helib::QueryExpr& a = helib::makeQueryExpr(0);
   const helib::QueryExpr& b = helib::makeQueryExpr(1);
   const helib::QueryExpr& c = helib::makeQueryExpr(2);
-  
+
   helib::QueryBuilder qb(a);
   helib::QueryBuilder qbAnd(a && b);
   helib::QueryBuilder qbOr(a || b);
   helib::QueryBuilder qbExpand(a || (b && c));
-  
+
   helib::QueryType query = qb.build(database.columns());
   helib::QueryType queryAnd = qbAnd.build(database.columns());
   helib::QueryType queryOr = qbOr.build(database.columns());
