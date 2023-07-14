@@ -54,7 +54,7 @@ if [ "${RUNNER_OS%-*}" == "ubuntu" ]; then
     sudo apt-get -yq --no-install-suggests --no-install-recommends install libgmp-dev libntl-dev bats
 fi
 
-if [ "${RUNNER_OS}" == "macos-latest" ]; then
+if [ "${RUNNER_OS}" == "macos-latest" ]  || [ "${RUNNER_OS}" == "macos-12" ] || [ "${RUNNER_OS}" == "macos-13" ] ; then
   brew install ntl bats-core
 fi
 

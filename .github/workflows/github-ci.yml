@@ -39,7 +39,7 @@ jobs:
         package_build: [ON, OFF]
         hexl: [ON, OFF]
         c_compiler: [gcc, clang]
-        os: [macos-latest, ubuntu-22.04]
+        os: [macos-12, macos-13, ubuntu-22.04]
         include: # Use g++ with gcc only and clang++ with clang only
           - c_compiler: gcc
             cxx_compiler: g++
