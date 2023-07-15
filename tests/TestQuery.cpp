@@ -445,4 +445,295 @@ TEST(TestQuery, ExpectedThrowsPseudoParser)
                                    " \n"),
                helib::InvalidArgument);
 }
+
+TEST(TestQuery, QueryExprGeneratesPostFix)
+{
+  const helib::QueryExpr& name = helib::makeQueryExpr(0);
+  const helib::QueryExpr& age = helib::makeQueryExpr(1);
+  const helib::QueryExpr& height = helib::makeQueryExpr(2);
+  const helib::QueryExpr& weight = helib::makeQueryExpr(3);
+
+  helib::QueryExpr res = ((name && age) || height);
+  EXPECT_EQ("0 1 && 2 ||", res.exp->eval());
+
+  res = name || age || height;
+  EXPECT_EQ("0 1 || 2 ||", res.exp->eval());
+
+  res = (name || age) && height;
+  EXPECT_EQ("0 1 || 2 &&", res.exp->eval());
+
+  res = (name || age) && (name || height);
+  EXPECT_EQ("0 1 || 0 2 || &&", res.exp->eval());
+
+  res = (name && age) || (age && height);
+  EXPECT_EQ("0 1 && 1 2 && ||", res.exp->eval());
+
+  res = name && (age || (height && weight));
+  EXPECT_EQ("0 1 2 3 && || &&", res.exp->eval());
+}
+
+TEST(TestQuery, QueryExprGeneratesPostFixWithNot)
+{
+  const helib::QueryExpr& name = helib::makeQueryExpr(0);
+  const helib::QueryExpr& age = helib::makeQueryExpr(1);
+  const helib::QueryExpr& height = helib::makeQueryExpr(2);
+  const helib::QueryExpr& weight = helib::makeQueryExpr(3);
+
+  helib::QueryExpr res = name || !name;
+  EXPECT_EQ("0 0 ! ||", res.exp->eval());
+
+  res = !(name || age || height);
+  EXPECT_EQ("0 1 || 2 || !", res.exp->eval());
+
+  res = !(name || age) && height;
+  EXPECT_EQ("0 1 || ! 2 &&", res.exp->eval());
+
+  res = !!name;
+  EXPECT_EQ("0 ! !", res.exp->eval());
+
+  res = age || !!weight;
+  EXPECT_EQ("1 3 ! ! ||", res.exp->eval());
+
+  res = !(name && age && height);
+  EXPECT_EQ("0 1 && 2 && !", res.exp->eval());
+
+  res = !((name || age) && (height || weight));
+  EXPECT_EQ("0 1 || 2 3 || && !", res.exp->eval());
+}
+
+TEST(TestQuery, containsOrFlagInBuild)
+{
+  const helib::QueryExpr& name = helib::makeQueryExpr(0);
+  const helib::QueryExpr& age = helib::makeQueryExpr(1);
+  const helib::QueryExpr& height = helib::makeQueryExpr(2);
+  long columns = 4;
+  helib::QueryBuilder res1((name || age) && height);
+  helib::QueryType query = res1.build(columns);
+  EXPECT_EQ(query.containsOR, true);
+
+  helib::QueryBuilder res2(height && (name || age));
+  query = res2.build(columns);
+  EXPECT_EQ(query.containsOR, true);
+
+  helib::QueryBuilder res3(height && name && age);
+  query = res3.build(columns);
+  EXPECT_EQ(query.containsOR, false);
+}
+
+TEST(TestQuery, QueryBuilderGeneratesMusAndTaus)
+{
+  const helib::QueryExpr& name = helib::makeQueryExpr(0);
+  const helib::QueryExpr& age = helib::makeQueryExpr(1);
+  const helib::QueryExpr& height = helib::makeQueryExpr(2);
+  const helib::QueryExpr& weight = helib::makeQueryExpr(3);
+
+  // ((0 && 1) || 2) = (0 || 2) && (1 || 2)
+  helib::QueryBuilder qbExpand0((name && age) || height);
+  // (0 || 1 || 2)
+  helib::QueryBuilder qbExpand1(name || age || height);
+  // (0 || 1) && (2)
+  helib::QueryBuilder qbExpand2((name || age) && height);
+  //((0 || 1) && (0 || 2))
+  helib::QueryBuilder qbExpand3((name || age) && (name || height));
+  // ((0 && 1) || (1 && 2)) = (0 || 1) && 1 && (2 || 0) && (2 || 1)
+  helib::QueryBuilder qbExpand4((name && age) || (age && height));
+  // 0 && (1 || (2 && 3)) = 0 && (1 || 2) && (1 && 3)
+  helib::QueryBuilder qbExpand5(name && (age || (height && weight)));
+  std::array<helib::QueryBuilder, 6> qbs =
+      {qbExpand0, qbExpand1, qbExpand2, qbExpand3, qbExpand4, qbExpand5};
+  long columns = 5;
+  long cases = 6;
+  std::array<std::vector<std::vector<long>>, 6> expected_Fs_vector;
+  std::vector<long> F(columns);
+  std::iota(F.begin(), F.end(), 0);
+  std::vector<std::vector<long>> Fs(4);
+  std::fill(Fs.begin(), Fs.end(), F);
+  std::fill(expected_Fs_vector.begin(), expected_Fs_vector.end(), Fs);
+  expected_Fs_vector[0].resize(2); // query 0 has 2 conjunctions
+  expected_Fs_vector[1].resize(1); // query 1 has 1 conjunction
+  expected_Fs_vector[2].resize(2); // query 2 has 2 conjunctions
+  expected_Fs_vector[3].resize(2); // query 3 has 2 conjunctions
+  expected_Fs_vector[4].resize(4); // query 4 has 4 conjunctions
+  expected_Fs_vector[5].resize(3); // query 5 has 3 conjunctions
+
+  std::array<std::vector<helib::Matrix<long>>, 6> expected_taus_vector;
+  expected_taus_vector[0] = {
+      {{1}, {0}, {1}, {0}, {0}},  // Either 0-th or 2nd column
+      {{0}, {1}, {1}, {0}, {0}}}; // Either 1st or 2nd column
+
+  expected_taus_vector[1] = {
+      {{1}, {1}, {1}, {0}, {0}}}; // Either 0-th or 1st or 2nd column
+
+  expected_taus_vector[2] = {
+      {{1}, {1}, {0}, {0}, {0}},  // Either 0-th or 1st column
+      {{0}, {0}, {1}, {0}, {0}}}; // Only 2nd column
+
+  expected_taus_vector[3] = {
+      {{1}, {1}, {0}, {0}, {0}},  // Either 0-th or 1st column
+      {{1}, {0}, {1}, {0}, {0}}}; // Either 0-th or 2nd column
+
+  expected_taus_vector[4] = {
+      {{1}, {1}, {0}, {0}, {0}},  // Either 0-th or 1st column
+      {{0}, {1}, {0}, {0}, {0}},  // Only 1st column
+      {{1}, {0}, {1}, {0}, {0}},  // Either 2nd or 0-th column
+      {{0}, {1}, {1}, {0}, {0}}}; // Either 2nd or 1st column
+
+  expected_taus_vector[5] = {
+      {{1}, {0}, {0}, {0}, {0}},  // Only 0-th column
+      {{0}, {1}, {1}, {0}, {0}},  // Either 1st or 2nd column
+      {{0}, {1}, {0}, {1}, {0}}}; // Either 1st or 3rd column
+  std::array<std::vector<long>, 6> expected_mus_vector{
+      {{0, 0}, {0}, {0, 0}, {0, 0}, {0, 0, 0, 0}, {0, 0, 0}}};
+  EXPECT_EQ(expected_Fs_vector.size(), cases);
+  EXPECT_EQ(expected_taus_vector.size(), cases);
+  EXPECT_EQ(expected_mus_vector.size(), cases);
+
+  for (int j = 0; j < cases; j++) {
+    helib::QueryType query = qbs[j].build(columns);
+    EXPECT_EQ(expected_Fs_vector[j].size(), query.Fs.size()) << "*** j = " << j;
+    EXPECT_EQ(expected_mus_vector[j].size(), query.mus.size())
+        << "*** j = " << j;
+    EXPECT_EQ(expected_taus_vector[j].size(), query.taus.size())
+        << "*** j = " << j;
+    EXPECT_EQ(columns, query.taus[0].size()) << "*** j = " << j;
+    for (size_t i = 0; i < expected_Fs_vector[j].size(); ++i)
+      EXPECT_EQ(expected_Fs_vector[j][i], query.Fs[i])
+          << "*** j = " << j << ", i = " << i;
+    for (size_t i = 0; i < expected_mus_vector[j].size(); ++i)
+      EXPECT_EQ(expected_mus_vector[j][i], query.mus[i])
+          << "*** j = " << j << ", i= " << i;
+    for (size_t i = 0; i < expected_taus_vector[j].size(); ++i)
+      EXPECT_TRUE(expected_taus_vector[j][i] == query.taus[i])
+          << "*** j = " << j << ", i= " << i;
+  }
+}
+
+TEST(TestQuery, QueryBuilderGeneratesMusAndTausWithNot)
+{
+  const helib::QueryExpr& name = helib::makeQueryExpr(0);
+  const helib::QueryExpr& age = helib::makeQueryExpr(1);
+  const helib::QueryExpr& height = helib::makeQueryExpr(2);
+  const helib::QueryExpr& weight = helib::makeQueryExpr(3);
+
+  // ! (0 || 1 || 2) -> {{-3},{-2},{-1}}
+  helib::QueryBuilder qbNotOfOr1(!(name || age || height));
+  // !(0 || 1) && 2 -> {{-2},{-1},{3}}
+  helib::QueryBuilder qbNotOfOr2(!(name || age) && height);
+  // ! ! 0 -> {{1}}
+  helib::QueryBuilder qbDoubleNot1(!!name);
+  // 0 || ! ! 3 ->{{4,2}}
+  helib::QueryBuilder qbDoubleNot2(age || !!weight);
+  // ! (0 && 1 && 2) -> {{-1,-2,-3}}
+  helib::QueryBuilder qbNotOfAnd1(!(name && age && height));
+  // !((0 || 1) && (2 || 3)) -> {{-2,-4},{-2,-3},{-1,-4},{-1,-3}}
+  helib::QueryBuilder qbNotOfAnd2(!((name || age) && (height || weight)));
+  std::array<helib::QueryBuilder, 6> qbs = {qbNotOfOr1,
+                                            qbNotOfOr2,
+                                            qbDoubleNot1,
+                                            qbDoubleNot2,
+                                            qbNotOfAnd1,
+                                            qbNotOfAnd2};
+  long columns = 5;
+  long cases = 6;
+  long max_clauses = 4;
+  std::array<std::vector<std::vector<long>>, 6> expected_Fs_vector;
+  std::vector<long> F(columns);
+  std::iota(F.begin(), F.end(), 0);
+  std::vector<std::vector<long>> Fs(max_clauses);
+  std::fill(Fs.begin(), Fs.end(), F);
+  std::fill(expected_Fs_vector.begin(), expected_Fs_vector.end(), Fs);
+  expected_Fs_vector[0].resize(3); // query 0 has 3 conjunctions
+  expected_Fs_vector[1].resize(3); // query 1 has 3 conjunctions
+  expected_Fs_vector[2].resize(1); // query 2 has 1 conjunction
+  expected_Fs_vector[3].resize(1); // query 3 has 1 conjunction
+  expected_Fs_vector[4].resize(1); // query 4 has 1 conjunction
+  expected_Fs_vector[5].resize(4); // query 5 has 4 conjunctions
+
+  std::array<std::vector<helib::Matrix<long>>, 6> expected_taus_vector;
+  expected_taus_vector[0] = {{{0}, {0}, {-1}, {0}, {0}},  // Not 2nd
+                             {{0}, {-1}, {0}, {0}, {0}},  // Not 1st
+                             {{-1}, {0}, {0}, {0}, {0}}}; // Not 0th
+
+  expected_taus_vector[1] = {{{0}, {-1}, {0}, {0}, {0}}, // Not 1st
+                             {{-1}, {0}, {0}, {0}, {0}}, // Not 0th
+                             {{0}, {0}, {1}, {0}, {0}}}; // 2nd
+
+  expected_taus_vector[2] = {{{1}, {0}, {0}, {0}, {0}}}, // 0th
+
+      expected_taus_vector[3] = {{{0}, {1}, {0}, {1}, {0}}}; // 3rd or 1st
+
+  expected_taus_vector[4] = {
+      {{-1}, {-1}, {-1}, {0}, {0}}}; // Not 0th or not 1st or not 2nd
+
+  expected_taus_vector[5] = {{{0}, {-1}, {0}, {-1}, {0}},  // Not 1st, not 3rd
+                             {{0}, {-1}, {-1}, {0}, {0}},  // Not 1st, not 2nd
+                             {{-1}, {0}, {0}, {-1}, {0}},  // Not 0th, not 3rd
+                             {{-1}, {0}, {-1}, {0}, {0}}}; // Not 0th, not 2nd
+  std::array<std::vector<long>, 6> expected_mus_vector{
+      {{1, 1, 1}, {1, 1, 0}, {0}, {0}, {3}, {2, 2, 2, 2}}};
+  EXPECT_EQ(expected_Fs_vector.size(), cases);
+  EXPECT_EQ(expected_taus_vector.size(), cases);
+  EXPECT_EQ(expected_mus_vector.size(), cases);
+
+  for (int j = 0; j < cases; j++) {
+    helib::QueryType query = qbs[j].build(columns);
+    EXPECT_EQ(expected_Fs_vector[j].size(), query.Fs.size()) << "*** j = " << j;
+    EXPECT_EQ(expected_mus_vector[j].size(), query.mus.size())
+        << "*** j = " << j;
+    EXPECT_EQ(expected_taus_vector[j].size(), query.taus.size())
+        << "*** j = " << j;
+    EXPECT_EQ(columns, query.taus[0].size()) << "*** j = " << j;
+    for (size_t i = 0; i < expected_Fs_vector[j].size(); ++i)
+      EXPECT_EQ(expected_Fs_vector[j][i], query.Fs[i])
+          << "*** j = " << j << ", i = " << i;
+    for (size_t i = 0; i < expected_mus_vector[j].size(); ++i)
+      EXPECT_EQ(expected_mus_vector[j][i], query.mus[i])
+          << "*** j = " << j << ", i= " << i;
+    for (size_t i = 0; i < expected_taus_vector[j].size(); ++i)
+      EXPECT_TRUE(expected_taus_vector[j][i] == query.taus[i])
+          << "*** j = " << j << ", i= " << i;
+  }
+}
+
+TEST(TestQuery, RemoveOrExpectedString)
+{
+  const helib::QueryExpr& a = helib::makeQueryExpr(0);
+  const helib::QueryExpr& b = helib::makeQueryExpr(1);
+  const helib::QueryExpr& c = helib::makeQueryExpr(2);
+  const helib::QueryExpr& d = helib::makeQueryExpr(3);
+
+  std::array<helib::QueryBuilder, 13> qbs = {
+      helib::QueryBuilder((a && b) || c),
+      helib::QueryBuilder(a || b || c),
+      helib::QueryBuilder((a || b) && c),
+      helib::QueryBuilder((a || b) && (c || d)),
+      helib::QueryBuilder((a && b) || (c && d)),
+      helib::QueryBuilder(a && (b || (c && d))),
+      helib::QueryBuilder(a || !a),
+      helib::QueryBuilder(!(a || b || c)),
+      helib::QueryBuilder(!(a || b) && c),
+      helib::QueryBuilder(!!a),
+      helib::QueryBuilder(b || !!a),
+      helib::QueryBuilder(!(a && b && c)),
+      helib::QueryBuilder(!((a || b) && (c || d)))};
+  std::array<std::string, 13> expected_strings = {
+      "0 1 && ! 2 ! && !",
+      "0 ! 1 ! && ! ! 2 ! && !",
+      "0 ! 1 ! && ! 2 &&",
+      "0 ! 1 ! && ! 2 ! 3 ! && ! &&",
+      "0 1 && ! 2 3 && ! && !",
+      "0 1 ! 2 3 && ! && ! &&",
+      "0 ! 0 ! ! && !",
+      "0 ! 1 ! && ! ! 2 ! && ! !",
+      "0 ! 1 ! && ! ! 2 &&",
+      "0 ! !",
+      "1 ! 0 ! ! ! && !",
+      "0 1 && 2 && !",
+      "0 ! 1 ! && ! 2 ! 3 ! && ! && !"};
+
+  for (std::size_t i = 0; i < qbs.size(); i++) {
+    qbs[i].removeOr();
+    EXPECT_EQ(expected_strings[i], qbs[i].getQueryString()) << "*** i = " << i;
+  }
+}
 } // namespace

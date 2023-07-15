@@ -315,7 +315,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
 
     helib::PtxtArray tmp_p(p1); // tmp = c1
     helib::Ctxt tmp(c1);
-    sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
+    EXPECT_TRUE(snprintf(buffer, sizeof(buffer), "tmp=c1>>=%d", (int)shamt) > 0);
     shift(tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
     ea.shift(tmp, shamt);
     if (!helib_test::noPrint)
@@ -328,7 +328,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
       CheckCtxt(c2, "c2+=tmp");
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2));
 
-    sprintf(buffer, "c2>>>=%d", (int)rotamt);
+    EXPECT_TRUE(snprintf(buffer, sizeof(buffer), "c2>>>=%d", (int)rotamt) > 0);
     rotate(p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
     ea.rotate(c2, rotamt);
     if (!helib_test::noPrint)
