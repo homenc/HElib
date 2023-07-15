@@ -1,6 +1,27 @@
 Release Changes
 ===============
 
+HElib 2.3.0, July 2023
+======================
+(tagged as v2.3.0)
+
+* Added support for processing queries with the NOT operator homomorphically.
+* Introduced the NOT Expr, and a corresponding inline NOT QueryExpr Within the weights, or CNF, framework:
+  * Extensions to the ExpandOr() function to queries with NOT operators, via a new function negate()
+  * New function Tidy() which eliminates duplicate columns in inner clauses, or columns and their negation in inner clauses that can be created by squashing ORs. It also eliminates empty clauses,
+  * Put the code from build() which constructed the corresponding weights into a new function buildWeights(), and extended this to the case there are negations of columns
+  * New framework which evaluates queries homomorphically directly from the string:
+  * New function removeOr() within the QueryBuilder class which generates a new query string which is logically equivalent, but only has Ands and Nots
+  * Overloaded contains() function that takes a string instead of a QueryType, and evaluates the RPN directly using a stack of ciphertexts
+
+* Updated CI
+  * Deprecated build&test on Ubuntu 20.04
+  * Updated build&test on Ubuntu 22.04
+  * Added build&test on macOS 12 and MacOS13
+
+* Bug Fixes
+
+
 HElib 2.2.1, October 2021
 =========================
 (tagged as v2.2.1)
