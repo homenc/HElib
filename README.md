@@ -1,7 +1,7 @@
 HElib
 =====
 
-[![helib](https://github.com/homenc/HElib/actions/workflows/github-ci.yml/badge.svg)](https://github.com/homenc/HElib/actions/workflows/github-ci.yml)
+[![helib](https://github.com/homenc/HElib/actions/workflows/github-ci.yml/badge.svg?branch=master)](https://github.com/homenc/HElib/actions/workflows/github-ci.yml)
 
 HElib is an open-source ([Apache License v2.0][5]) software library that
 implements [homomorphic encryption][6] (HE). Currently available schemes are the
