@@ -1,8 +1,10 @@
 # Building and installing HElib
 
 The current HElib build, install, and regression tests suite have been built
-and tested on Ubuntu 20.04 and macOS Catalina >=10.15.7. Previous versions 
-have also included Ubuntu 18.04, Fedora 33, CentOS 8.2, macOS Mojave >=10.14.6.
+and tested on Ubuntu 22.04, macOS Montrey >=12.6.7, and macOS Ventura >=13.4.1.
+Previous HElib versions included build, install, and regression tests on 
+Ubuntu 18.04, ubuntu 20.04, Fedora 33, CentOS 8.2, macOS Mojave >=10.14.6, 
+macOS Catalina >=10.15.7, and macOS Big Sur >=11.7.8
 
 There are two different ways to build and install HElib. The first one will
 automatically download and build the GMP and NTL dependencies and pack the
@@ -21,27 +23,28 @@ Instructions to enable and link to HEXL are given
 ## General prerequisites
 
 - pthreads
-- git >= 2.27 (required to build and run the HElib test suite)
+- git >= 2.36 (required to build and run the HElib test suite)
 
 **Default Linux environment:**
 
-- GNU make >= 4.2
-- g++ >= 9.3.0  (recommended g++ 10.3.0)
-- cmake >= 3.16
+- Ubuntu 22.04 LTS
+- GNU make >= 4.3
+- g++ >= 11.3.0
+- cmake >= 3.22
 
 **macOS environment:**
 
-- Apple clang >= 12.0.0 (available with the latest Xcode for the tested versions of macOS)
+- Apple clang >= 14.0.0 (available with the latest Xcode for the tested versions of macOS)
 - Xcode Command Line Tools (can be installed with the command `xcode-select
   --install` in a terminal)
-- cmake >= 3.20 (available from [CMake](https://cmake.org/) or [MacPorts
+- cmake >= 3.22 (available from [CMake](https://cmake.org/) or [MacPorts
   Project](https://www.macports.org/) and [Homebrew](https://brew.sh/) as
   packages)
-- GNU make >= 3.81
+- GNU make >= 4.3
 
 **For HElib development:**
 
-- clang-format >= 9.0.0 (available with your linux distribution and for macOS
+- clang-format >= 14.0.0 (available with your linux distribution and for macOS
   from [MacPorts Project](https://www.macports.org/) and
   [Homebrew](https://brew.sh/) as packages)
 
@@ -55,8 +58,8 @@ specified, but this should only be done with caution as existing versions of
 NTL, GMP, or HElib will be overwritten.  These additional two prerequisites are
 required in this case:
 
-- m4 >= 1.4.16
-- patchelf >= 0.9 (if building on Linux)
+- m4 >= 1.4.18
+- patchelf >= 0.14.3 (if building on Linux)
 
 Please note that if changing from library build to package build, it is safer to
 use a clean build directory.
