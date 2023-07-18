@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: helib
+name: Build and Test
 on:
   # By default this will run when the activity type is "opened", "synchronize",
   # or "reopened".
