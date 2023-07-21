@@ -45,10 +45,8 @@ require [bats-core](https://github.com/bats-core/bats-core/releases/tag/v1.2.1).
 
 ## Running the examples
 
-All examples have a help method by passing the `-h` flag, for example
-
 ```
-./BGV_packed_arithmetic -h
+./BGV_packed_arithmetic
 ```
 
 The BGV_packed_arithmetic example shows some of the basic arithmetic APIs
