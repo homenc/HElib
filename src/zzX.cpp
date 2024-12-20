@@ -15,6 +15,7 @@
  **/
 #include <mutex>
 #include <map>
+#include <memory>
 
 #include <helib/PAlgebra.h>
 #include <helib/timing.h>
@@ -78,7 +79,7 @@ void normalize(zzX& f)
 // This function changes the NTL current zz_p modulus.
 const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg)
 {
-  static std::map<long, NTL::zz_pXModulus*> moduli; // pointer per value of m
+  static std::map<long, std::unique_ptr<NTL::zz_pXModulus>> moduli; // pointer per value of m
   static std::mutex pt_mtx; // control access to modifying the map
 
   NTL::zz_p::FFTInit(0); // set "the best FFT prime" as NTL's current modulus
@@ -91,15 +92,10 @@ const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg)
 
     // Got the lock, insert a new entry for this value of m into the map
     NTL::zz_pX phimX = NTL::conv<NTL::zz_pX>(palg.getPhimX());
-    NTL::zz_pXModulus* ptr =
-        new NTL::zz_pXModulus(phimX); // will "never" be deleted
+    auto ptr = std::make_unique<NTL::zz_pXModulus>(phimX);
 
     // insert returns a pair (iterator, bool)
-    auto ret = moduli.insert(std::pair<long, NTL::zz_pXModulus*>(m, ptr));
-    if (ret.second == false) // Another thread inserted it, delete your copy
-      delete ptr;
-    // FIXME: Could leak memory if insert throws an exception
-    //        without inserting the element (but who cares)
+    auto ret = moduli.insert(std::make_pair(m, std::move(ptr)));
 
     it = ret.first; // point to the entry in the map
   }
