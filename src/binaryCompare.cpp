@@ -72,25 +72,27 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
   }
   NTL_EXEC_RANGE_END
 #ifdef HELIB_DEBUG
-  std::cout << " g[" << g.start << ".." << (g.start + g.sz - 1) << "], "
-            << " e[" << e.start << ".." << (e.start + e.sz - 1)
-            << "]:" << std::endl;
-  for (long i = 0; i < g.size(); i++)
-    decryptAndPrint((std::cout << "   g[" << (i + g.start) << "] ("
-                               << ((void*)g[i]) << "): "),
-                    *g[i],
-                    *dbgKey,
-                    *dbgEa,
-                    FLAG_PRINT_POLY);
-  for (long i = 0; i < e.size(); i++)
-    decryptAndPrint((std::cout << "   e[" << (i + e.start) << "] ("
-                               << ((void*)e[i]) << "): "),
-                    *e[i],
-                    *dbgKey,
-                    *dbgEa,
-                    FLAG_PRINT_POLY);
+  if (dbgKey && dbgEa) {
+    std::cout << " g[" << g.start << ".." << (g.start + g.sz - 1) << "], "
+              << " e[" << e.start << ".." << (e.start + e.sz - 1)
+              << "]:" << std::endl;
+    for (long i = 0; i < g.size(); i++)
+      decryptAndPrint((std::cout << "   g[" << (i + g.start) << "] ("
+                                 << ((void*)g[i]) << "): "),
+                      *g[i],
+                      *dbgKey,
+                      *dbgEa,
+                      FLAG_PRINT_POLY);
+    for (long i = 0; i < e.size(); i++)
+      decryptAndPrint((std::cout << "   e[" << (i + e.start) << "] ("
+                                 << ((void*)e[i]) << "): "),
+                      *e[i],
+                      *dbgKey,
+                      *dbgEa,
+                      FLAG_PRINT_POLY);
 
-  std::cout << std::endl;
+    std::cout << std::endl;
+  }
 #endif
 }
 
@@ -141,19 +143,21 @@ static void compEqGt(CtPtrs& aeqb,
   HELIB_NTIMER_STOP(compEqGt2);
 
 #ifdef HELIB_DEBUG
-  for (long i = 0; i < lsize(b); i++)
-    decryptAndPrint((std::cout << " e[" << i << "]: "),
-                    *aeqb[i],
-                    *dbgKey,
-                    *dbgEa,
-                    FLAG_PRINT_POLY);
-  for (long i = 0; i < lsize(a); i++)
-    decryptAndPrint((std::cout << " ag[" << i << "]: "),
-                    *agtb[i],
-                    *dbgKey,
-                    *dbgEa,
-                    FLAG_PRINT_POLY);
-  std::cout << std::endl;
+  if (dbgKey && dbgEa) {
+    for (long i = 0; i < lsize(b); i++)
+      decryptAndPrint((std::cout << " e[" << i << "]: "),
+                      *aeqb[i],
+                      *dbgKey,
+                      *dbgEa,
+                      FLAG_PRINT_POLY);
+    for (long i = 0; i < lsize(a); i++)
+      decryptAndPrint((std::cout << " ag[" << i << "]: "),
+                      *agtb[i],
+                      *dbgKey,
+                      *dbgEa,
+                      FLAG_PRINT_POLY);
+    std::cout << std::endl;
+  }
 #endif
 
   // Call a recursive function to compute:

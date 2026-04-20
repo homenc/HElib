@@ -1008,15 +1008,18 @@ static void multByNegative(CtPtrs& product,
 
   CtPtrMat_VecCt nums(numbers); // Wrapper around numbers
 #ifdef HELIB_DEBUG
-  long pa, pb;
-  std::vector<long> slots;
-  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
-  pa = slots[0];
-  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);
-  pb = slots[0];
-  decryptAndSum((std::cout << " multByNegative: " << pa << '*' << pb << " = "),
-                nums,
-                true);
+  if (dbgKey && dbgEa) {
+    long pa, pb;
+    std::vector<long> slots;
+    decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
+    pa = slots[0];
+    decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);
+    pb = slots[0];
+    decryptAndSum(
+        (std::cout << " multByNegative: " << pa << '*' << pb << " = "),
+        nums,
+        true);
+  }
 #endif
   addManyNumbers(product, nums, resSize, unpackSlotEncoding);
 }
@@ -1107,16 +1110,18 @@ void multTwoNumbers(CtPtrs& product,
 
   CtPtrMat_VecCt nums(numbers); // A wrapper around numbers
 #ifdef HELIB_DEBUG
-  long plaintext_lhs, plaintext_rhs;
-  std::vector<long> slots;
-  decryptBinaryNums(slots, lhs, *dbgKey, *dbgEa, false);
-  plaintext_lhs = slots[0];
-  decryptBinaryNums(slots, rhs, *dbgKey, *dbgEa, false);
-  plaintext_rhs = slots[0];
-  decryptAndSum((std::cout << " multTwoNumbers: " << plaintext_lhs << '*'
-                           << plaintext_rhs << " = "),
-                nums,
-                false);
+  if (dbgKey && dbgEa) {
+    long plaintext_lhs, plaintext_rhs;
+    std::vector<long> slots;
+    decryptBinaryNums(slots, lhs, *dbgKey, *dbgEa, false);
+    plaintext_lhs = slots[0];
+    decryptBinaryNums(slots, rhs, *dbgKey, *dbgEa, false);
+    plaintext_rhs = slots[0];
+    decryptAndSum((std::cout << " multTwoNumbers: " << plaintext_lhs << '*'
+                             << plaintext_rhs << " = "),
+                  nums,
+                  false);
+  }
 #endif
   addManyNumbers(product, nums, resSize, unpackSlotEncoding);
 }
@@ -1402,7 +1407,7 @@ void AddDAG::printAddDAG(bool printCT)
       if (node->parent1)
         std::cout << ", prnt1=" << node->parent1->nodeName();
       std::cout << " }\n";
-      if (printCT && node->ct != nullptr)
+      if (printCT && node->ct != nullptr && dbgKey && dbgEa)
         decryptAndPrint(std::cout,
                         *(node->ct),
                         *dbgKey,
@@ -1430,7 +1435,7 @@ void AddDAG::printAddDAG(bool printCT)
       if (node->parent1)
         std::cout << ", prnt1=" << node->parent1->nodeName();
       std::cout << " }\n";
-      if (printCT && node->ct != nullptr)
+      if (printCT && node->ct != nullptr && dbgKey && dbgEa)
         decryptAndPrint(std::cout,
                         *(node->ct),
                         *dbgKey,
@@ -1445,6 +1450,10 @@ void decryptAndSum(std::ostream& s,
                    const CtPtrMat& numbers,
                    bool twosComplement)
 {
+  if (!dbgKey || !dbgEa) {
+    s << "(skipped: debug globals not set)" << std::endl;
+    return;
+  }
   s << "sum(";
   long sum = 0;
   for (long i = 0; i < numbers.size(); i++) {
