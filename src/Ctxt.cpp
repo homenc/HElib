@@ -1769,7 +1769,10 @@ void Ctxt::multiplyBy(const Ctxt& other)
   this->multLowLvl(other); // perform the multiplication
   reLinearize();           // re-linearize
 #ifdef HELIB_DEBUG
-  checkNoise(*this, *dbgKey, "reLinearize " + std::to_string(size_t(this)));
+  // Skip when setupDebugGlobals() was not called; dereferencing a null
+  // dbgKey here previously caused a segfault (issue #501).
+  if (dbgKey)
+    checkNoise(*this, *dbgKey, "reLinearize " + std::to_string(size_t(this)));
 #endif
 }
 
