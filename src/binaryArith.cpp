@@ -914,6 +914,12 @@ void addManyNumbers(CtPtrs& sum,
 
   bool bootstrappable = ct_ptr->getPubKey().isBootstrappable();
   const EncryptedArray& ea = ct_ptr->getContext().getEA();
+  // Cache the bit-per-level threshold before the loop: three4Two below may
+  // resize the NTL::Vec<Ctxt> that ct_ptr points into, reallocating the
+  // underlying storage and leaving ct_ptr dangling. Dereferencing ct_ptr
+  // on a later iteration then reads freed memory (issue #517).
+  const long minCapacityThreshold = 3 * ct_ptr->getContext().BPL();
+  ct_ptr = nullptr;
 
   long leftInQ = lsize(numbers);
   std::vector<CtPtrs*> numPtrs(leftInQ);
@@ -924,7 +930,7 @@ void addManyNumbers(CtPtrs& sum,
   while (leftInQ > 2) {
     // If any number is too low level, then bootstrap everything
     PtrMatrix_PtPtrVector<Ctxt> wrapper(numPtrs);
-    if (findMinBitCapacity(wrapper) < 3 * ct_ptr->getContext().BPL()) {
+    if (findMinBitCapacity(wrapper) < minCapacityThreshold) {
       assertNotNull<InvalidArgument>(unpackSlotEncoding,
                                      "unpackSlotEncoding must not be null");
       assertTrue(bootstrappable,
